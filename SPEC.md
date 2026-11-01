@@ -98,7 +98,7 @@ Each step works end to end, with tests, before the next starts.
 
 | Step | Content | Target date |
 |---|---|---|
-| 0 | Repo, Supabase project, migrations for all tables, Google sign in set up, keep alive job, empty app deployed to Vercel | 27 Oct |
+| 0 | Repo, Supabase project, migrations for all tables, Google sign in set up, keep alive job, empty app deployed to Netlify | 27 Oct |
 | 1 | US1: sign in, create group, invite link, join | 29 Oct |
 | 2 | US2 and US5 with one photo: capture, reading, review, save, unsorted items | 1 Nov |
 | 3 | US3 and US4: categories, rules, item changes and change log; open period balance | 3 Nov |

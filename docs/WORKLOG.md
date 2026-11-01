@@ -24,3 +24,9 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Data model changes found while writing the schema: receipt status gains `draft` and `saved`, plus `saved_at`, to enforce that photos lock once a receipt is saved; `categories.created_by` is not null; `payments.created_at` added.
 - Verified here: type check passed, lint passed, 9 unit tests passed, 1 end to end test passed, production build passed.
 - Not yet verified: migrations against Supabase, health check and keep alive on Vercel. This environment cannot reach Supabase, so these are checked after the first Vercel deploy.
+
+## 2026-11-01: hosting moved from Vercel to Netlify
+
+- Reason: Maduabuchi has deployed on Netlify before and is more comfortable fixing problems there.
+- Changed: `vercel.json` and the `vercel-build` script removed; `netlify.toml` runs migrations then the build on every deploy; the daily keep alive is now a Netlify Scheduled Function (`netlify/functions/keep-alive.mts`) that calls `/api/cron/keep-alive` with CRON_SECRET. Documents updated.
+- Keep alive is done when: the scheduled function runs once a day and a successful run is visible in the Netlify function logs.

@@ -17,9 +17,9 @@ A mobile-first responsive web app. Designed at phone width (375 px) first, usabl
 | Database access | Drizzle ORM with SQL migrations in the repo | The schema lives in code and is reviewable, which matters because the data tables are graded. |
 | Login | Supabase Auth with Google sign in | No passwords to store. Avoids Supabase's rate limited built in email. Each member is a real user, needed for agree and confirm. |
 | Photo storage | Supabase Storage, private bucket | Receipt photos are kept and viewable by group members. |
-| Keep alive | Daily Vercel cron job running one small database query | A free Supabase project pauses after a period of inactivity. The app must stay online through later assignments. |
+| Keep alive | Daily Netlify Scheduled Function calling the keep alive endpoint, which runs one small database query | A free Supabase project pauses after a period of inactivity. The app must stay online through later assignments. |
 | Receipt reading | Google Gemini API, called only from the server | Already used in the earlier pipeline. The API key never reaches the browser. |
-| Hosting | Vercel | Public HTTPS address, as the brief requires. Allowed by the brief at own responsibility. |
+| Hosting | Netlify | Public HTTPS address, as the brief requires. Allowed by the brief at own responsibility. Chosen over Vercel because Maduabuchi has used it before. |
 | Unit tests | Vitest | Split, rounding, balance and period logic. |
 | End to end tests | Playwright, phone viewport | Critical user flows. Gemini is replaced by a fixed fake response in tests. |
 
@@ -47,7 +47,7 @@ Rules:
 3. **The HTTP API is versioned (`/api/v1`) and covers every action a page can do.** Later assignments require other applications to reach the app, so the API is built now, not added later.
 4. **Membership is checked in the service layer on every call.** A user can only read or change groups they belong to.
 5. **Money is stored as integer cents.** Shares are stored as basis points (10000 = 100%). No floating point for money.
-6. **Photos upload straight from the browser to Supabase Storage** using signed upload URLs, compressed in the browser first. They do not pass through Vercel functions, which limit request size. The server then reads them from storage for Gemini.
+6. **Photos upload straight from the browser to Supabase Storage** using signed upload URLs, compressed in the browser first. They do not pass through Netlify functions, which limit request size. The server then reads them from storage for Gemini.
 7. **Period closing is evaluated on request.** When any group data is loaded, the service closes every period whose end date has passed and opens the next one. No scheduled job is needed, and the logic is a testable pure function.
 
 ## 4. Folder structure
@@ -100,7 +100,7 @@ distill-app/
 
 - `.env.local` for local development, never committed. `.env.example` lists the names only.
 - Variables: `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `CRON_SECRET`. Google sign in credentials are stored in the Supabase dashboard, not in the app.
-- Vercel holds the production values.
+- Netlify holds the production values.
 
 ## 6. Decisions still open
 
