@@ -105,7 +105,7 @@ Each step works end to end, with tests, before the next starts.
 | 4 | Multi photo receipts (section 7) | 4 Nov |
 | 5 | US6, US7, US8: close rule, closing, sorting leftovers, agree | 6 Nov |
 | 6 | US9: payments | 8 Nov |
-| 7 | Remaining tests, UX review by the LLM against the Assignment 1 mockups, manual check of every screen, data tables PDF, screenshots, demo script and rehearsal | 9 to 15 Nov |
+| 7 | Remaining tests, UX review by the LLM against the Assignment 1 mockups, manual check of every screen, privacy page and Google sign in published (out of testing mode), data tables PDF, screenshots, demo script and rehearsal | 9 to 15 Nov |
 
 ## 7. Change from the approved specification
 

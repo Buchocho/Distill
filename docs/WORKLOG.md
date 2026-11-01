@@ -34,3 +34,8 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Deployed at https://distill-ma7f.vercel.app.
 - Verified by Maduabuchi: `/api/v1/health` returns status ok (the app reaches the database); Supabase shows the 12 tables, so the migrations ran during the Vercel build.
 - Still to verify: the first keep alive run (daily at 06:17 UTC) in the Vercel logs.
+
+## 2026-11-01: Google sign in in testing mode
+
+- Google sign in stays in testing mode for now: only listed test users can sign in. Publishing needs a privacy policy and terms page.
+- Before submission (step 7): add a privacy page and publish the Google consent screen, so anyone can sign in.
