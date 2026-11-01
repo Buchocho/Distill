@@ -1,0 +1,59 @@
+# CLAUDE.md: project rules for Distill
+
+Read this file, SPEC.md, docs/ARCHITECTURE.md and docs/DATA_MODEL.md at the start of every session.
+
+## What this project is
+
+Distill, a mobile-first web app for splitting shared grocery receipts. MVP for the Information Systems Architecture course at FEUP, due 15 Nov 2026. SPEC.md is the source of truth for what to build.
+
+## Scope
+
+- Build only what SPEC.md lists. If a task seems to need something outside it, stop and ask. Do not add features, settings or screens on your own.
+- Work on one step of the build order (SPEC.md section 6) at a time. Do not start the next step until the current one passes its tests and has been checked by hand.
+- When a business rule in SPEC.md is unclear, ask. Do not guess and do not change the rule silently.
+
+## Architecture rules
+
+- Business rules go in `src/domain` as pure functions. No database, network or framework imports there.
+- Only `src/server/services` reads or writes the database. Pages, components and API routes call services.
+- Every action a page can do is also available under `/api/v1`.
+- Check group membership in the service layer on every read and write.
+- Money is integer cents. Shares are basis points. Never use floating point for money.
+- Use the largest remainder method for splitting cents, from `src/domain/money.ts`. Do not write a second rounding function.
+- Gemini and Supabase service keys are used only on the server.
+- Row Level Security is on for every table with no policies. Never add a policy that lets the browser read or write tables directly. The browser uses Supabase only for sign in and signed photo uploads.
+- Schema changes go through Drizzle migrations. Update docs/DATA_MODEL.md in the same change.
+
+## Code style
+
+- TypeScript strict mode. No `any`.
+- Small files with one purpose. Name files after what they hold.
+- Use the existing components in `src/components` before writing new ones.
+- No new dependencies without saying why and asking first.
+
+## UI rules
+
+- Design at 375 px wide first, then check at desktop width.
+- Tap targets at least 44 px. Text contrast at least WCAG AA.
+- Amounts shown as euros with a comma decimal: 12,90.
+- Interface text is English, plain and short. No jargon.
+- Every screen has loading, empty and error states.
+- Bottom tab bar inside a group: Receipts, Categories, Balance.
+
+## Testing and verification
+
+- Every function in `src/domain` has unit tests in `tests/unit`, including rounding edge cases and negative prices.
+- Every story has at least one Playwright test in `tests/e2e`, run at a phone viewport.
+- Tests never call the real Gemini API. Use the fake responses in `tests/fixtures`.
+- Before saying a task is done: run the type check, the linter and all tests, and report the results. If something fails, say so. Do not mark it done.
+- Describe what the user should check by hand after each change.
+
+## Git and record keeping
+
+- One commit per finished piece of work, with a message that says what changed and why.
+- Never commit `.env.local` or any key.
+- At the end of each session, add an entry to `docs/WORKLOG.md`: the goal, the main prompts, what was changed, how it was verified, and anything left open.
+
+## Commands
+
+To be filled in at step 0 once the project is set up: install, dev server, type check, lint, unit tests, end to end tests, migrations, seed.
