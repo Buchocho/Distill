@@ -24,3 +24,7 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Data model changes found while writing the schema: receipt status gains `draft` and `saved`, plus `saved_at`, to enforce that photos lock once a receipt is saved; `categories.created_by` is not null; `payments.created_at` added.
 - Verified here: type check passed, lint passed, 9 unit tests passed, 1 end to end test passed, production build passed.
 - Not yet verified: migrations against Supabase, health check and keep alive on Vercel. This environment cannot reach Supabase, so these are checked after the first Vercel deploy.
+
+## 2026-11-01: hosting stays on Vercel
+
+- Netlify was tried and reverted. Its free plan allows about 20 production deploys a month (300 credits, 15 per deploy), too few for an active build. Vercel's free tier has no such limit.
