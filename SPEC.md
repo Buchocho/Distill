@@ -94,11 +94,12 @@ Every form shows validation errors next to the field. Every screen has a loading
 
 ## 6. Build order
 
-Each step works end to end, with tests, before the next starts.
+Each step works end to end, with tests, before the next starts. A step is done only when Maduabuchi has approved its screens against the approved design and the Assignment 1 wireframes, and the LLM design check (hierarchy, contrast, spacing, consistency, accessibility, phone fit) has been run on them.
 
 | Step | Content | Target date |
 |---|---|---|
 | 0 | Repo, Supabase project, migrations for all tables, Google sign in set up, keep alive job, empty app deployed to Vercel | 27 Oct |
+| 0b | UI design: colours, type, spacing, buttons, tab bar, and mockups of key screens from the Assignment 1 wireframes. Approved by Maduabuchi before any screen is built | 2 Nov |
 | 1 | US1: sign in, create group, invite link, join | 29 Oct |
 | 2 | US2 and US5 with one photo: capture, reading, review, save, unsorted items | 1 Nov |
 | 3 | US3 and US4: categories, rules, item changes and change log; open period balance | 3 Nov |

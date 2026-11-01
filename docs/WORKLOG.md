@@ -39,3 +39,8 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 
 - Google sign in stays in testing mode for now: only listed test users can sign in. Publishing needs a privacy policy and terms page.
 - Before submission (step 7): add a privacy page and publish the Google consent screen, so anyone can sign in.
+
+## 2026-11-01: UI design and approval added to the plan
+
+- Gap found by Maduabuchi: the plan had no point where he approves the UI; the design review was only in step 7.
+- Added: step 0b, a design stage (look and key screen mockups) approved before any screen is built; every step now ends with his screen approval and an LLM design check.
