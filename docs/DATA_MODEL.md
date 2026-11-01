@@ -3,6 +3,8 @@
 Author: Maduabuchi Ogugua Dibiaezue
 Status: draft, 25 Oct 2026. Defined before any screen is built.
 
+Implemented in `src/server/db/schema.ts`, migrations in `src/server/db/migrations`. Row Level Security is enabled on every table with no policies.
+
 Conventions: primary keys are UUIDs unless noted. Money is integer cents (`_cents`). Shares are basis points (`_bp`, 10000 = 100%). All timestamps are `timestamptz`.
 
 ## Tables
@@ -55,7 +57,7 @@ Rule: at most one `open` ledger per group (partial unique index on group_id wher
 | id | uuid | PK |
 | group_id | uuid | FK groups.id |
 | name | text | not null; unique per group, case insensitive |
-| created_by | uuid | FK users.id; for a category proposed by the reading step, the user who saved the receipt |
+| created_by | uuid | FK users.id, not null; for a category proposed by the reading step, the user who saved the receipt |
 | created_at | timestamptz | |
 
 ### category_shares
@@ -77,9 +79,10 @@ The sharing rule. No rows for a category means everyone in the group shares it e
 | store_name | text | null until read |
 | purchase_date | date | null until read |
 | total_cents | integer | printed total, null until read |
-| status | text | `reading`, `ready`, `failed` |
+| status | text | `draft` (photos being added), `reading`, `ready` (read, under review), `failed`, `saved` (in the ledger; photos locked) |
 | created_by | uuid | FK users.id |
 | created_at | timestamptz | |
+| saved_at | timestamptz | null until saved |
 
 ### receipt_photos
 | Column | Type | Key / rule |
@@ -132,6 +135,7 @@ Rule: any change to an item in a closed ledger deletes that ledger's agreements 
 | amount_cents | integer | greater than 0 |
 | paid_on | date | |
 | recorded_by | uuid | FK users.id; must be from_user or to_user |
+| created_at | timestamptz | |
 | confirmed_at | timestamptz | null until the other person confirms |
 
 ## Relations
