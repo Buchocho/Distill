@@ -28,3 +28,9 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 ## 2026-11-01: hosting stays on Vercel
 
 - Netlify was tried and reverted. Its free plan allows about 20 production deploys a month (300 credits, 15 per deploy), too few for an active build. Vercel's free tier has no such limit.
+
+## 2026-11-01: step 0 verified on Vercel
+
+- Deployed at https://distill-ma7f.vercel.app.
+- Verified by Maduabuchi: `/api/v1/health` returns status ok (the app reaches the database); Supabase shows the 12 tables, so the migrations ran during the Vercel build.
+- Still to verify: the first keep alive run (daily at 06:17 UTC) in the Vercel logs.
