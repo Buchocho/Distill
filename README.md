@@ -19,4 +19,4 @@ MVP for the Information Systems Architecture course (FEUP), by Maduabuchi Ogugua
 
 ## Stack
 
-Next.js on Netlify, PostgreSQL with sign in and photo storage on Supabase, Gemini for reading receipts.
+Next.js on Vercel, PostgreSQL with sign in and photo storage on Supabase, Gemini for reading receipts.

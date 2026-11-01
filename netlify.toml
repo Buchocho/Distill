@@ -1,7 +1,0 @@
-[build]
-  # Apply database migrations, then build. Runs on every deploy.
-  command = "npm run db:migrate && npm run build"
-  publish = ".next"
-
-[functions]
-  directory = "netlify/functions"

@@ -63,5 +63,5 @@ Distill, a mobile-first web app for splitting shared grocery receipts. MVP for t
 - Unit tests: `npm test`
 - End to end tests: `npm run test:e2e` (set `CHROMIUM_PATH` if Playwright's browser is not installed)
 - New migration after a schema change: `npm run db:generate -- --name <what_changed>`
-- Apply migrations: `npm run db:migrate`. On Netlify this runs automatically before every deploy (see `netlify.toml`).
+- Apply migrations: `npm run db:migrate`. On Vercel this runs automatically in `vercel-build` before every deploy.
 - Seed: added in a later step.
