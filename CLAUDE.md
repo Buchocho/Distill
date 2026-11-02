@@ -22,7 +22,7 @@ Distill, a mobile-first web app for splitting shared grocery receipts. MVP for t
 - Use the largest remainder method for splitting cents, from `src/domain/money.ts`. Do not write a second rounding function.
 - Gemini and Supabase service keys are used only on the server.
 - Row Level Security is on for every table with no policies. Never add a policy that lets the browser read or write tables directly. The browser uses Supabase only for sign in and signed photo uploads.
-- Schema changes go through Drizzle migrations. Update docs/DATA_MODEL.md in the same change.
+- Schema changes go through Drizzle migrations. Update docs/DATA_MODEL.md in the same change. Every new table gets `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` in its migration.
 
 ## Code style
 

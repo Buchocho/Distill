@@ -61,7 +61,7 @@ Rule: at most one `open` ledger per group (partial unique index on group_id wher
 | created_at | timestamptz | |
 
 ### category_shares
-The sharing rule. No rows for a category means everyone in the group shares it equally.
+The sharing rule. No rows for a category means it has no rule yet: its items are left out of the balance, like unsorted items.
 
 | Column | Type | Key / rule |
 |---|---|---|
@@ -116,6 +116,17 @@ Makes changes visible to all members (US4).
 | summary | text | for example "Category: Snacks to Bread" |
 | changed_at | timestamptz | |
 
+### category_changes
+History of category creation and rule changes, visible to all members.
+
+| Column | Type | Key / rule |
+|---|---|---|
+| id | uuid | PK |
+| category_id | uuid | FK categories.id, cascade delete |
+| changed_by | uuid | FK users.id |
+| summary | text | for example "Created Cleaning" or "Rule: Ana 30%, Rui 70%" |
+| changed_at | timestamptz | |
+
 ### agreements
 | Column | Type | Key / rule |
 |---|---|---|
@@ -148,6 +159,7 @@ groups 1..* receipts *..1 ledgers
 receipts 1..* receipt_photos
 receipts 1..* items *..0..1 categories
 items 1..* item_changes
+categories 1..* category_changes
 ledgers 1..* agreements *..1 users
 ledgers 1..* payments
 ```

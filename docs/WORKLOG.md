@@ -44,3 +44,8 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 
 - Gap found by Maduabuchi: the plan had no point where he approves the UI; the design review was only in step 7.
 - Added: step 0b, a design stage (look and key screen mockups) approved before any screen is built; every step now ends with his screen approval and an LLM design check.
+
+## 2026-11-02: category rule changes
+
+- Decided with Maduabuchi: a category with no rule is not split; its items count as unsorted and the period cannot be agreed until every category used in it has a rule. The person who saved the receipt that created the category is prompted; any member can set the rule. Category creation and rule changes are logged and visible to all members (screen 4c). Considered and rejected: the creator paying 100% until a rule is set, because the creator is usually the main shopper and the pressure would miss the members who never scan.
+- Changed: SPEC.md rules 12, 14a, 17, 20, 21, screen 4c and section 7; DATA_MODEL.md and schema gain `category_changes`; migration 0002 creates it with Row Level Security.

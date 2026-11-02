@@ -87,7 +87,7 @@ export const categories = pgTable(
   (t) => [uniqueIndex("categories_name_per_group").on(t.groupId, sql`lower(${t.name})`)],
 );
 
-// The sharing rule. No rows for a category means everyone shares it equally.
+// The sharing rule. No rows for a category means no rule yet: its items stay out of the balance.
 export const categoryShares = pgTable(
   "category_shares",
   {
@@ -172,6 +172,20 @@ export const itemChanges = pgTable(
     changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("item_changes_item").on(t.itemId)],
+);
+
+export const categoryChanges = pgTable(
+  "category_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    changedBy: uuid("changed_by").notNull().references(() => users.id),
+    summary: text("summary").notNull(),
+    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("category_changes_category").on(t.categoryId)],
 );
 
 export const agreements = pgTable(

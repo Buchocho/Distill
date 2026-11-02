@@ -52,20 +52,21 @@ Term: a period in the app is stored as a ledger in the database.
 
 **Sharing**
 11. A category's rule lists the members who share it and each one's percentage. Percentages total exactly 100%.
-12. A category with no rule is split equally between all current members.
+12. A category with no rule is not split. Its items are treated like unsorted items: left out of the balance and flagged as needing a rule. The person who saved the receipt that created the category is prompted to set the rule; any member can set it.
 13. Any member can change an item's category. An item always follows its category's rule; there are no per item splits.
 14. Every change to an item is logged with who made it and when, and shown on the item (US4).
+14a. Any member can create a category or change its rule. Every creation and rule change is logged with who made it and when. All members can see this history from the Categories screen. (Notifications about these changes are for a later version.)
 15. Shares are calculated in cents. Rounding uses the largest remainder method, so the shares of an item always add up to its price exactly.
 
 **Balance**
 16. For each sorted item, every sharer other than the payer owes the payer their share. Debts between two people are netted, giving at most one line per pair: "Rui owes Ana 18,40".
-17. Unsorted items are not in the balance. The balance screen shows how many there are.
+17. Unsorted items, and items in categories without a rule, are not in the balance. The balance screen shows how many there are.
 
 **Periods and closing**
 18. The group chooses the close rule: last day of the month, a day of the month (1 to 28), or a day of the week. It can be changed; the change applies from the next period.
 19. A period runs from its start date to its end date inclusive. After the end date passes, it closes and the next period opens the following day (US6). Closing is checked whenever group data is loaded.
-20. A closed period takes no new receipts and no edits, with one exception: its unsorted items can be given a category or deleted (US7).
-21. The Agree button for a period is active only when that period has no unsorted items (US7).
+20. A closed period takes no new receipts and no edits, with two exceptions: its unsorted items can be given a category or deleted, and rules can be set for categories that have none (US7).
+21. The Agree button for a period is active only when that period has no unsorted items and every category used in it has a rule (US7).
 22. Each member agrees to their own amount. Any change to the period's items after that clears all agreements for the period (US8).
 23. The next period opens on time whether or not anyone agreed.
 
@@ -87,6 +88,7 @@ All screens are designed at phone width first. Bottom tab bar on every screen in
 | 2a | Receipt photos: one or more sections, reorder, retake | /groups/[id]/receipts/capture | US2 |
 | 3 | Review receipt: header, items with price, category and who shares, sum check, save | /groups/[id]/receipts/[receiptId] | US2, US4, US5 |
 | 4 | Categories and sharing rules, rule editor | /groups/[id]/categories | US3 |
+| 4c | Category history: who created or changed which rule, and when | /groups/[id]/categories/history | US3 |
 | 5 | Balance: open period balance; closed periods with unsorted items, balance and agree | /groups/[id]/balance | US6, US7, US8 |
 | 6 | Payments: history, confirm, record a payment, yearly total | /groups/[id]/balance/payments | US9 |
 
@@ -111,6 +113,8 @@ Each step works end to end, with tests, before the next starts. A step is done o
 ## 7. Change from the approved specification
 
 Multi photo receipts: a receipt can be made of one or more photos taken in sections, read together as one receipt. Reason: a long receipt in one photo is too small to read. It extends US2 and does not add a screen to the tab bar. Full detail in `docs/features/multi-photo-receipt.md`.
+
+Category rules (agreed 2 Nov 2026): the approved specification split a category with no rule evenly between everyone. Now a category with no rule is not split; its items count as unsorted until someone sets a rule, and the period cannot be agreed until every category used in it has one. Reason: an even split hides the missing decision, and the period should not settle on a guess. Category creation and rule changes are also logged and visible to every member.
 
 ## 8. Demo data
 
