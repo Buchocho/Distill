@@ -49,3 +49,9 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 
 - Decided with Maduabuchi: a category with no rule is not split; its items count as unsorted and the period cannot be agreed until every category used in it has a rule. The person who saved the receipt that created the category is prompted; any member can set the rule. Category creation and rule changes are logged and visible to all members (screen 4c). Considered and rejected: the creator paying 100% until a rule is set, because the creator is usually the main shopper and the pressure would miss the members who never scan.
 - Changed: SPEC.md rules 12, 14a, 17, 20, 21, screen 4c and section 7; DATA_MODEL.md and schema gain `category_changes`; migration 0002 creates it with Row Level Security.
+
+## 2026-11-03: UI design, step 0b
+
+- Design canvas "Distill screens" holds all screens as a clickable prototype: loading, sign in, join, new group, home, receipts, receipt photos, review, categories, sharing rule, category history, balance (open period), closed period, payments, record a payment.
+- Look: AtheriaHQ ink, paper and orange, warm greys, Open Sans; colours with one meaning each (orange act here, grey waiting, green done, red error).
+- Decided with Maduabuchi: Home is a landing page outside the tabs with three sections (Receipts, Categories, Balance), dark to light, with drawn stick figures and motion; tab screens get a Home link at the top right; per person section order goes on the roadmap.

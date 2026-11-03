@@ -77,12 +77,13 @@ Term: a period in the app is stored as a ledger in the database.
 
 ## 5. Screens
 
-All screens are designed at phone width first. Bottom tab bar on every screen inside a group: Receipts, Categories, Balance.
+All screens are designed at phone width first. Bottom tab bar on every screen inside a group: Receipts, Categories, Balance. Sign in, New group and Join lead to Home. Home sits outside the tabs; the first screen of each tab has a small Home link at the top right.
 
 | # | Screen | Route | Stories |
 |---|---|---|---|
 | 0 | Sign in, set display name | /login | US1 |
 | 0b | Join a group from an invite link | /join/[token] | US1 |
+| 0c | Home: landing page outside the tabs, three sections stacked dark to light: Receipts (scan), Categories (what needs a rule), Balance (your amount). Each shows a live one line status and opens its tab. Drawn stick figures with motion, no photos | /groups/[id] | US1 to US9 |
 | 1 | New group: name, members by invite link, close rule | /groups/new | US1, US6 |
 | 2 | Receipts: take a photo, choose a file, paid by, recent receipts with status | /groups/[id]/receipts | US2 |
 | 2a | Receipt photos: one or more sections, reorder, retake | /groups/[id]/receipts/capture | US2 |
@@ -119,6 +120,12 @@ Category rules (agreed 2 Nov 2026): the approved specification split a category 
 ## 8. Demo data
 
 Group "Rua das Flores 12" with members Ana, Rui and Sam. A seed script loads categories with rules, a closed period with receipts, and one pending payment, so the demo can show every story in 5 minutes.
+
+## 8b. Later versions (roadmap, not in this MVP)
+
+- Home section order per person: each member can reorder the three Home sections to put what matters to them first. For now the order is fixed: Receipts, Categories, Balance.
+- Notifications when a category is created or its rule changes.
+- Rename or merge categories, duplicate receipt warning, spending by category, close date reminder, export of the payment record.
 
 ## 9. Open questions
 
