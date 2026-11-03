@@ -19,7 +19,7 @@ A mobile-first responsive web app. Designed at phone width (375 px) first, usabl
 | Photo storage | Supabase Storage, private bucket | Receipt photos are kept and viewable by group members. |
 | Keep alive | Daily Vercel cron job running one small database query | A free Supabase project pauses after a period of inactivity. The app must stay online through later assignments. |
 | Receipt reading | Google Gemini API, called only from the server | Already used in the earlier pipeline. The API key never reaches the browser. |
-| Hosting | Vercel | Public HTTPS address, as the brief requires. Allowed by the brief at own responsibility. |
+| Hosting | Vercel, functions in Dublin (dub1) | Public HTTPS address, as the brief requires. Allowed by the brief at own responsibility. Dublin is next to the Supabase database in Ireland. |
 | Unit tests | Vitest | Split, rounding, balance and period logic. |
 | End to end tests | Playwright, phone viewport | Critical user flows. Gemini is replaced by a fixed fake response in tests. |
 
