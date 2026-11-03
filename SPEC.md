@@ -77,7 +77,7 @@ Term: a period in the app is stored as a ledger in the database.
 
 ## 5. Screens
 
-All screens are designed at phone width first. Bottom tab bar on every screen inside a group: Receipts, Categories, Balance. Sign in, New group and Join lead to Home. Home sits outside the tabs; the first screen of each tab has a small Home link at the top right.
+All screens are designed at phone width first. Bottom tab bar on every screen inside a group: Receipts, Categories, Balance. Sign in, New group and Join lead to Home. Home sits outside the tabs; on the first screen of each tab, tapping the Distill mark at the top left goes back to Home.
 
 | # | Screen | Route | Stories |
 |---|---|---|---|
