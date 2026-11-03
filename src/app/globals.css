@@ -1,5 +1,40 @@
 @import "tailwindcss";
 
+@theme {
+  --color-ink: #14110e;
+  --color-paper: #f1ece4;
+  --color-dark: #221d19;
+  --color-dark-card: #2e2823;
+  --color-dark-line: #3a332d;
+  --color-orange: #f48d3c;
+  --color-orange-text: #a6501a;
+  --color-orange-tint: #fce3cf;
+  --color-grey-700: #4a433c;
+  --color-grey-600: #6b635b;
+  --color-grey-400: #a39a90;
+  --color-grey-200: #d9d2c8;
+  --color-grey-100: #e6e0d7;
+  --color-sand: #c9c0b5;
+  --color-green: #2e6b45;
+  --color-green-tint: #ddebdf;
+  --color-red: #a8261e;
+  --color-red-tint: #f6dedb;
+  --font-sans: "Open Sans", system-ui, sans-serif;
+}
+
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
+}
+
+@keyframes underline { from { width: 100%; } to { width: 40%; } }
+@keyframes legA { 0%, 100% { transform: rotate(18deg); } 50% { transform: rotate(-18deg); } }
+@keyframes legB { 0%, 100% { transform: rotate(-18deg); } 50% { transform: rotate(18deg); } }
+@keyframes push { 0%, 100% { transform: translateX(-4px); } 50% { transform: translateX(4px); } }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes stick { 0%, 60%, 100% { transform: translate(0, 0); } 30% { transform: translate(6px, -2px); } }
+@keyframes pop { 0%, 35% { opacity: 0; transform: scale(0.6); } 45%, 90% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
+@keyframes tilt { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; }
 }

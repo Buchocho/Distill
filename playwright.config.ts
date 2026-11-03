@@ -11,6 +11,12 @@ export default defineConfig({
   },
   webServer: {
     command: "npm run dev",
+    // Tests run signed out against a fake Supabase address; nothing reaches a real service.
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+      DATABASE_URL: process.env.DATABASE_URL ?? "postgres://test:test@127.0.0.1:6543/test",
+    },
     url: "http://localhost:3000",
     reuseExistingServer: true,
     timeout: 120_000,

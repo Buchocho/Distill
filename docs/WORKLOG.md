@@ -61,3 +61,11 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Design approved: canvas "Distill screens", page v2. Each tab keeps its Home colour through its whole journey (Receipts dark, Categories orange, Balance white). Home shows no amounts; the Balance section says "The group's balance" with a Check balance button.
 - Confirmed and added to SPEC.md: rules 3a (first sign in with no group goes to /start), 13a (rule changes apply to the open period only), 17a (Balance tab opens the open period; a closed period needing agreement shows as one card).
 - Schedule: setup and design ran about two days over plan. The final week is now about three days.
+
+## 2026-11-03: step 1, sign in and groups (built, not yet checked by hand)
+
+- Built: Google sign in through Supabase (`/login`, `/auth/callback`, session middleware); user row created on first sign in; `/start` for users with no group; `/groups/new` with validation; invite page with share and copy; `/join/[token]`; Home in the v2 design with the three animated sections; tab screens in their colours with placeholder content; Distill mark returns to Home; loading, error and not found screens.
+- API: `/me`, `/groups`, `/groups/{id}`, `/invites/{token}`, `/invites/{token}/join`, documented in docs/API.md. Accepts a bearer token so other applications can call it.
+- Domain: `ledgers.ts` (close dates, first and next ledger, plain descriptions) and `groups.ts` (validation), with unit tests.
+- Design change: the New group screen no longer shows an "Invite by link" button. The invite link exists only after the group is created, so the app shows it on the next screen.
+- Verified here: type check, lint, 21 unit tests, 3 end to end tests (signed out flows), production build. Not verifiable here: sign in, database writes and joining, because this environment cannot reach Supabase or Google. Checked by hand on the deployed app next.
