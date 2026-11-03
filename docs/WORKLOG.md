@@ -55,3 +55,9 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Design canvas "Distill screens" holds all screens as a clickable prototype: loading, sign in, join, new group, home, receipts, receipt photos, review, categories, sharing rule, category history, balance (open period), closed period, payments, record a payment.
 - Look: AtheriaHQ ink, paper and orange, warm greys, Open Sans; colours with one meaning each (orange act here, grey waiting, green done, red error).
 - Decided with Maduabuchi: Home is a landing page outside the tabs with three sections (Receipts, Categories, Balance), dark to light, with drawn stick figures and motion; tab screens get a Home link at the top right; per person section order goes on the roadmap.
+
+## 2026-11-03: design approved, step 1 starts
+
+- Design approved: canvas "Distill screens", page v2. Each tab keeps its Home colour through its whole journey (Receipts dark, Categories orange, Balance white). Home shows no amounts; the Balance section says "The group's balance" with a Check balance button.
+- Confirmed and added to SPEC.md: rules 3a (first sign in with no group goes to /start), 13a (rule changes apply to the open period only), 17a (Balance tab opens the open period; a closed period needing agreement shows as one card).
+- Schedule: setup and design ran about two days over plan. The final week is now about three days.

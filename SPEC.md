@@ -39,6 +39,7 @@ Term: a period in the app is stored as a ledger in the database.
 1. Signing in uses a Google account. A new user can change their display name once signed in.
 2. The group creator is a member. Anyone with the invite link who signs in becomes a member.
 3. Every member has the same rights. There is no admin.
+3a. After sign in, a user with no group sees a short choice: create a group or join one with a link. A user with a group goes straight to Home.
 
 **Receipts**
 4. Any member can add a receipt and choose who paid. The default is the person adding it.
@@ -54,6 +55,7 @@ Term: a period in the app is stored as a ledger in the database.
 11. A category's rule lists the members who share it and each one's percentage. Percentages total exactly 100%.
 12. A category with no rule is not split. Its items are treated like unsorted items: left out of the balance and flagged as needing a rule. The person who saved the receipt that created the category is prompted to set the rule; any member can set it.
 13. Any member can change an item's category. An item always follows its category's rule; there are no per item splits.
+13a. A rule change applies to every item in that category in the open period, including items already added. Closed periods are not changed.
 14. Every change to an item is logged with who made it and when, and shown on the item (US4).
 14a. Any member can create a category or change its rule. Every creation and rule change is logged with who made it and when. All members can see this history from the Categories screen. (Notifications about these changes are for a later version.)
 15. Shares are calculated in cents. Rounding uses the largest remainder method, so the shares of an item always add up to its price exactly.
@@ -61,6 +63,7 @@ Term: a period in the app is stored as a ledger in the database.
 **Balance**
 16. For each sorted item, every sharer other than the payer owes the payer their share. Debts between two people are netted, giving at most one line per pair: "Rui owes Ana 18,40".
 17. Unsorted items, and items in categories without a rule, are not in the balance. The balance screen shows how many there are.
+17a. The Balance tab opens on the open period. A closed period that still needs agreement is shown as one card linking to it. There is no list of all past periods in this version.
 
 **Periods and closing**
 18. The group chooses the close rule: last day of the month, a day of the month (1 to 28), or a day of the week. It can be changed; the change applies from the next period.
@@ -82,6 +85,7 @@ All screens are designed at phone width first. Bottom tab bar on every screen in
 | # | Screen | Route | Stories |
 |---|---|---|---|
 | 0 | Sign in, set display name | /login | US1 |
+| 0a | Start: create a group or join one (first sign in, no group yet) | /start | US1 |
 | 0b | Join a group from an invite link | /join/[token] | US1 |
 | 0c | Home: landing page outside the tabs, three sections stacked dark to light: Receipts (scan), Categories (what needs a rule), Balance (your amount). Each shows a live one line status and opens its tab. Drawn stick figures with motion, no photos | /groups/[id] | US1 to US9 |
 | 1 | New group: name, members by invite link, close rule | /groups/new | US1, US6 |
@@ -102,7 +106,7 @@ Each step works end to end, with tests, before the next starts. A step is done o
 | Step | Content | Target date |
 |---|---|---|
 | 0 | Repo, Supabase project, migrations for all tables, Google sign in set up, keep alive job, empty app deployed to Vercel | 27 Oct |
-| 0b | UI design: colours, type, spacing, buttons, tab bar, and mockups of key screens from the Assignment 1 wireframes. Approved by Maduabuchi before any screen is built | 2 Nov |
+| 0b | UI design: approved 3 Nov. Design canvas "Distill screens", page v2 (colour journeys: Receipts dark, Categories orange, Balance white) is the reference | 3 Nov |
 | 1 | US1: sign in, create group, invite link, join | 29 Oct |
 | 2 | US2 and US5 with one photo: capture, reading, review, save, unsorted items | 1 Nov |
 | 3 | US3 and US4: categories, rules, item changes and change log; open period balance | 3 Nov |
