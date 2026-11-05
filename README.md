@@ -7,6 +7,8 @@ MVP for the Information Systems Architecture course (FEUP), by Maduabuchi Ogugua
 - What is built: [SPEC.md](SPEC.md)
 - Architecture and folders: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - Data tables: [docs/DATA_MODEL.md](docs/DATA_MODEL.md)
+- Where each file and function lives: [docs/CODE_MAP.md](docs/CODE_MAP.md)
+- Business rules and build progress: [docs/BUSINESS_RULES.md](docs/BUSINESS_RULES.md)
 - Rules for the LLM agent: [CLAUDE.md](CLAUDE.md)
 - Work log: [docs/WORKLOG.md](docs/WORKLOG.md)
 

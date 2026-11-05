@@ -1,3 +1,8 @@
+/**
+ * Shown for an address that does not exist, a bad invite link, or a group the user is not a member
+ * of. The same message covers all three on purpose, so the app does not reveal which groups exist.
+ */
+
 import Link from "next/link";
 
 export default function NotFound() {

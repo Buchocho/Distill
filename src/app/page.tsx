@@ -1,3 +1,9 @@
+/**
+ * Route: /  (the app's front door; it has no screen of its own).
+ * Sends each person to the right place (SPEC.md rule 3a): signed out to Sign in, signed in with no
+ * group to Start, otherwise to Home of the first group they joined.
+ */
+
 import { redirect } from "next/navigation";
 import { currentUser } from "@/server/auth";
 import { ensureUser } from "@/server/services/users";

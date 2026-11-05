@@ -1,6 +1,6 @@
 # CLAUDE.md: project rules for Distill
 
-Read this file, SPEC.md, docs/ARCHITECTURE.md and docs/DATA_MODEL.md at the start of every session.
+Read this file, SPEC.md, docs/ARCHITECTURE.md, docs/DATA_MODEL.md, docs/CODE_MAP.md and docs/BUSINESS_RULES.md at the start of every session.
 
 ## What this project is
 
@@ -30,6 +30,19 @@ Distill, a mobile-first web app for splitting shared grocery receipts. MVP for t
 - Small files with one purpose. Name files after what they hold.
 - Use the existing components in `src/components` before writing new ones.
 - No new dependencies without saying why and asking first.
+
+## Comments and code documentation
+
+The readers are Maduabuchi and the teacher marking the build. Write for someone who knows the product, not the framework. Plain English, no lessons on how the language works.
+
+- Every source file starts with a short header: what the file holds, why it matters to the product, and the SPEC.md rule numbers or stories it serves.
+- Every exported function, and any helper whose purpose is not obvious, has a comment block above it: what it does, why it exists in business terms, and the rule it applies (for example "SPEC.md rule 22").
+- Explain the reason, not the code. Do not write comments that repeat what a line plainly does. Add a short comment inside a function only where a step would otherwise make a reader stop (a rounding step, a date conversion, a security check).
+- Name business rules by their SPEC.md number, and architecture rules by their ARCHITECTURE.md section 3 number, so every reference can be found in docs/BUSINESS_RULES.md.
+- A screen that is a placeholder says PLACEHOLDER in its header and names the step that builds it.
+- Do not put comments inside JSX markup; put them above the component or above the return.
+- Do not edit a migration file after it has been applied. Explain migrations in docs/CODE_MAP.md instead.
+- In the same commit as the code change: update docs/CODE_MAP.md when a file or main function is added, removed, renamed or moved; update docs/BUSINESS_RULES.md when a rule is built, partly built or changed. A change is not done until both are current.
 
 ## UI rules
 

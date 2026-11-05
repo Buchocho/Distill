@@ -1,3 +1,8 @@
+/**
+ * Settings for drizzle-kit, the tool that turns src/server/db/schema.ts into migrations and runs them.
+ * Runs on Vercel before every deploy (`vercel-build` in package.json) and locally with `npm run db:migrate`.
+ */
+
 import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 

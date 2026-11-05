@@ -1,3 +1,6 @@
+// End to end tests for signed out flows: Sign in screen, redirect to sign in, sign in error (story US1).
+// Signed in flows cannot run here yet because tests do not reach the real Google sign in.
+
 import { expect, test } from "@playwright/test";
 
 test("sign in screen shows the product and the Google button at phone width", async ({ page }) => {

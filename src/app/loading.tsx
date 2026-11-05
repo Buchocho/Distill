@@ -1,3 +1,7 @@
+/**
+ * Shown while any screen is loading (CLAUDE.md: every screen has a loading state).
+ */
+
 export default function Loading() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-ink text-paper" aria-busy="true">

@@ -1,5 +1,17 @@
-// Database schema. Matches docs/DATA_MODEL.md; change both together.
-// Money is integer cents. Shares are basis points (10000 = 100%).
+/**
+ * Database schema: every table, column and database level check.
+ *
+ * What it holds: the 12 tables described in docs/DATA_MODEL.md. That document explains each
+ * table in plain terms; this file is the code version. Change both together (CLAUDE.md).
+ *
+ * How a change reaches the database: edit this file, run `npm run db:generate -- --name <what>`
+ * to create a migration in ./migrations, and the migration runs on the next Vercel deploy.
+ * Every new table also needs Row Level Security switched on in its migration (CLAUDE.md).
+ *
+ * Conventions: money is integer cents (_cents). Shares are basis points (_bp, 10000 = 100%).
+ * Some business rules are also enforced here as database checks, so bad data is refused even
+ * if the app code has a bug. Each one names the rule it protects.
+ */
 
 import { sql } from "drizzle-orm";
 import {
@@ -16,9 +28,11 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+/** Standard "created at" column: set by the database to the moment the row is added. */
 const createdAt = () =>
   timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 
+/** One row per signed in person, created on first Google sign in (SPEC.md rule 1). */
 export const users = pgTable("users", {
   // Equals the Supabase Auth user id.
   id: uuid("id").primaryKey(),
@@ -27,6 +41,10 @@ export const users = pgTable("users", {
   createdAt: createdAt(),
 });
 
+/**
+ * A household or any set of people who shop together (story US1).
+ * The check below allows only valid close choices (SPEC.md rule 18), same as src/domain/ledgers.ts.
+ */
 export const groups = pgTable(
   "groups",
   {
@@ -48,6 +66,7 @@ export const groups = pgTable(
   ],
 );
 
+/** Who is in which group. No role column: every member has the same rights (SPEC.md rule 3). */
 export const groupMembers = pgTable(
   "group_members",
   {
@@ -58,6 +77,10 @@ export const groupMembers = pgTable(
   (t) => [primaryKey({ columns: [t.groupId, t.userId] })],
 );
 
+/**
+ * Periods, called ledgers in the code. A group has many; at most one is open at a time, enforced
+ * by the unique index below (SPEC.md rule 19). End date is included in the period.
+ */
 export const ledgers = pgTable(
   "ledgers",
   {
@@ -74,6 +97,10 @@ export const ledgers = pgTable(
   ],
 );
 
+/**
+ * A group's categories (for example Bread, Snacks). Names are unique per group ignoring capitals,
+ * so "milk" and "Milk" cannot both exist (SPEC.md rule 7).
+ */
 export const categories = pgTable(
   "categories",
   {
@@ -87,7 +114,9 @@ export const categories = pgTable(
   (t) => [uniqueIndex("categories_name_per_group").on(t.groupId, sql`lower(${t.name})`)],
 );
 
-// The sharing rule. No rows for a category means no rule yet: its items stay out of the balance.
+// The sharing rule: who shares a category and each person's share. Shares for one category must
+// total 10000 (100%, SPEC.md rule 11). No rows means no rule yet: its items stay out of the balance
+// and block agreement until a rule is set (SPEC.md rules 12, 17, 21).
 export const categoryShares = pgTable(
   "category_shares",
   {
@@ -103,6 +132,11 @@ export const categoryShares = pgTable(
   ],
 );
 
+/**
+ * One shop. Belongs to the period open when it was added, not the printed date (SPEC.md rule 5).
+ * Status: draft (photos being added), reading, ready (under review), failed (can retry,
+ * SPEC.md rule 10), saved (in the ledger; photos locked, SPEC.md rule 9a).
+ */
 export const receipts = pgTable(
   "receipts",
   {
@@ -123,6 +157,7 @@ export const receipts = pgTable(
   (t) => [index("receipts_ledger").on(t.ledgerId)],
 );
 
+/** The photos of one receipt, in order. A long receipt can be several photos (SPEC.md rule 9a). */
 export const receiptPhotos = pgTable(
   "receipt_photos",
   {
@@ -140,6 +175,7 @@ export const receiptPhotos = pgTable(
   ],
 );
 
+/** One line on a receipt. Follows its category's sharing rule; there are no per item splits (SPEC.md rule 13). */
 export const items = pgTable(
   "items",
   {
@@ -160,6 +196,7 @@ export const items = pgTable(
   (t) => [index("items_receipt").on(t.receiptId), index("items_category").on(t.categoryId)],
 );
 
+/** History of edits to an item, shown to every member (SPEC.md rule 14, story US4). */
 export const itemChanges = pgTable(
   "item_changes",
   {
@@ -174,6 +211,7 @@ export const itemChanges = pgTable(
   (t) => [index("item_changes_item").on(t.itemId)],
 );
 
+/** History of category creation and rule changes, shown on screen 4c (SPEC.md rule 14a). */
 export const categoryChanges = pgTable(
   "category_changes",
   {
@@ -188,6 +226,10 @@ export const categoryChanges = pgTable(
   (t) => [index("category_changes_category").on(t.categoryId)],
 );
 
+/**
+ * Who agreed to their amount for a period (SPEC.md rule 22, story US8). Rows are deleted when
+ * the period's items change, which resets agreement.
+ */
 export const agreements = pgTable(
   "agreements",
   {
@@ -200,6 +242,11 @@ export const agreements = pgTable(
   (t) => [primaryKey({ columns: [t.ledgerId, t.userId] })],
 );
 
+/**
+ * Money one member says they paid another. No money moves in the app. Shown as paid only once
+ * confirmed_at is set by the other person (SPEC.md rules 24, 25, story US9). The checks below
+ * refuse zero amounts, paying yourself, and a payment recorded by someone not involved.
+ */
 export const payments = pgTable(
   "payments",
   {

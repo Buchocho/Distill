@@ -1,3 +1,8 @@
+/**
+ * The shared layout for the first screen of each tab: colour, Distill mark back to Home, label,
+ * title, content and tab bar. New tab screens should use this rather than building their own.
+ */
+
 import { DistillMark } from "./DistillMark";
 import { TabBar, type Tab } from "./TabBar";
 

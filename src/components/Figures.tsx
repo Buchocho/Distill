@@ -1,10 +1,15 @@
-// Drawn stick figures with motion for the Home sections. Decorative only.
+/**
+ * Drawn stick figures with motion for the three Home sections (approved design, page v2).
+ * Decorative only: hidden from screen readers, and the motion stops for people who turn on
+ * "reduce motion" on their phone (src/app/globals.css). Animations are defined in globals.css.
+ */
 
 const base = {
   width: 130, height: 120, viewBox: "0 0 130 120", fill: "none", strokeWidth: 3,
   strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true,
 };
 
+/** Receipts section: a person pushing a shopping cart. */
 export function CartFigure() {
   return (
     <svg {...base} stroke="#F1ECE4" className="shrink-0 self-center">
@@ -30,6 +35,7 @@ export function CartFigure() {
   );
 }
 
+/** Categories section: a person putting a tag on a box. */
 export function TagFigure() {
   return (
     <svg {...base} stroke="#14110E" className="shrink-0 self-center">
@@ -53,6 +59,7 @@ export function TagFigure() {
   );
 }
 
+/** Balance section: a person next to a balancing scale. */
 export function ScaleFigure() {
   return (
     <svg {...base} stroke="#14110E" className="shrink-0 self-center">

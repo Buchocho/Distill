@@ -1,3 +1,8 @@
+/**
+ * The bottom tab bar inside a group: Receipts, Categories, Balance (CLAUDE.md UI rules).
+ * Each tab keeps the colour of its Home section, so the user always knows where they are.
+ */
+
 import Link from "next/link";
 import { Icon, type IconName } from "./Icon";
 

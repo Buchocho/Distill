@@ -1,3 +1,9 @@
+/**
+ * Screen 2, Receipts tab. Route: /groups/<id>/receipts. Story US2.
+ * PLACEHOLDER: shows the tab and an empty state only. Scanning, the receipt list and statuses are
+ * built in step 2 (SPEC.md section 6).
+ */
+
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { TabScreen } from "@/components/TabScreen";

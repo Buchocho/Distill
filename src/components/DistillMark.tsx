@@ -1,3 +1,8 @@
+/**
+ * The Distill name and dot (the wordmark), in four colour versions to sit on each background.
+ * On tab screens it is also the link back to Home (SPEC.md section 5).
+ */
+
 import Link from "next/link";
 
 export type Tone = "dark" | "orange" | "white" | "paper";

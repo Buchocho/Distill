@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * The "Continue with Google" button on Sign in. Runs in the browser.
+ * Hands the user to Google through Supabase; Google returns them to /auth/callback, which then
+ * opens the page in `next`.
+ */
+
 import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { Icon } from "@/components/Icon";

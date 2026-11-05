@@ -1,3 +1,9 @@
+/**
+ * Screen 5, Balance tab. Route: /groups/<id>/balance. Stories US6, US7, US8.
+ * PARTLY BUILT: shows the open period's dates and days left, and each member at 0,00. Real amounts
+ * come in step 3; closing, sorting leftovers and Agree in step 5; payments in step 6.
+ */
+
 import { TabScreen } from "@/components/TabScreen";
 import { requireUser } from "@/server/session";
 import { groupOr404 } from "@/server/pageData";

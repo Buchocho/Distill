@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * The New group form: group name and when accounts close (SPEC.md rule 18). Runs in the browser.
+ * The day picker changes with the close choice: none for last day of the month, 1 to 28 for a day
+ * of the month, Monday to Sunday for weekly. Errors from the server appear under each field.
+ * There is no invite button here: the invite link only exists once the group is saved, so it is
+ * shown on the next screen (design change, docs/WORKLOG.md 2026-11-03).
+ */
+
 import { useActionState, useState } from "react";
 import { createGroupAction, type FormState } from "@/app/actions";
 

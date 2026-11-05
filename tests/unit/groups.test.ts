@@ -1,3 +1,5 @@
+// Unit tests for src/domain/groups.ts: New group form validation (story US1).
+
 import { describe, expect, it } from "vitest";
 import { validateNewGroup } from "@/domain/groups";
 

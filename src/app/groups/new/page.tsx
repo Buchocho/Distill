@@ -1,3 +1,8 @@
+/**
+ * Screen 1, New group. Route: /groups/new. Stories US1 and US6.
+ * The form itself is in NewGroupForm.tsx; saving is in src/app/actions.ts (createGroupAction).
+ */
+
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { requireUser } from "@/server/session";

@@ -69,3 +69,12 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Domain: `ledgers.ts` (close dates, first and next ledger, plain descriptions) and `groups.ts` (validation), with unit tests.
 - Design change: the New group screen no longer shows an "Invite by link" button. The invite link exists only after the group is created, so the app shows it on the next screen.
 - Verified here: type check, lint, 21 unit tests, 3 end to end tests (signed out flows), production build. Not verifiable here: sign in, database writes and joining, because this environment cannot reach Supabase or Google. Checked by hand on the deployed app next.
+
+## 2026-11-05: code comments and code map
+
+- Goal: make the code readable for Maduabuchi and the marker without changing what it does, and make build progress traceable rule by rule.
+- Prompt: comment all code so a person can read what each function is, what it does and the business logic behind it; keep a guideline document mapping what is in each file and where each function lives.
+- Changed: a header comment on every source file and a comment on every exported function, naming the SPEC.md rules and stories it serves. New docs/CODE_MAP.md (every file, its main functions, screen status) and docs/BUSINESS_RULES.md (each SPEC.md rule with status and the files that enforce it). CLAUDE.md gains a "Comments and code documentation" section so later sessions keep both documents current. Migration files were not edited.
+- Verified: every changed code file was compiled with comments removed and compared with the previous version; no code changed. Type check, lint and unit tests run after the change.
+- Found while reviewing, left open: changing the display name (rule 1) and changing the close rule (rule 18) are not built, although the New group screen says "You can change it later"; dates are worked out in UTC, which is one hour behind Portugal in summer.
+

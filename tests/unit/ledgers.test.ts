@@ -1,3 +1,5 @@
+// Unit tests for src/domain/ledgers.ts: close dates and period ranges (SPEC.md rules 18, 19).
+
 import { describe, expect, it } from "vitest";
 import { firstLedger, nextCloseDate, nextLedger, validateCloseSetting } from "@/domain/ledgers";
 

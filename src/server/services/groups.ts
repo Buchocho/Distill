@@ -1,3 +1,19 @@
+/**
+ * Groups service: everything that reads or writes groups, members and invites.
+ *
+ * What it holds: list my groups, create a group, load a group for a member, look up an
+ * invite link, and join by invite link.
+ *
+ * Why it matters: a group is the shared record everyone in a household works from (story US1).
+ * Services are the only layer allowed to touch the database (architecture rule 2), and they
+ * check membership on every read (architecture rule 4), so a user can never see a group
+ * they are not in. Pages and API routes both call these functions.
+ *
+ * Business rules: SPEC.md rules 2 (creator is a member; anyone with the link who signs in
+ * joins), 3 (every member has the same rights, so there is no role check), 18 and 19
+ * (the first period opens when the group is made).
+ */
+
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
@@ -7,11 +23,17 @@ import { type NewGroupInput, validateNewGroup } from "@/domain/groups";
 import { firstLedger } from "@/domain/ledgers";
 import { ServiceError } from "./errors";
 
+/** Today's date as YYYY-MM-DD, in UTC, matching src/domain/ledgers.ts. */
 const todayIso = () => new Date().toISOString().slice(0, 10);
+/** Shape of a database id. A group id in the address that does not match is treated as not found. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** A random, hard to guess invite code for the link /join/<token>. 18 random bytes, URL safe. */
 const newInviteToken = () => randomBytes(18).toString("base64url");
 
-/** Groups the user belongs to, oldest first. */
+/**
+ * The groups a user belongs to, oldest joined first.
+ * The first one is where the app sends the user after sign in (see src/app/page.tsx).
+ */
 export async function listMyGroups(userId: string) {
   return db
     .select({ id: groups.id, name: groups.name })
@@ -21,7 +43,15 @@ export async function listMyGroups(userId: string) {
     .orderBy(asc(groupMembers.joinedAt));
 }
 
-/** Creates a group with its creator as the first member and opens the first ledger. */
+/**
+ * Creates a group (screen 1, story US1).
+ *
+ * Three things are saved together, in one transaction, so a half made group can never exist:
+ * the group with its invite code, the creator as its first member (SPEC.md rule 2), and the
+ * first open period, which runs from today to the first close date (SPEC.md rules 18, 19).
+ *
+ * Throws an "invalid" error with a message per field when the form is not valid.
+ */
 export async function createGroup(userId: string, input: NewGroupInput) {
   const errors = validateNewGroup(input);
   if (Object.keys(errors).length > 0) throw new ServiceError("invalid", "Check the form.", errors);
@@ -44,8 +74,15 @@ export async function createGroup(userId: string, input: NewGroupInput) {
   });
 }
 
-/** A group with its members and open ledger. Only for members. */
+/**
+ * Loads a group with its members and its open period, for members only.
+ *
+ * A non member gets "not found" rather than "not allowed", so the app does not reveal that
+ * a group exists (architecture rule 4). Every screen inside a group starts by calling this.
+ * Members are listed in the order they joined.
+ */
 export async function getGroupForMember(userId: string, groupId: string) {
+  // Membership check first: nothing about the group is read until this passes.
   if (!UUID.test(groupId)) throw new ServiceError("not_found", "Group not found.");
   const [membership] = await db
     .select()
@@ -60,6 +97,7 @@ export async function getGroupForMember(userId: string, groupId: string) {
     .innerJoin(users, eq(users.id, groupMembers.userId))
     .where(eq(groupMembers.groupId, groupId))
     .orderBy(asc(groupMembers.joinedAt));
+  // At most one open period per group; the database enforces this (ledgers_one_open_per_group).
   const [openLedger] = await db
     .select()
     .from(ledgers)
@@ -67,7 +105,11 @@ export async function getGroupForMember(userId: string, groupId: string) {
   return { group, members, openLedger: openLedger ?? null };
 }
 
-/** What someone opening an invite link sees before joining. */
+/**
+ * What someone opening an invite link sees before joining (screen 0b): the group name,
+ * who is in it and when accounts close. Holding the link is the permission, so no
+ * membership check is made here. Only these few fields are returned, never the receipts.
+ */
 export async function getInvite(token: string) {
   const [group] = await db.select().from(groups).where(eq(groups.inviteToken, token));
   if (!group) throw new ServiceError("not_found", "This invite link is not valid.");
@@ -80,7 +122,10 @@ export async function getInvite(token: string) {
   return { group: { id: group.id, name: group.name, closeRule: group.closeRule, closeDay: group.closeDay }, members };
 }
 
-/** Adds the user to the group behind an invite link. Joining twice is harmless. */
+/**
+ * Adds the signed in user to the group behind an invite link (SPEC.md rule 2, story US1).
+ * Tapping Join twice, or opening the link again later, changes nothing and gives no error.
+ */
 export async function joinByToken(userId: string, token: string) {
   const { group } = await getInvite(token);
   await db.insert(groupMembers).values({ groupId: group.id, userId }).onConflictDoNothing();

@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Shown when a screen fails to load for an unexpected reason (CLAUDE.md: every screen has an
+ * error state with a retry). "Try again" reloads the screen that failed.
+ */
+
 export default function ErrorPage({ reset }: { error: Error; reset: () => void }) {
   return (
     <main className="flex min-h-dvh flex-col justify-center gap-4 bg-paper px-5 text-ink">

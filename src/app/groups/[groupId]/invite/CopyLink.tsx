@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * Share and Copy buttons for the invite link. Runs in the browser.
+ * Share opens the phone's share sheet (WhatsApp, Messages and so on); where that is not available,
+ * for example on most laptops, it copies the link instead.
+ */
+
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
 

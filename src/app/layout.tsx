@@ -1,3 +1,8 @@
+/**
+ * The frame around every screen: page title, phone sizing, the Open Sans font and the dark
+ * background. Content is kept to 480 px wide so the phone first design still looks right on a laptop.
+ */
+
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 

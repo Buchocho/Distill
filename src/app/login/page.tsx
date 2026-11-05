@@ -1,3 +1,9 @@
+/**
+ * Screen 0, Sign in. Route: /login. Story US1, SPEC.md rule 1.
+ * Shows what the app does in three lines and the Google sign in button. `next` is the page to
+ * return to after sign in (for example an invite link); only addresses inside the app are accepted.
+ */
+
 import { DistillMark } from "@/components/DistillMark";
 import { SignInButton } from "./SignInButton";
 

@@ -1,3 +1,5 @@
+// Unit tests for src/domain/money.ts: splitting cents (SPEC.md rule 15) and euro formatting.
+
 import { describe, expect, it } from "vitest";
 import { formatCents, splitCents } from "@/domain/money";
 

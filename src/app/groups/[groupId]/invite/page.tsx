@@ -1,3 +1,10 @@
+/**
+ * Invite screen. Route: /groups/<id>/invite. Story US1.
+ * Shows the group's invite link with Share and Copy, and the member list. Opened right after a
+ * group is created (title "Group created") and from the initial on Home (title "Invite people").
+ * The link is built from the address the app is running at, so it works on any deploy.
+ */
+
 import Link from "next/link";
 import { headers } from "next/headers";
 import { Icon } from "@/components/Icon";

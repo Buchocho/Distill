@@ -1,3 +1,9 @@
+/**
+ * Screen 0a, Start. Route: /start. SPEC.md rule 3a.
+ * Shown after sign in to someone who is in no group yet: create a group, or open the invite link
+ * someone sent. There is no "enter a code" field; joining is only through the link.
+ */
+
 import Link from "next/link";
 import { DistillMark } from "@/components/DistillMark";
 import { requireUser } from "@/server/session";

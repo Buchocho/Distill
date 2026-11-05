@@ -1,3 +1,8 @@
+/**
+ * End to end test settings: tests run in a phone sized browser (iPhone 13), as CLAUDE.md requires.
+ * Run with `npm run test:e2e`. Tests live in tests/e2e.
+ */
+
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({

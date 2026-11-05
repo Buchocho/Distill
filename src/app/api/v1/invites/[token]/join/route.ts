@@ -1,3 +1,8 @@
+/**
+ * POST /api/v1/invites/{token}/join: join the group behind an invite link (SPEC.md rule 2).
+ * Joining twice is harmless. Documented in docs/API.md.
+ */
+
 import { withUser } from "@/server/api";
 import { joinByToken } from "@/server/services/groups";
 

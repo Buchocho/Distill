@@ -1,3 +1,10 @@
+/**
+ * Screen 0b, Join a group. Route: /join/<invite code>. Story US1, SPEC.md rule 2.
+ * Someone opens the invite link, signs in if needed, sees the group name, who is in it and when
+ * accounts close, and taps Join. Someone already in the group is offered Home instead.
+ * A bad or old link shows the Not found screen.
+ */
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DistillMark } from "@/components/DistillMark";

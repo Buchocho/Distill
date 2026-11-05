@@ -1,9 +1,16 @@
+/**
+ * /auth/callback: where Google sends the user back after sign in (SPEC.md rule 1).
+ * The address must be listed in the Supabase dashboard under allowed redirect URLs.
+ */
+
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-// Google sends the user back here. Exchange the code for a session, then continue.
+// Swaps the one time code from Google for a session cookie, then continues to the page the user
+// wanted. Only addresses inside this app are allowed as the next page, so a crafted link cannot
+// send someone to another site after sign in. On failure, back to /login with an error message.
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");

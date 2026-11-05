@@ -1,3 +1,11 @@
+/**
+ * Screen 0c, Home. Route: /groups/<id>. The landing page of a group, outside the tabs.
+ * Three stacked sections, dark to light, each opening its tab: Receipts, Categories, Balance
+ * (approved design, canvas "Distill screens" page v2). No amounts are shown on Home by design;
+ * the Balance section only says when the period closes.
+ * The status lines are placeholders until receipts and categories are built (steps 2 and 3).
+ */
+
 import Link from "next/link";
 import { DistillMark } from "@/components/DistillMark";
 import { CartFigure, ScaleFigure, TagFigure } from "@/components/Figures";

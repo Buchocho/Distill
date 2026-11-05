@@ -1,3 +1,7 @@
+/**
+ * Unit test settings. Run with `npm test`. Tests live in tests/unit, one file per file in src/domain.
+ */
+
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 

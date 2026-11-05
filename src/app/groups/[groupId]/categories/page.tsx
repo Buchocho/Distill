@@ -1,3 +1,9 @@
+/**
+ * Screen 4, Categories tab. Route: /groups/<id>/categories. Story US3.
+ * PLACEHOLDER: shows the tab and an empty state only. Categories, sharing rules and the change
+ * history are built in step 3 (SPEC.md section 6).
+ */
+
 import { TabScreen } from "@/components/TabScreen";
 import { requireUser } from "@/server/session";
 import { groupOr404 } from "@/server/pageData";

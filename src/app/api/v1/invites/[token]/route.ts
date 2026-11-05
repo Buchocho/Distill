@@ -1,3 +1,8 @@
+/**
+ * GET /api/v1/invites/{token}: what is behind an invite link (group name, members, close rule),
+ * before deciding to join. Documented in docs/API.md.
+ */
+
 import { withUser } from "@/server/api";
 import { getInvite } from "@/server/services/groups";
 

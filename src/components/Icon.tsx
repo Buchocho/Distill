@@ -1,3 +1,8 @@
+/**
+ * The app's line icons, drawn in code so no icon library is needed. To add an icon, add its
+ * drawing to PATHS; the name then becomes available everywhere.
+ */
+
 const PATHS = {
   receipt: "M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6",
   tag: "M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01",
@@ -12,6 +17,7 @@ const PATHS = {
 
 export type IconName = keyof typeof PATHS;
 
+/** Draws one icon in the current text colour. Hidden from screen readers; the label next to it carries the meaning. */
 export function Icon({ name, size = 20, strokeWidth = 2 }: { name: IconName; size?: number; strokeWidth?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth}
