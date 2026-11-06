@@ -78,3 +78,12 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Verified: every changed code file was compiled with comments removed and compared with the previous version; no code changed. Type check, lint and unit tests run after the change.
 - Found while reviewing, left open: changing the display name (rule 1) and changing the close rule (rule 18) are not built, although the New group screen says "You can change it later"; dates are worked out in UTC, which is one hour behind Portugal in summer.
 
+## 2026-11-06: step 1 changes: display name dropped, group currency, local dates, tax rule
+
+- Goal: close the open points from 5 Nov before the hand check of step 1.
+- Decisions by Maduabuchi: changing the display name is dropped from v1 (roadmap); the Google name is used. A group chooses a currency when created (display only, no conversion), from every currency with two decimal places, because the app will be sent to people in the US, Canada and Nigeria. Dates follow the local date of the device doing the action, with no stored time zone. Tax printed as its own line is an item (step 2).
+- Prompts: "Drop it from v1, replace it with the ability to select a currency for a group"; "Add all the currencies that are 2 decimal places"; "tax should be a new item"; "Use the local time of the device scanning to keep things simple".
+- Changed: SPEC.md rules 1, 2b, 2c, 6 and the roadmap. New `src/domain/currencies.ts` (119 currencies). `money.ts` gains `formatMoney` and formats by currency without floating point. `groups.currency` column (migration 0003) with a format check. New group form has a Currency field and sends the device date in a hidden field; the API accepts `currency` and `localDate`. The first period now starts on the creator's local date instead of the UTC date.
+- Left out on purpose: currencies shown with no or three decimals (for example yen, CFA franc, Kuwaiti dinar) and withdrawn ones. A group's currency cannot be changed after creation (decided by Maduabuchi), so no edit is planned.
+- Verified: type check, lint, unit tests (new tests for the currency list, formatting and the device date check), production build. Not verifiable here: the migration on Supabase and the form on the deployed app; checked in the step 1 hand check.
+

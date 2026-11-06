@@ -2,14 +2,15 @@
  * Money helpers.
  *
  * What it holds: the one rounding function used for every split in the app, and the
- * function that shows an amount as euros.
+ * functions that show an amount in the group's currency.
  *
  * Why it matters: money is stored as whole cents and shares as basis points
  * (10000 = 100%), so there is never a floating point error. When an item is split,
  * the parts must add up to the item price exactly, or the balance drifts by a cent.
  * CLAUDE.md forbids a second rounding function: if splitting changes, change it here.
  *
- * Business rules: SPEC.md rule 15 (shares in cents, largest remainder method).
+ * Business rules: SPEC.md rule 15 (shares in cents, largest remainder method) and rule 2b
+ * (amounts are shown in the group's currency; display only, nothing is converted).
  * Pure functions: no database, network or framework code. Tests: tests/unit/money.test.ts
  */
 
@@ -65,15 +66,51 @@ export function splitCents(amountCents: number, weights: readonly number[]): num
 }
 
 /**
- * Shows cents as euros with a comma decimal, for example 1290 becomes "12,90".
- * The comma format is a UI rule in CLAUDE.md (Portuguese style amounts).
- * No euro sign is added here; screens add it where the design shows one.
+ * Number style per currency. Euro amounts keep the Portuguese style of the approved design
+ * ("12,90 €"); every other currency uses the English style ("$12.90", "₦12.90").
+ * Fixed per currency rather than taken from the browser, so the server and the browser
+ * always print the same thing (SPEC.md rule 2b).
  */
-export function formatCents(cents: number): string {
+function localeFor(currency: string): string {
+  return currency === "EUR" ? "pt-PT" : "en-US";
+}
+
+/**
+ * Turns whole cents into an exact decimal string such as "-12.90". The string, not a
+ * floating point number, is what is handed to the number formatter, so no rounding can
+ * creep in (CLAUDE.md: never use floating point for money).
+ */
+function centsToDecimal(cents: number): string {
   if (!Number.isInteger(cents)) throw new Error("cents must be an integer");
   const sign = cents < 0 ? "-" : "";
   const abs = Math.abs(cents);
-  const euros = Math.floor(abs / 100);
-  const rest = String(abs % 100).padStart(2, "0");
-  return `${sign}${euros},${rest}`;
+  return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
+}
+
+/** Intl accepts exact decimal strings (ES2023), but the TypeScript types in use only list numbers. */
+type DecimalFormatter = { format(value: string): string };
+
+/**
+ * Shows cents as a plain amount in the group's number style, without a symbol.
+ * Example: 1290 becomes "12,90" for EUR and "12.90" for USD. Used where the screen shows
+ * the currency once, for example in a column heading.
+ */
+export function formatCents(cents: number, currency = "EUR"): string {
+  const f = new Intl.NumberFormat(localeFor(currency), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (f as unknown as DecimalFormatter).format(centsToDecimal(cents));
+}
+
+/**
+ * Shows cents with the group's currency symbol, for example "12,90 €", "$12.90" or "₦12.90"
+ * (SPEC.md rule 2b). Display only: the amount is never converted between currencies.
+ */
+export function formatMoney(cents: number, currency: string): string {
+  const f = new Intl.NumberFormat(localeFor(currency), {
+    style: "currency",
+    currency,
+    currencyDisplay: "narrowSymbol",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return (f as unknown as DecimalFormatter).format(centsToDecimal(cents));
 }

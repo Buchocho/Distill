@@ -44,6 +44,8 @@ export const users = pgTable("users", {
 /**
  * A household or any set of people who shop together (story US1).
  * The check below allows only valid close choices (SPEC.md rule 18), same as src/domain/ledgers.ts.
+ * currency (rule 2b) is display only; the list of allowed codes is in src/domain/currencies.ts.
+ * Groups made before the currency column existed get EUR.
  */
 export const groups = pgTable(
   "groups",
@@ -52,6 +54,7 @@ export const groups = pgTable(
     name: text("name").notNull(),
     closeRule: text("close_rule", { enum: ["month_end", "month_day", "weekly"] }).notNull(),
     closeDay: smallint("close_day"),
+    currency: text("currency").notNull().default("EUR"),
     inviteToken: text("invite_token").notNull().unique(),
     createdBy: uuid("created_by").notNull().references(() => users.id),
     createdAt: createdAt(),
@@ -63,6 +66,8 @@ export const groups = pgTable(
         or (${t.closeRule} = 'month_day' and ${t.closeDay} between 1 and 28)
         or (${t.closeRule} = 'weekly' and ${t.closeDay} between 0 and 6)`,
     ),
+    // Rule 2b: a three letter currency code. The full list is checked in the app.
+    check("groups_currency_code", sql`${t.currency} ~ '^[A-Z]{3}$'`),
   ],
 );
 

@@ -15,8 +15,8 @@ import type { AuthUser } from "@/server/auth";
 /**
  * Creates the user's row on first sign in and returns the stored user.
  *
- * Called on every page and API request. If the row already exists nothing is changed, so a
- * display name the user later edits (SPEC.md rule 1) is not overwritten by their Google name.
+ * Called on every page and API request. The Google name becomes the display name (SPEC.md rule 1).
+ * If the row already exists nothing is changed, so it keeps working if name editing is added later.
  */
 export async function ensureUser(auth: AuthUser) {
   await db

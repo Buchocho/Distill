@@ -13,6 +13,8 @@ import { requireUser } from "@/server/session";
 import { createGroup, joinByToken } from "@/server/services/groups";
 import { ServiceError } from "@/server/services/errors";
 import type { CloseRule } from "@/domain/ledgers";
+import { DEFAULT_CURRENCY } from "@/domain/currencies";
+import { isValidLocalDate, utcToday } from "@/domain/groups";
 
 /** What a form gets back when saving fails: a general message and one message per field. */
 export interface FormState {
@@ -30,9 +32,17 @@ export async function createGroupAction(_prev: FormState, form: FormData): Promi
   const rule = String(form.get("closeRule") ?? "") as CloseRule;
   const dayRaw = form.get("closeDay");
   const day = rule === "month_end" || dayRaw === null || dayRaw === "" ? null : Number(dayRaw);
+  // The device's local date, from a hidden field (rule 2c). The user cannot fix it, so a missing
+  // or impossible value falls back to the UTC date instead of showing an error.
+  const sentDate = String(form.get("localDate") ?? "");
+  const localToday = isValidLocalDate(sentDate) ? sentDate : utcToday();
   let groupId: string;
   try {
-    const group = await createGroup(user.id, { name: String(form.get("name") ?? ""), close: { rule, day } });
+    const group = await createGroup(user.id, {
+      name: String(form.get("name") ?? ""),
+      close: { rule, day },
+      currency: String(form.get("currency") ?? DEFAULT_CURRENCY),
+    }, localToday);
     groupId = group.id;
   } catch (e) {
     if (e instanceof ServiceError) return { error: e.message, fields: e.fields };

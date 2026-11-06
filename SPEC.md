@@ -36,15 +36,17 @@ Not in this MVP (should and could from Assignment 1): spending by category, dupl
 Term: a period in the app is stored as a ledger in the database.
 
 **Groups and members**
-1. Signing in uses a Google account. A new user can change their display name once signed in.
+1. Signing in uses a Google account. The name shown in the app is the user's Google name.
 2. The group creator is a member. Anyone with the invite link who signs in becomes a member.
+2b. The group chooses a currency when it is created (default euro). It is display only: amounts are shown in that currency and nothing is converted. Only currencies with two decimal places are offered, so money stays in whole cents. The currency cannot be changed after the group is created.
+2c. Dates follow the local date of the device doing the action (for example creating a group or scanning a receipt), not the server's date. No time zone is stored.
 3. Every member has the same rights. There is no admin.
 3a. After sign in, a user with no group sees a short choice: create a group or join one with a link. A user with a group goes straight to Home.
 
 **Receipts**
 4. Any member can add a receipt and choose who paid. The default is the person adding it.
 5. A receipt belongs to the period that is open when it is added, whatever date is printed on it.
-6. The reading step returns store, date, printed total, and items with name and price. Discount lines are items with a negative price.
+6. The reading step returns store, date, printed total, and items with name and price. Discount lines are items with a negative price. Tax printed as a separate line (for example US or Canadian sales tax) is an item, categorised and split like any other, so the items still sum to the printed total.
 7. Each item is given a category from the group's list. If none fits, the reading step may propose a new category name. A proposed category is created only when the receipt is saved; saving counts as confirming it. After that it is reused for later receipts. If the reading step cannot choose, the item is unsorted.
 8. The review screen shows the sum check: items total against printed total, and the difference if they do not match. The user can edit names and prices before saving.
 9. Saving is never blocked by unsorted items (US5).
@@ -88,7 +90,7 @@ All screens are designed at phone width first. Bottom tab bar on every screen in
 | 0a | Start: create a group or join one (first sign in, no group yet) | /start | US1 |
 | 0b | Join a group from an invite link | /join/[token] | US1 |
 | 0c | Home: landing page outside the tabs, three sections stacked dark to light: Receipts (scan), Categories (what needs a rule), Balance (your amount). Each shows a live one line status and opens its tab. Drawn stick figures with motion, no photos | /groups/[id] | US1 to US9 |
-| 1 | New group: name, members by invite link, close rule | /groups/new | US1, US6 |
+| 1 | New group: name, members by invite link, close rule, currency | /groups/new | US1, US6 |
 | 2 | Receipts: take a photo, choose a file, paid by, recent receipts with status | /groups/[id]/receipts | US2 |
 | 2a | Receipt photos: one or more sections, reorder, retake | /groups/[id]/receipts/capture | US2 |
 | 3 | Review receipt: header, items with price, category and who shares, sum check, save | /groups/[id]/receipts/[receiptId] | US2, US4, US5 |
@@ -129,6 +131,7 @@ Group "Rua das Flores 12" with members Ana, Rui and Sam. A seed script loads cat
 
 - Home section order per person: each member can reorder the three Home sections to put what matters to them first. For now the order is fixed: Receipts, Categories, Balance.
 - Notifications when a category is created or its rule changes.
+- Changing your display name (dropped from this MVP on 6 Nov; the Google name is used).
 - Rename or merge categories, duplicate receipt warning, spending by category, close date reminder, export of the payment record.
 
 ## 9. Open questions

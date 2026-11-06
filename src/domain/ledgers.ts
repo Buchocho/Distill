@@ -12,8 +12,9 @@
  * Business rules: SPEC.md rules 18 (close rule options), 19 (a period runs start to end
  * date inclusive, the next opens the following day), story US6.
  *
- * Dates are text in the form YYYY-MM-DD and are calculated in UTC, so a server in another
- * time zone gives the same answer. Pure functions. Tests: tests/unit/ledgers.test.ts
+ * Dates are text in the form YYYY-MM-DD and the calendar arithmetic is done in UTC, so a server
+ * in another time zone gives the same answer. The starting "today" must be the group's own date,
+ * the date on the user's device (SPEC.md rule 2c). Pure functions. Tests: tests/unit/ledgers.test.ts
  */
 
 /** The three ways a group can choose to close its accounts (SPEC.md rule 18). */

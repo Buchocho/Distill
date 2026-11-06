@@ -11,7 +11,7 @@
  *
  * Business rules: SPEC.md rules 2 (creator is a member; anyone with the link who signs in
  * joins), 3 (every member has the same rights, so there is no role check), 18 and 19
- * (the first period opens when the group is made).
+ * (the first period opens when the group is made), 2b (currency) and 2c (dates follow the device's local date).
  */
 
 import "server-only";
@@ -23,8 +23,6 @@ import { type NewGroupInput, validateNewGroup } from "@/domain/groups";
 import { firstLedger } from "@/domain/ledgers";
 import { ServiceError } from "./errors";
 
-/** Today's date as YYYY-MM-DD, in UTC, matching src/domain/ledgers.ts. */
-const todayIso = () => new Date().toISOString().slice(0, 10);
 /** Shape of a database id. A group id in the address that does not match is treated as not found. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A random, hard to guess invite code for the link /join/<token>. 18 random bytes, URL safe. */
@@ -50,12 +48,15 @@ export async function listMyGroups(userId: string) {
  * the group with its invite code, the creator as its first member (SPEC.md rule 2), and the
  * first open period, which runs from today to the first close date (SPEC.md rules 18, 19).
  *
+ * localToday is the date on the device creating the group (SPEC.md rule 2c), already checked by
+ * the caller, so the first period starts on the creator's own today rather than the UTC date.
+ *
  * Throws an "invalid" error with a message per field when the form is not valid.
  */
-export async function createGroup(userId: string, input: NewGroupInput) {
+export async function createGroup(userId: string, input: NewGroupInput, localToday: string) {
   const errors = validateNewGroup(input);
   if (Object.keys(errors).length > 0) throw new ServiceError("invalid", "Check the form.", errors);
-  const range = firstLedger(input.close, todayIso());
+  const range = firstLedger(input.close, localToday);
 
   return db.transaction(async (tx) => {
     const [group] = await tx
@@ -64,6 +65,7 @@ export async function createGroup(userId: string, input: NewGroupInput) {
         name: input.name.trim(),
         closeRule: input.close.rule,
         closeDay: input.close.day,
+        currency: input.currency,
         inviteToken: newInviteToken(),
         createdBy: userId,
       })
@@ -107,7 +109,7 @@ export async function getGroupForMember(userId: string, groupId: string) {
 
 /**
  * What someone opening an invite link sees before joining (screen 0b): the group name,
- * who is in it and when accounts close. Holding the link is the permission, so no
+ * who is in it, when accounts close and its currency. Holding the link is the permission, so no
  * membership check is made here. Only these few fields are returned, never the receipts.
  */
 export async function getInvite(token: string) {
@@ -119,7 +121,10 @@ export async function getInvite(token: string) {
     .innerJoin(users, eq(users.id, groupMembers.userId))
     .where(eq(groupMembers.groupId, group.id))
     .orderBy(asc(groupMembers.joinedAt));
-  return { group: { id: group.id, name: group.name, closeRule: group.closeRule, closeDay: group.closeDay }, members };
+  return {
+    group: { id: group.id, name: group.name, closeRule: group.closeRule, closeDay: group.closeDay, currency: group.currency },
+    members,
+  };
 }
 
 /**

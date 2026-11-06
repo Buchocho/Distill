@@ -1,7 +1,7 @@
 # Distill: business rules register
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 5 Nov 2026, end of build step 1 (sign in and groups).
+Last updated: 6 Nov 2026, build step 1 (sign in and groups), group currency added.
 
 Each business rule in SPEC.md section 4, whether it is built, and the files that enforce it. Rule numbers are the SPEC.md numbers, so a code comment that says "SPEC.md rule 15" points to the same row here.
 
@@ -15,8 +15,10 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
-| 1 | Sign in with Google; a user can change their display name | Partly built: sign in works; changing the display name is not built | `src/server/auth.ts`, `src/app/login`, `src/app/auth/callback/route.ts`, `src/server/services/users.ts` |
+| 1 | Sign in with Google; the Google name is shown | Built (changing the name was dropped on 6 Nov, now on the roadmap) | `src/server/auth.ts`, `src/app/login`, `src/app/auth/callback/route.ts`, `src/server/services/users.ts` |
 | 2 | The creator is a member; anyone with the invite link who signs in joins | Built | `src/server/services/groups.ts` (`createGroup`, `joinByToken`), `src/server/session.ts` (returns to the link after sign in) |
+| 2b | Group currency chosen at creation, cannot be changed, display only, two decimal currencies only | Built for creation and the API. Amounts on screens use it from step 2, through `formatMoney`. | `src/domain/currencies.ts`, `src/domain/money.ts` (`formatMoney`), `src/domain/groups.ts`, `groups_currency_code` in `src/server/db/schema.ts`, `src/app/groups/new/NewGroupForm.tsx` |
+| 2c | Dates follow the device's local date | Built for group creation (first period). Receipts send it from step 2; closing uses it from step 5. | `src/domain/groups.ts` (`isValidLocalDate`), `src/app/actions.ts`, `src/app/api/v1/groups/route.ts`, `src/app/groups/new/NewGroupForm.tsx` |
 | 3 | Every member has the same rights, no admin | Built (by design: there is no role to check) | `group_members` table in `src/server/db/schema.ts` |
 | 3a | No group after sign in goes to Start; otherwise Home | Built | `src/app/page.tsx`, `src/app/start/page.tsx` |
 
@@ -26,7 +28,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 |---|---|---|---|
 | 4 | Any member adds a receipt and chooses who paid | Not built (step 2) | |
 | 5 | A receipt belongs to the period open when it is added | Prepared: `receipts.ledger_id` | `src/server/db/schema.ts` |
-| 6 | Reading returns store, date, total and items; discounts are negative | Not built (step 2). Negative amounts already split correctly. | `src/domain/money.ts` |
+| 6 | Reading returns store, date, total and items; discounts are negative; tax lines are items | Not built (step 2). Negative amounts already split correctly. | `src/domain/money.ts` |
 | 7 | Items get a category; new ones are created when the receipt is saved | Prepared: category names unique per group | `src/server/db/schema.ts` |
 | 8 | Review shows items total against printed total | Not built (step 2) | |
 | 9 | Saving is never blocked by unsorted items | Not built (step 2) | |
@@ -87,4 +89,4 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 
 ## Points to watch
 
-- Dates are worked out in UTC. Portugal is on UTC in winter but UTC+1 in summer, so between midnight and 1:00 in summer the app still counts the previous day. This matters for which period a late night receipt joins. To decide before step 5.
+- Decided 6 Nov (rule 2c): dates follow the device's local date. Built for group creation; steps 2 and 5 must send and use it too. Members of one group in different time zones may see the date change at different times; accepted as simple enough.
