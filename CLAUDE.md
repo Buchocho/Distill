@@ -48,7 +48,8 @@ The readers are Maduabuchi and the teacher marking the build. Write for someone 
 
 - Design at 375 px wide first, then check at desktop width.
 - Tap targets at least 44 px. Text contrast at least WCAG AA.
-- Amounts shown as euros with a comma decimal: 12,90.
+- Amounts are shown in the group's currency with `formatMoney` or `formatCents` from `src/domain/money.ts` (SPEC.md rule 2b): euro as 12,90 €, other currencies as $12.90. Never format money anywhere else.
+- Dates come from the device's local date (SPEC.md rule 2c). Do not use the server's date for which period something belongs to.
 - Interface text is English, plain and short. No jargon.
 - Every screen has loading, empty and error states.
 - Bottom tab bar inside a group: Receipts, Categories, Balance.
