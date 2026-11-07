@@ -86,7 +86,7 @@ All screens are designed at phone width first. Bottom tab bar on every screen in
 
 | # | Screen | Route | Stories |
 |---|---|---|---|
-| 0 | Sign in, set display name | /login | US1 |
+| 0 | Sign in with Google | /login | US1 |
 | 0a | Start: create a group or join one (first sign in, no group yet) | /start | US1 |
 | 0b | Join a group from an invite link | /join/[token] | US1 |
 | 0c | Home: landing page outside the tabs, three sections stacked dark to light: Receipts (scan), Categories (what needs a rule), Balance (your amount). Each shows a live one line status and opens its tab. Drawn stick figures with motion, no photos | /groups/[id] | US1 to US9 |

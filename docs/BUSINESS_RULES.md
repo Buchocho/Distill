@@ -1,7 +1,7 @@
 # Distill: business rules register
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 6 Nov 2026, build step 1 (sign in and groups), group currency added.
+Last updated: 7 Nov 2026, build step 2 (scan, read, review and save).
 
 Each business rule in SPEC.md section 4, whether it is built, and the files that enforce it. Rule numbers are the SPEC.md numbers, so a code comment that says "SPEC.md rule 15" points to the same row here.
 
@@ -26,14 +26,14 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
-| 4 | Any member adds a receipt and chooses who paid | Not built (step 2) | |
-| 5 | A receipt belongs to the period open when it is added | Prepared: `receipts.ledger_id` | `src/server/db/schema.ts` |
-| 6 | Reading returns store, date, total and items; discounts are negative; tax lines are items | Not built (step 2). Negative amounts already split correctly. | `src/domain/money.ts` |
-| 7 | Items get a category; new ones are created when the receipt is saved | Prepared: category names unique per group | `src/server/db/schema.ts` |
-| 8 | Review shows items total against printed total | Not built (step 2) | |
-| 9 | Saving is never blocked by unsorted items | Not built (step 2) | |
-| 9a | Any number of photos; locked once saved | Prepared: `receipt_photos`, status `saved` | `src/server/db/schema.ts` |
-| 10 | A failed reading keeps the receipt with status "failed" for retry | Prepared: status `failed` | `src/server/db/schema.ts` |
+| 4 | Any member adds a receipt and chooses who paid | Built: Paid by on Receipts and on Review, default you; must be a member | `src/server/services/receipts.ts` (`startReceipt`, `saveReceipt`), `receipts/ScanPanel.tsx`, `ReviewForm.tsx` |
+| 5 | A receipt belongs to the period open when it is added | Built: the open period at the moment the receipt is started. Moving to the next period on the close date is step 5 | `startReceipt` in `src/server/services/receipts.ts` |
+| 6 | Reading returns store, date, total and items; discounts are negative; tax lines are items | Built: reading through Gemini, checked by `parseReading`; tax lines asked for as items in category Tax | `src/server/integrations/gemini.ts`, `src/domain/receipts.ts` (`parseReading`), `src/domain/money.ts` (`parseAmount`) |
+| 7 | Items get a category; new ones are created when the receipt is saved | Built: matched ignoring capitals, otherwise kept as `items.proposed_category` until save; a new name can also be typed | `src/domain/receipts.ts` (`matchCategory`), `saveReceipt`, `ReviewForm.tsx`, `categories_name_per_group` and `items_one_category` in `src/server/db/schema.ts` |
+| 8 | Review shows items total against printed total; names and prices editable | Built | `src/domain/receipts.ts` (`sumCheck`), `ReviewForm.tsx` |
+| 9 | Saving is never blocked by unsorted items | Built: Skip for now; unsorted count on Receipts and Home | `src/domain/receipts.ts` (`validateReview`), `saveReceipt`, `ReviewForm.tsx` |
+| 9a | Any number of photos; locked once saved | Partly built: one photo per receipt; saved receipts cannot be read or saved again. More photos are step 4 | `src/server/services/receipts.ts`, `src/server/db/schema.ts` |
+| 10 | A failed reading keeps the receipt with status "failed" for retry | Built: Retry reads the same photo again | `readReceipt` in `src/server/services/receipts.ts`, `ReadingStep.tsx` |
 
 ## Sharing (build step 3)
 
@@ -44,7 +44,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 13 | Any member changes an item's category; items always follow their category's rule | Not built (step 3) | |
 | 13a | A rule change applies to the open period only | Not built (step 3) | |
 | 14 | Every item change is logged and shown | Prepared: `item_changes` table | `src/server/db/schema.ts` |
-| 14a | Category creation and rule changes are logged and shown | Prepared: `category_changes` table | `src/server/db/schema.ts` |
+| 14a | Category creation and rule changes are logged and shown | Partly built: creation on save is logged. Rule changes and the history screen are step 3 | `saveReceipt` in `src/server/services/receipts.ts` |
 | 15 | Shares in cents, largest remainder rounding, always adds up to the price | Built and tested; not used by any screen yet | `src/domain/money.ts` (`splitCents`) |
 
 ## Balance (build step 3)

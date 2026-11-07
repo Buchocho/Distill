@@ -192,13 +192,21 @@ export const items = pgTable(
     name: text("name").notNull(),
     // Negative for discount lines.
     priceCents: integer("price_cents").notNull(),
-    // Null means unsorted.
+    // Null means unsorted, unless proposedCategory is set.
     categoryId: uuid("category_id").references(() => categories.id),
+    // A new category name suggested by the reading step, while the receipt is under review. It
+    // becomes a real category only when the receipt is saved, and is then cleared (SPEC.md rule 7).
+    proposedCategory: text("proposed_category"),
     // Null when set by the reading step.
     updatedBy: uuid("updated_by").references(() => users.id),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("items_receipt").on(t.receiptId), index("items_category").on(t.categoryId)],
+  (t) => [
+    index("items_receipt").on(t.receiptId),
+    index("items_category").on(t.categoryId),
+    // An item has an existing category or a proposed one, never both.
+    check("items_one_category", sql`${t.categoryId} is null or ${t.proposedCategory} is null`),
+  ],
 );
 
 /** History of edits to an item, shown to every member (SPEC.md rule 14, story US4). */

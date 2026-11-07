@@ -105,5 +105,6 @@ distill-app/
 ## 6. Decisions still open
 
 
-- Gemini model version: set through `GEMINI_MODEL`, chosen when the extraction service is built.
+- Gemini model: `gemini-3.5-flash-lite`, set through `GEMINI_MODEL` in Vercel (7 Nov 2026). Maduabuchi chose 2.5 Flash, but a test with the project's API key returned 404 for `gemini-2.5-flash` and `gemini-2.5-flash-lite` (Google limits the 2.5 models to projects that used them before) and success for `gemini-3.5-flash-lite`. If readings are poor, move up to a stronger model (for example `gemini-3.8-flash`) by changing the setting; no code change. One model only for now.
+- Photo bucket: `receipt-photos` in Supabase Storage, private, no policies, 10 MB limit, JPEG, PNG and WebP. Photos are resized in the browser to 2500 px on the long side before upload (`src/lib/photos.ts`).
 - Authentication for other applications calling the API: needed in a later assignment, not in this one.

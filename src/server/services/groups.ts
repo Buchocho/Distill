@@ -24,7 +24,7 @@ import { firstLedger } from "@/domain/ledgers";
 import { ServiceError } from "./errors";
 
 /** Shape of a database id. A group id in the address that does not match is treated as not found. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A random, hard to guess invite code for the link /join/<token>. 18 random bytes, URL safe. */
 const newInviteToken = () => randomBytes(18).toString("base64url");
 
@@ -77,6 +77,30 @@ export async function createGroup(userId: string, input: NewGroupInput, localTod
 }
 
 /**
+ * Stops with "not found" unless the user is a member of the group (architecture rule 4).
+ * Every service that reads or writes something inside a group calls this first, so the check
+ * is the same everywhere. A malformed group id is treated as not found.
+ */
+export async function assertMember(userId: string, groupId: string): Promise<void> {
+  if (!UUID.test(groupId)) throw new ServiceError("not_found", "Group not found.");
+  const [membership] = await db
+    .select()
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+  if (!membership) throw new ServiceError("not_found", "Group not found.");
+}
+
+/** True when the person is a member of the group. Used to check "paid by" (SPEC.md rule 4). */
+export async function isMember(userId: string, groupId: string): Promise<boolean> {
+  if (!UUID.test(userId)) return false;
+  const [row] = await db
+    .select()
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+  return Boolean(row);
+}
+
+/**
  * Loads a group with its members and its open period, for members only.
  *
  * A non member gets "not found" rather than "not allowed", so the app does not reveal that
@@ -85,12 +109,7 @@ export async function createGroup(userId: string, input: NewGroupInput, localTod
  */
 export async function getGroupForMember(userId: string, groupId: string) {
   // Membership check first: nothing about the group is read until this passes.
-  if (!UUID.test(groupId)) throw new ServiceError("not_found", "Group not found.");
-  const [membership] = await db
-    .select()
-    .from(groupMembers)
-    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
-  if (!membership) throw new ServiceError("not_found", "Group not found.");
+  await assertMember(userId, groupId);
 
   const [group] = await db.select().from(groups).where(eq(groups.id, groupId));
   const members = await db

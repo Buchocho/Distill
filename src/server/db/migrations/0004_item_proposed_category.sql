@@ -1,0 +1,2 @@
+ALTER TABLE "items" ADD COLUMN "proposed_category" text;--> statement-breakpoint
+ALTER TABLE "items" ADD CONSTRAINT "items_one_category" CHECK ("items"."category_id" is null or "items"."proposed_category" is null);

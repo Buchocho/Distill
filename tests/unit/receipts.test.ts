@@ -1,0 +1,105 @@
+/** Tests for src/domain/receipts.ts and parseAmount in src/domain/money.ts (SPEC.md rules 6 to 9). */
+import { describe, expect, it } from "vitest";
+import continente from "../fixtures/reading-continente.json";
+import usReceipt from "../fixtures/reading-us-tax-discount.json";
+import { parseAmount } from "@/domain/money";
+import { matchCategory, parseReading, receiptStatus, sumCheck, validateReview } from "@/domain/receipts";
+
+describe("parseAmount", () => {
+  it("reads both decimal styles", () => {
+    expect(parseAmount("12,90")).toBe(1290);
+    expect(parseAmount("12.90")).toBe(1290);
+    expect(parseAmount("1.234,50")).toBe(123450);
+    expect(parseAmount("1,234.50")).toBe(123450);
+    expect(parseAmount("12")).toBe(1200);
+    expect(parseAmount("0,5")).toBe(50);
+    expect(parseAmount("€ 12,90")).toBe(1290);
+  });
+  it("treats three digits after a separator as thousands", () => {
+    expect(parseAmount("1.234")).toBe(123400);
+  });
+  it("keeps the minus sign for discounts", () => {
+    expect(parseAmount("-1,10")).toBe(-110);
+    expect(parseAmount("-0")).toBe(0);
+  });
+  it("refuses text that is not an amount", () => {
+    expect(parseAmount("")).toBeNull();
+    expect(parseAmount("abc")).toBeNull();
+    expect(parseAmount("1-2")).toBeNull();
+    expect(parseAmount("9999999999")).toBeNull();
+  });
+});
+
+describe("parseReading", () => {
+  it("reads a clean Portuguese receipt", () => {
+    const r = parseReading(continente);
+    expect(r.storeName).toBe("Continente");
+    expect(r.purchaseDate).toBe("2026-09-10");
+    expect(r.totalCents).toBe(1290);
+    expect(r.items).toHaveLength(7);
+    expect(r.items[6]).toEqual({ name: "Saco Plastico", priceCents: 10, category: null });
+    expect(sumCheck(r.items.map((i) => i.priceCents), r.totalCents).differenceCents).toBe(0);
+  });
+  it("keeps discounts negative and tax as an item, drops broken lines and a false date", () => {
+    const r = parseReading(usReceipt);
+    expect(r.storeName).toBe("Trader Joe's");
+    expect(r.purchaseDate).toBeNull();
+    expect(r.items.map((i) => i.name)).toEqual(["Bananas", "Oat Milk", "Coffee Beans", "Member discount", "Sales tax"]);
+    expect(r.items[3].priceCents).toBe(-100);
+    expect(r.items[4]).toEqual({ name: "Sales tax", priceCents: 190, category: "Tax" });
+    expect(sumCheck(r.items.map((i) => i.priceCents), r.totalCents)).toEqual({ itemsCents: 2037, differenceCents: -100 });
+  });
+  it("throws when there is nothing usable, so the receipt can be retried", () => {
+    expect(() => parseReading(null)).toThrow();
+    expect(() => parseReading({ items: [] })).toThrow();
+    expect(() => parseReading({ items: [{ name: "x" }] })).toThrow();
+  });
+});
+
+describe("sumCheck", () => {
+  it("has no difference when the total is unknown", () => {
+    expect(sumCheck([100, 200], null)).toEqual({ itemsCents: 300, differenceCents: null });
+  });
+});
+
+describe("matchCategory", () => {
+  const cats = [{ id: "c1", name: "Eggs" }, { id: "c2", name: "Milk" }];
+  it("matches ignoring capitals and spaces", () => {
+    expect(matchCategory(" eggs ", cats)).toEqual({ categoryId: "c1", proposed: null });
+  });
+  it("proposes a new name, so oat milk is not filed as milk", () => {
+    expect(matchCategory("Oat milk", cats)).toEqual({ categoryId: null, proposed: "Oat milk" });
+  });
+  it("leaves an item with no name unsorted", () => {
+    expect(matchCategory(null, cats)).toBeNull();
+  });
+});
+
+describe("validateReview", () => {
+  const item = { name: "Bread", priceCents: 149, categoryId: null, proposedCategory: null };
+  it("allows unsorted items", () => {
+    expect(validateReview({ storeName: "Lidl", purchaseDate: null, items: [item] })).toEqual({});
+  });
+  it("flags empty names, bad dates and two categories on one line", () => {
+    const e = validateReview({
+      storeName: "Lidl",
+      purchaseDate: "2026-02-30",
+      items: [{ ...item, name: " " }, { ...item, categoryId: "c1", proposedCategory: "New" }],
+    });
+    expect(e.purchaseDate).toBeDefined();
+    expect(e["item.0"]).toBeDefined();
+    expect(e["item.1"]).toBeDefined();
+  });
+  it("needs at least one item", () => {
+    expect(validateReview({ storeName: "", purchaseDate: null, items: [] }).items).toBeDefined();
+  });
+});
+
+describe("receiptStatus", () => {
+  it("names what to do next", () => {
+    expect(receiptStatus("ready", 0).label).toBe("Review and save");
+    expect(receiptStatus("saved", 1)).toEqual({ label: "1 item unsorted", tone: "act" });
+    expect(receiptStatus("saved", 0).tone).toBe("done");
+    expect(receiptStatus("failed", 0).tone).toBe("error");
+  });
+});

@@ -87,3 +87,13 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Left out on purpose: currencies shown with no or three decimals (for example yen, CFA franc, Kuwaiti dinar) and withdrawn ones. A group's currency cannot be changed after creation (decided by Maduabuchi), so no edit is planned.
 - Verified: type check, lint, unit tests (new tests for the currency list, formatting and the device date check), production build. Not verifiable here: the migration on Supabase and the form on the deployed app; checked in the step 1 hand check.
 
+## 2026-11-07: step 1 closed (tentative), step 2 built: scan, read, review and save
+
+- Step 1 hand check by Maduabuchi: sign in, group creation with the currency choice and the earlier flows work. Called a tentative pass. Joining from a second account is not tested yet (only one Google account); to be checked when his brother joins, before the demo.
+- Setup done by Maduabuchi: private bucket `receipt-photos` (10 MB limit, raised from 5 MB after he raised the size of camera photos; JPEG, PNG, WebP; no policies). New Gemini API key in Vercel.
+- Model: he chose Gemini 2.5 Flash. A test from his computer gave 404 for gemini-2.5-flash and gemini-2.5-flash-lite and success for gemini-3.5-flash-lite, so `GEMINI_MODEL` is gemini-3.5-flash-lite (set in Vercel by Claude with his approval). One model for now; move up if readings are poor.
+- Prompts: "Use Flash 2.5"; "What about Gemini 2.5 flash-lite"; "I'm worried about this: Restrict file upload size"; "Please go ahead and set Gemini 3.5 flash lite in Vercel. Let's make progress."
+- Built: Receipts screen (take a photo, choose a file, paid by, recent receipts with status); photo shrunk in the browser and uploaded with a one time link; reading through Gemini with the group's category names; review screen (edit store, date, total, paid by, names and prices; choose, propose or skip categories; sum check); save (creates proposed categories and logs them); failed reading with Retry; saved receipt view; live Receipts line on Home. API routes for each action. Migration 0004 adds `items.proposed_category`.
+- Verified here: type check, lint, 46 unit tests (new: reading checks with two sample answers, amounts in both styles, sum check, category matching, save checks), 5 end to end tests (signed out only), production build. Not verifiable here: upload, Gemini reading and saving, because this environment cannot reach Supabase or Gemini. Checked by hand on the deployed app next.
+- Left open: changing items after saving, item change log and sharing rules (step 3); more photos per receipt (step 4); whether 2500 px is enough for long receipts.
+

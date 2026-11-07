@@ -3,7 +3,8 @@
  * Three stacked sections, dark to light, each opening its tab: Receipts, Categories, Balance
  * (approved design, canvas "Distill screens" page v2). No amounts are shown on Home by design;
  * the Balance section only says when the period closes.
- * The status lines are placeholders until receipts and categories are built (steps 2 and 3).
+ * The Receipts status line is live: no receipts yet, receipts waiting for review, unsorted items,
+ * or all sorted (SPEC.md rule 9). The Categories line is a placeholder until step 3.
  */
 
 import Link from "next/link";
@@ -13,6 +14,7 @@ import { Icon } from "@/components/Icon";
 import { requireUser } from "@/server/session";
 import { groupOr404 } from "@/server/pageData";
 import { daysUntil } from "@/domain/ledgers";
+import { listReceipts } from "@/server/services/receipts";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,14 @@ export default async function Home({ params }: { params: Promise<{ groupId: stri
   const user = await requireUser(`/groups/${groupId}`);
   const { group, openLedger } = await groupOr404(user.id, groupId);
   const first = user.name.split(" ")[0];
+  const recent = await listReceipts(user.id, groupId);
+  const toReview = recent.filter((r) => r.status === "ready").length;
+  const unsorted = recent.filter((r) => r.status === "saved").reduce((n, r) => n + r.unsortedCount, 0);
+  const receiptsLine =
+    recent.length === 0 ? "No receipts yet"
+    : toReview > 0 ? `${toReview} receipt${toReview === 1 ? "" : "s"} to review`
+    : unsorted > 0 ? `${unsorted} item${unsorted === 1 ? "" : "s"} without a category`
+    : "All receipts sorted";
   const today = new Date().toISOString().slice(0, 10);
   const daysLeft = openLedger ? daysUntil(today, openLedger.endsOn) : null;
   const month = openLedger ? new Date(`${openLedger.endsOn}T00:00:00Z`).toLocaleString("en-GB", { month: "long", timeZone: "UTC" }) : "";
@@ -46,7 +56,7 @@ export default async function Home({ params }: { params: Promise<{ groupId: stri
         <div className="z-10 flex flex-1 flex-col gap-2">
           <span className="text-xs font-bold tracking-[1.4px] text-sand">RECEIPTS</span>
           <span className="text-2xl font-extrabold leading-tight tracking-tight">Bought something?<br />Scan it.</span>
-          <span className="text-[13px] text-sand">No receipts yet</span>
+          <span className="text-[13px] text-sand">{receiptsLine}</span>
           <span className={`${pill} bg-orange text-ink`}><Icon name="camera" size={18} strokeWidth={2.2} />Scan receipt</span>
         </div>
         <CartFigure />

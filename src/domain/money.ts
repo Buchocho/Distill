@@ -9,8 +9,9 @@
  * the parts must add up to the item price exactly, or the balance drifts by a cent.
  * CLAUDE.md forbids a second rounding function: if splitting changes, change it here.
  *
- * Business rules: SPEC.md rule 15 (shares in cents, largest remainder method) and rule 2b
- * (amounts are shown in the group's currency; display only, nothing is converted).
+ * Business rules: SPEC.md rule 15 (shares in cents, largest remainder method), rule 2b
+ * (amounts are shown in the group's currency; display only, nothing is converted) and rule 8
+ * (the user can correct prices on the review screen, typed with a comma or a point).
  * Pure functions: no database, network or framework code. Tests: tests/unit/money.test.ts
  */
 
@@ -114,3 +115,38 @@ export function formatMoney(cents: number, currency: string): string {
   });
   return (f as unknown as DecimalFormatter).format(centsToDecimal(cents));
 }
+
+/**
+ * Turns an amount typed by a person or printed on a receipt into whole cents, or null if it is
+ * not an amount. Used for prices read by Gemini and prices corrected on the review screen
+ * (SPEC.md rules 6 and 8).
+ *
+ * Accepts both styles, because groups use different currencies (rule 2b): "12,90", "12.90",
+ * "1.234,50", "1,234.50", "-1,10" (a discount, rule 6), "12" and "€ 12,90". The last comma or
+ * point counts as the decimal mark only when one or two digits follow it; otherwise it is a
+ * thousands separator, so "1.234" is 1234,00. Worked on the text itself, never as a floating
+ * point number (CLAUDE.md).
+ */
+export function parseAmount(text: string): number | null {
+  // Keep only digits, separators and a minus sign; currency symbols and spaces are dropped.
+  let t = text.trim().replace(/[^0-9.,\-]/g, "");
+  let negative = false;
+  if (t.startsWith("-")) {
+    negative = true;
+    t = t.slice(1);
+  }
+  if (t.length === 0 || !/^[0-9.,]+$/.test(t)) return null;
+  const last = Math.max(t.lastIndexOf("."), t.lastIndexOf(","));
+  let whole = t;
+  let fraction = "";
+  if (last >= 0 && t.length - last - 1 >= 1 && t.length - last - 1 <= 2) {
+    whole = t.slice(0, last);
+    fraction = t.slice(last + 1);
+  }
+  whole = whole.replace(/[.,]/g, "");
+  if (whole.length === 0) whole = "0";
+  if (!/^[0-9]+$/.test(whole) || whole.length > 9) return null;
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+  return cents === 0 ? 0 : negative ? -cents : cents;
+}
+
