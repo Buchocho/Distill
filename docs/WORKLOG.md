@@ -121,3 +121,11 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Verified: type check, lint, 58 unit tests, end to end tests, build, and a browser render of the warning, the unsorted state and the underlined link with sample data. Not verifiable here: real readings of dates and receipt numbers.
 - Left open: how reliably Gemini reads receipt numbers on real receipts.
 
+## 2026-11-09 (late): duplicate check missed a receipt
+
+- Found by Maduabuchi: a Continente receipt saved, then scanned again, could be saved a second time with no block or warning. The saved copy had number FS AMM004/514739; the new scan read FS AMW004/514739 (one letter misread).
+- Cause: the block worked as written (the numbers differ). The logic error was that the store, date and total warning ran only when one receipt had no number, so two different numbers were taken to mean two different receipts.
+- Changed (he asked for the trace plus the store, date and total check "in case a cropped receipt is added"): the warning now runs whenever store, date and total match, whatever the numbers say; store names are compared without accents, capitals or punctuation (`storeKey`). SPEC rule 9c updated.
+- Verified: type check, lint, 60 unit tests (new: the AMM/AMW case, accents), end to end tests, build.
+- Left open: misread letters in receipt numbers cannot be prevented by instructions; the warning is the safety net.
+

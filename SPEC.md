@@ -52,7 +52,7 @@ Term: a period in the app is stored as a ledger in the database.
 9. Saving is never blocked by unsorted items (US5).
 9a. A receipt can have any number of photos. Once it is saved into the ledger, no photos can be added or removed.
 9b. A receipt that is not saved yet can be deleted with its photo, after a confirm step. A saved receipt cannot be deleted.
-9c. The reading step also returns the receipt's own number (document or transaction number, not a tax number). A receipt with the same store and receipt number as a saved receipt in the group cannot be saved. Without a number to compare, a receipt with the same store, date and total as a saved one shows a warning, and the person can delete it or save it anyway.
+9c. The reading step also returns the receipt's own number (document or transaction number, not a tax number). A receipt with the same store and receipt number as a saved receipt in the group cannot be saved. Otherwise, a receipt with the same store, date and total as a saved one shows a warning, even when the receipt numbers differ (a number can be misread or cropped), and the person can delete it or save it anyway. Store names are compared without accents, capitals or punctuation.
 10. If reading fails, the receipt is kept with its photos and status "failed", and the user can retry.
 
 **Sharing**

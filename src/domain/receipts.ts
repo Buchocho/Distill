@@ -199,10 +199,21 @@ export interface DuplicateFacts {
 }
 
 /**
+ * A store name in a form that can be compared: no accents, capitals, punctuation or extra spaces.
+ * "Intermarché" and "INTERMARCHE" give the same key.
+ */
+export function storeKey(name: string): string {
+  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/**
  * Looks for this receipt among the group's saved receipts (SPEC.md rule 9c, agreed 9 Nov 2026).
  * - "block": same store and same receipt number. It is the same piece of paper; it cannot be saved.
- * - "warn": no number to compare (on either side), but same store, date and total. Probably the
- *   same receipt, but two genuine identical shops happen, so the person decides.
+ * - "warn": same store, date and total, whatever the receipt numbers say. Probably the same
+ *   receipt, but two genuine identical shops happen, so the person decides.
+ * The warning runs even when both receipts have different numbers, because a number can be
+ * misread: in testing the same Continente receipt was read once as FS AMM004/514739 and once as
+ * FS AMW004/514739. It also covers a cropped photo where the number is missing.
  * A receipt number is unique per shop, not across shops, so the store must match too.
  * Returns the first saved receipt that matches, or null.
  */
@@ -210,17 +221,16 @@ export function findDuplicate<T extends DuplicateFacts>(
   current: DuplicateFacts,
   saved: readonly T[],
 ): { kind: "block" | "warn"; match: T } | null {
-  const store = current.storeName ? categoryKey(current.storeName) : null;
+  const store = current.storeName ? storeKey(current.storeName) : "";
   if (!store) return null;
   const number = receiptNumberKey(current.receiptNumber);
-  const sameStore = saved.filter((s) => s.storeName && categoryKey(s.storeName) === store);
+  const sameStore = saved.filter((s) => s.storeName && storeKey(s.storeName) === store);
   if (number) {
     const exact = sameStore.find((s) => receiptNumberKey(s.receiptNumber) === number);
     if (exact) return { kind: "block", match: exact };
   }
   const similar = sameStore.find(
     (s) =>
-      (!number || !receiptNumberKey(s.receiptNumber)) &&
       current.purchaseDate !== null &&
       s.purchaseDate === current.purchaseDate &&
       current.totalCents !== null &&

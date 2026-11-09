@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import continente from "../fixtures/reading-continente.json";
 import usReceipt from "../fixtures/reading-us-tax-discount.json";
 import { parseAmount } from "@/domain/money";
-import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, sumCheck, validateReview } from "@/domain/receipts";
+import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, storeKey, sumCheck, validateReview } from "@/domain/receipts";
 
 describe("parseAmount", () => {
   it("reads both decimal styles", () => {
@@ -131,7 +131,18 @@ describe("findDuplicate", () => {
     const r = findDuplicate({ storeName: "Lidl", purchaseDate: "2026-10-20", totalCents: 1000, receiptNumber: "X1" }, saved);
     expect(r?.kind).toBe("warn");
   });
-  it("does not warn when both receipts have different numbers", () => {
-    expect(findDuplicate({ storeName: "Intermarché", purchaseDate: "2026-10-18", totalCents: 2345, receiptNumber: "FS 9999/1" }, saved)).toBeNull();
+  it("still warns when the numbers differ but store, date and total match (a misread number)", () => {
+    const misread = { storeName: "Continente", purchaseDate: "2026-11-08", totalCents: 1290, receiptNumber: "FS AMM004/514739" };
+    const r = findDuplicate({ ...misread, receiptNumber: "FS AMW004/514739" }, [{ id: "c", ...misread }]);
+    expect(r?.kind).toBe("warn");
+  });
+  it("does not match a different shop on another day", () => {
+    expect(findDuplicate({ storeName: "Intermarché", purchaseDate: "2026-10-19", totalCents: 2345, receiptNumber: "FS 9999/1" }, saved)).toBeNull();
+  });
+  it("compares store names without accents or punctuation", () => {
+    expect(storeKey("Intermarché")).toBe(storeKey("INTERMARCHE"));
+    expect(storeKey("Pingo-Doce ")).toBe("pingo doce");
+    const r = findDuplicate({ storeName: "Intermarche", purchaseDate: null, totalCents: null, receiptNumber: "FS 0123/4567" }, saved);
+    expect(r?.kind).toBe("block");
   });
 });

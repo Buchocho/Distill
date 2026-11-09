@@ -34,7 +34,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 9 | Saving is never blocked by unsorted items | Built: Leave unsorted in the category dropdown; unsorted count on Receipts and Home | `src/domain/receipts.ts` (`validateReview`), `saveReceipt`, `ReviewForm.tsx` |
 | 9a | Any number of photos; locked once saved | Partly built: one photo per receipt; saved receipts cannot be read or saved again. More photos are step 4 | `src/server/services/receipts.ts`, `src/server/db/schema.ts` |
 | 9b | An unsaved receipt can be deleted with its photo; a saved one cannot | Built | `deleteReceipt` in `src/server/services/receipts.ts`, `DeleteReceipt.tsx`, `src/server/integrations/storage.ts` (`deletePhotos`) |
-| 9c | Same store and receipt number cannot be saved twice; same store, date and total warns | Built | `src/domain/receipts.ts` (`findDuplicate`), `saveReceipt` and `savedReceiptsFor` in `src/server/services/receipts.ts`, `ReviewForm.tsx`, `receipts.receipt_number` |
+| 9c | Same store and receipt number cannot be saved twice; same store, date and total warns, even with different numbers | Built | `src/domain/receipts.ts` (`findDuplicate`), `saveReceipt` and `savedReceiptsFor` in `src/server/services/receipts.ts`, `ReviewForm.tsx`, `receipts.receipt_number` |
 | 10 | A failed reading keeps the receipt with status "failed" for retry | Built: Retry reads the same photo again | `readReceipt` in `src/server/services/receipts.ts`, `ReadingStep.tsx` |
 
 ## Sharing (build step 3)
