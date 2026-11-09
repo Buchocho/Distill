@@ -1,8 +1,8 @@
 /**
  * Receipt photo storage (Supabase Storage, private bucket "receipt-photos").
  *
- * What it holds: making a one time upload link, downloading a photo for reading, and making a
- * short lived link so a member can look at a photo.
+ * What it holds: making a one time upload link, downloading a photo for reading, making a
+ * short lived link so a member can look at a photo, and removing photos of a deleted receipt.
  *
  * Why it matters: photos go straight from the phone to storage, not through the app's server,
  * which limits request size (architecture rule 6). The bucket is private and has no policies, so
@@ -47,7 +47,14 @@ export async function downloadPhoto(path: string): Promise<{ bytes: Buffer; mime
   return { bytes: Buffer.from(await data.arrayBuffer()), mimeType: data.type || "image/jpeg" };
 }
 
-/** A link to view a photo, valid for 10 minutes, for the review screen. */
+/** Removes stored photos, used when an unsaved receipt is deleted. */
+export async function deletePhotos(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  const { error } = await admin().storage.from(PHOTO_BUCKET).remove(paths);
+  if (error) throw new Error(`Photo delete failed: ${error.message}`);
+}
+
+/** A link to view a photo, valid for 10 minutes. Made at the moment the photo is opened. */
 export async function viewLink(path: string): Promise<string | null> {
   const { data } = await admin().storage.from(PHOTO_BUCKET).createSignedUrl(path, 600);
   return data?.signedUrl ?? null;

@@ -14,10 +14,12 @@ import { ensureUser } from "@/server/services/users";
 /**
  * Returns the signed in user, or sends the browser to /login with a note to come back to
  * `nextPath` afterwards. Also makes sure the user's row exists in the database.
+ * The name returned is the one stored in Distill, which the person may have changed
+ * (SPEC.md rule 1), not the Google name.
  */
 export async function requireUser(nextPath: string): Promise<AuthUser> {
   const user = await currentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`);
-  await ensureUser(user);
-  return user;
+  const row = await ensureUser(user);
+  return { ...user, name: row.displayName };
 }

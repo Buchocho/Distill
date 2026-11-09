@@ -3,8 +3,8 @@
  *
  * Shows a receipt in whichever state it is in:
  * - being read (draft or reading): ReadingStep starts or waits for the reading;
- * - failed: ReadingStep shows Retry (SPEC.md rule 10);
- * - ready: ReviewForm, to check, correct and save (rules 6 to 9);
+ * - failed: ReadingStep shows Retry (SPEC.md rule 10) and Delete (rule 9b);
+ * - ready: ReviewForm, to check, correct, save or delete (rules 6 to 9b);
  * - saved: the saved items with their categories, read only. Changing items after saving
  *   (story US4, with the change log) is built in step 3.
  * Dark like the rest of the Receipts journey (approved design, Review2). Members only.
@@ -17,9 +17,9 @@ import { TabBar } from "@/components/TabBar";
 import { requireUser } from "@/server/session";
 import { getReceipt } from "@/server/services/receipts";
 import { ServiceError } from "@/server/services/errors";
-import { formatCents, formatMoney } from "@/domain/money";
+import { formatMoney } from "@/domain/money";
 import { ReadingStep } from "./ReadingStep";
-import { ReviewForm } from "./ReviewForm";
+import { longDate, ReviewForm } from "./ReviewForm";
 
 export const dynamic = "force-dynamic";
 
@@ -53,13 +53,13 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
       </header>
       <div className="flex flex-1 flex-col gap-2.5 px-3 pt-1">
         {(receipt.status === "draft" || receipt.status === "reading" || receipt.status === "failed") && (
-          <ReadingStep receiptId={receipt.id} status={receipt.status} />
+          <ReadingStep receiptId={receipt.id} groupId={groupId} status={receipt.status} />
         )}
 
         {receipt.status === "ready" && (
           <ReviewForm receiptId={receipt.id} groupId={groupId} currency={currency} storeName={receipt.storeName}
             purchaseDate={receipt.purchaseDate} totalCents={receipt.totalCents} paidBy={receipt.paidBy} me={user.id}
-            items={data.items} categories={data.categories} members={data.members} photoLinks={data.photoLinks} />
+            items={data.items} categories={data.categories} members={data.members} photoCount={data.photoCount} />
         )}
 
         {receipt.status === "saved" && (
@@ -70,19 +70,22 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
                 {receipt.totalCents !== null && <span className="text-[22px] font-extrabold tabular-nums">{formatMoney(receipt.totalCents, currency)}</span>}
               </div>
               <div className="flex items-center justify-between text-[13px] text-sand">
-                <span>{receipt.purchaseDate ?? "No date"} · Paid by {payer}</span>
-                {data.photoLinks[0] && <a href={data.photoLinks[0]} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center font-bold text-orange">See photo</a>}
+                <span>{receipt.purchaseDate ? longDate(receipt.purchaseDate) : "No date"} · Paid by {payer}</span>
+                {data.photoCount > 0 && <a href={`/api/v1/receipts/${receipt.id}/photos/1`} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center font-bold text-orange">See photo</a>}
               </div>
             </div>
             <ul className="rounded-2xl bg-dark-card px-4">
               {data.items.map((item) => (
                 <li key={item.id} className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 border-b border-dark-line py-2.5 last:border-0">
                   <span className="text-[15px] font-bold">{item.name}</span>
-                  <span className="text-[15px] font-bold tabular-nums">{formatCents(item.priceCents, currency)}</span>
+                  <span className="text-[15px] font-bold tabular-nums">{formatMoney(item.priceCents, currency)}</span>
                   {item.categoryId ? (
                     <span className="text-[13px] text-sand">{categoryName.get(item.categoryId)}</span>
                   ) : (
                     <span className="inline-flex h-[26px] w-fit items-center rounded-full bg-orange px-2.5 text-xs font-bold text-ink">No category</span>
+                  )}
+                  {item.discountCents !== null && (
+                    <span className="text-right text-[13px] text-sand">Discount {formatMoney(item.discountCents, currency)}</span>
                   )}
                 </li>
               ))}

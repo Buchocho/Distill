@@ -3,12 +3,41 @@
   "date": "2026-09-10",
   "total": "12.90",
   "items": [
-    { "name": "Pao de Forma", "price": "1.49", "category": "Bread" },
-    { "name": "Ovos Classe L", "price": "3.29", "category": "eggs" },
-    { "name": "Nectar Laranja", "price": "1.19", "category": "Drinks" },
-    { "name": "Leite Mimosa", "price": "2.95", "category": "Milk" },
-    { "name": "Cafe Delta", "price": "2.80", "category": "Coffee" },
-    { "name": "Snack Twix", "price": "1.08", "category": "Snacks" },
-    { "name": "Saco Plastico", "price": "0.10", "category": null }
+    {
+      "name": "Pao de Forma",
+      "price": "1.49",
+      "category": "Bread"
+    },
+    {
+      "name": "Ovos Classe L",
+      "price": "3.29",
+      "category": "eggs"
+    },
+    {
+      "name": "Nectar Laranja",
+      "price": "1.19",
+      "category": "Drinks"
+    },
+    {
+      "name": "Leite Mimosa",
+      "price": "2.95",
+      "category": "Milk"
+    },
+    {
+      "name": "Cafe Delta",
+      "price": "2.80",
+      "category": "Coffee"
+    },
+    {
+      "name": "Snack Twix",
+      "price": "1.08",
+      "category": "Snacks",
+      "discount": "0.37"
+    },
+    {
+      "name": "Saco Plastico",
+      "price": "0.10",
+      "category": null
+    }
   ]
 }

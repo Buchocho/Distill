@@ -10,8 +10,9 @@
  * (parseReading) checks it. Called only from the server, so the API key never reaches the browser
  * (architecture rule 7). Tests never call this; they use the sample answers in tests/fixtures.
  *
- * Business rules: SPEC.md rules 6 (what is read; discounts negative; tax lines are items) and
- * 7 (category from the group's list, or a proposed new one).
+ * Business rules: SPEC.md rules 6 (what is read; an item's discount is attached to it and its
+ * price is what was paid; tax lines are items) and 7 (category at product type level, from the
+ * group's list or a proposed new one).
  */
 
 import "server-only";
@@ -29,7 +30,8 @@ const RESPONSE_SCHEMA = {
         type: "OBJECT",
         properties: {
           name: { type: "STRING" },
-          price: { type: "STRING", description: "Line price, digits with a point; negative for discounts" },
+          price: { type: "STRING", description: "Price paid for this item after its own discount, digits with a point" },
+          discount: { type: "STRING", nullable: true, description: "Discount on this item, digits with a point, or null" },
           category: { type: "STRING", nullable: true },
         },
         required: ["name", "price"],
@@ -46,12 +48,29 @@ function instructions(categoryNames: readonly string[]): string {
     "You read shop receipts for an app that splits shared shopping between people.",
     "Return the store name, the purchase date (YYYY-MM-DD), the final total paid, and every line item.",
     "Write each item name as printed. Write amounts with digits and a point, for example 12.90.",
-    "A discount or coupon line is its own item with a negative price.",
+    "",
+    "Discounts on an item are never items of their own. Attach each one to the item it belongs to:",
+    "- price is what was actually paid for that item after its discount;",
+    "- discount is the amount taken off, as a positive number, or null if there was none.",
+    "Shops print discounts in two ways; give the same result for both:",
+    "- the item line already shows the reduced price and a discount line follows for information",
+    "  (for example Snack Twix 1.08 then Desconto 0.37): price 1.08, discount 0.37;",
+    "- the item line shows the full price and a discount line takes money off",
+    "  (for example Snack Twix 1.45 then Discount -0.37): price 1.08, discount 0.37.",
+    "Check which way the receipt works: the item prices must add up to the final total.",
+    "A discount on the whole receipt that belongs to no item (a voucher, a coupon on the total)",
+    "is its own item with a negative price.",
     "Tax printed on its own line (for example sales tax or GST) is its own item with the category Tax.",
     "Do not list subtotals, payment lines, change or loyalty points as items.",
-    "Give each item a category. Use one of the group's categories below when it fits, written exactly as listed.",
-    "If none fits, propose a short new category for that kind of product, in English, for example Oat milk.",
-    "Keep categories specific: oat milk and milk are different categories.",
+    "",
+    "Give each item a category at the level of the product type: what the thing is, not where the",
+    "shop puts it and not its brand. The people sharing decide who pays for each category, so",
+    "products that one person might buy only for themselves must be in their own category.",
+    "Good: Cola, Orange juice, Apple juice, Milk, Oat milk, Chocolate bars, Popcorn, Bread, Eggs.",
+    "Too broad (never use shop aisles or sections): Soft drinks, Drinks, Dairy, Snacks, Bakery.",
+    "Too narrow (never use brands or pack sizes): Coca-Cola 1.5L, Compal Laranja.",
+    "Use one of the group's categories below when it is the same product type, written exactly as listed.",
+    "If none is, propose a new category in English at the level above.",
     "If you cannot tell what an item is, set its category to null.",
     "If something cannot be read, set it to null rather than guessing.",
     "",

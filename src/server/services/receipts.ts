@@ -2,7 +2,8 @@
  * Receipts service: everything that reads or writes receipts, their photos and their items.
  *
  * What it holds: list a group's receipts, start a receipt and get an upload link for its photo,
- * read the photo with Gemini, load a receipt for review, and save it.
+ * read the photo with Gemini, load a receipt for review, give a fresh link to its photo, save it,
+ * and delete it while it is not yet saved.
  *
  * Why it matters: this is the scan, review and save flow of stories US2 and US5. A receipt goes
  * draft (photo being uploaded) -> reading -> ready (under review) -> saved, or to failed with a
@@ -12,7 +13,8 @@
  * Business rules: SPEC.md rules 4 (any member adds a receipt and chooses who paid), 5 (a receipt
  * belongs to the period open when it is added), 6 to 9 (reading, categories, sum check, saving
  * never blocked by unsorted items), 9a (photos locked once saved), 10 (failed readings can be
- * retried) and 14a (creating a category is logged).
+ * retried) and 14a (creating a category is logged). Deleting an unsaved receipt and its photo was
+ * agreed with Maduabuchi on 9 Nov 2026 (rule 9b); saved receipts cannot be deleted.
  * Step 2 handles one photo per receipt; more photos come in step 4.
  */
 
@@ -22,7 +24,7 @@ import { db } from "@/server/db/client";
 import { categories, categoryChanges, groups, items, ledgers, receiptPhotos, receipts, users } from "@/server/db/schema";
 import { categoryKey, matchCategory, parseReading, type ReviewItem, validateReview } from "@/domain/receipts";
 import { readReceiptPhotos } from "@/server/integrations/gemini";
-import { createUploadLink, downloadPhoto, photoPath, viewLink } from "@/server/integrations/storage";
+import { createUploadLink, deletePhotos, downloadPhoto, photoPath, viewLink } from "@/server/integrations/storage";
 import { assertMember, getGroupForMember, isMember, UUID } from "./groups";
 import { ServiceError } from "./errors";
 
@@ -135,6 +137,7 @@ export async function readReceipt(userId: string, receiptId: string): Promise<{ 
             position: i + 1,
             name: item.name,
             priceCents: item.priceCents,
+            discountCents: item.discountCents,
             categoryId: match?.categoryId ?? null,
             proposedCategory: match?.proposed ?? null,
           };
@@ -155,8 +158,8 @@ export async function readReceipt(userId: string, receiptId: string): Promise<{ 
 
 /**
  * Everything the review screen (screen 3) needs: the receipt, its items in printed order, the
- * group's categories and members to choose from, the group's currency (rule 2b) and a short lived
- * link to each photo.
+ * group's categories and members to choose from, the group's currency (rule 2b) and how many photos
+ * it has. Photo links are not made here: they expire, so each is made when it is tapped (photoLink).
  */
 export async function getReceipt(userId: string, receiptId: string) {
   const receipt = await receiptForMember(userId, receiptId);
@@ -167,11 +170,7 @@ export async function getReceipt(userId: string, receiptId: string) {
     .from(categories)
     .where(eq(categories.groupId, receipt.groupId))
     .orderBy(asc(categories.name));
-  const photos = await db
-    .select()
-    .from(receiptPhotos)
-    .where(eq(receiptPhotos.receiptId, receiptId))
-    .orderBy(asc(receiptPhotos.position));
+  const [{ photoCount }] = await db.select({ photoCount: count() }).from(receiptPhotos).where(eq(receiptPhotos.receiptId, receiptId));
   const { members } = await getGroupForMember(userId, receipt.groupId);
   return {
     receipt,
@@ -179,8 +178,39 @@ export async function getReceipt(userId: string, receiptId: string) {
     items: lines,
     categories: groupCategories,
     members,
-    photoLinks: await Promise.all(photos.map((p) => viewLink(p.storagePath))),
+    photoCount,
   };
+}
+
+/**
+ * A fresh link to one photo of a receipt, made at the moment it is asked for, for members only.
+ * The link lasts 10 minutes; because a new one is made on every tap, an old page never shows an
+ * expired link (issue found in testing on 7 Nov 2026).
+ */
+export async function photoLink(userId: string, receiptId: string, position: number): Promise<string> {
+  const receipt = await receiptForMember(userId, receiptId);
+  const [photo] = await db
+    .select()
+    .from(receiptPhotos)
+    .where(and(eq(receiptPhotos.receiptId, receipt.id), eq(receiptPhotos.position, position)));
+  const link = photo ? await viewLink(photo.storagePath) : null;
+  if (!link) throw new ServiceError("not_found", "Photo not found.");
+  return link;
+}
+
+/**
+ * Deletes a receipt that has not been saved, with its items and its photos (SPEC.md rule 9b).
+ * For a wrong photo, a test, or a receipt that cannot be read. A saved receipt is part of its
+ * period's balance and cannot be deleted. The database row goes first, so if removing the photo
+ * file fails the receipt is still gone for every member; the file is then only orphaned storage.
+ */
+export async function deleteReceipt(userId: string, receiptId: string): Promise<void> {
+  const receipt = await receiptForMember(userId, receiptId);
+  if (receipt.status === "saved") throw new ServiceError("invalid", "A saved receipt cannot be deleted.");
+  const photos = await db.select().from(receiptPhotos).where(eq(receiptPhotos.receiptId, receiptId));
+  // Photos and items are removed with the receipt (cascade in the database).
+  await db.delete(receipts).where(and(eq(receipts.id, receiptId), ne(receipts.status, "saved")));
+  await deletePhotos(photos.map((p) => p.storagePath)).catch((error) => console.error("Photo delete failed", receiptId, error));
 }
 
 /** What the review screen sends when Save receipt is tapped. */
@@ -264,6 +294,7 @@ export async function saveReceipt(userId: string, receiptId: string, input: Save
         position: i + 1,
         name: item.name.trim(),
         priceCents: item.priceCents,
+        discountCents: item.discountCents,
         categoryId: item.categoryId ?? (item.proposedCategory ? idByKey.get(categoryKey(item.proposedCategory)) ?? null : null),
         proposedCategory: null,
       })),

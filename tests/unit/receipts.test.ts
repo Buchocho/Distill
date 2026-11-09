@@ -37,17 +37,21 @@ describe("parseReading", () => {
     expect(r.purchaseDate).toBe("2026-09-10");
     expect(r.totalCents).toBe(1290);
     expect(r.items).toHaveLength(7);
-    expect(r.items[6]).toEqual({ name: "Saco Plastico", priceCents: 10, category: null });
+    expect(r.items[6]).toEqual({ name: "Saco Plastico", priceCents: 10, discountCents: null, category: null });
+    // The Twix line is already the price paid; its discount is kept for information only.
+    expect(r.items[5]).toMatchObject({ name: "Snack Twix", priceCents: 108, discountCents: 37 });
     expect(sumCheck(r.items.map((i) => i.priceCents), r.totalCents).differenceCents).toBe(0);
   });
-  it("keeps discounts negative and tax as an item, drops broken lines and a false date", () => {
+  it("attaches item discounts, keeps a voucher as a negative line and tax as an item, drops broken lines and a false date", () => {
     const r = parseReading(usReceipt);
     expect(r.storeName).toBe("Trader Joe's");
     expect(r.purchaseDate).toBeNull();
-    expect(r.items.map((i) => i.name)).toEqual(["Bananas", "Oat Milk", "Coffee Beans", "Member discount", "Sales tax"]);
-    expect(r.items[3].priceCents).toBe(-100);
-    expect(r.items[4]).toEqual({ name: "Sales tax", priceCents: 190, category: "Tax" });
-    expect(sumCheck(r.items.map((i) => i.priceCents), r.totalCents)).toEqual({ itemsCents: 2037, differenceCents: -100 });
+    expect(r.items.map((i) => i.name)).toEqual(["Bananas", "Oat Milk", "Coffee Beans", "Store voucher", "Sales tax"]);
+    // A discount written as negative is still stored as a positive amount.
+    expect(r.items[2]).toMatchObject({ priceCents: 1199, discountCents: 100 });
+    expect(r.items[3].priceCents).toBe(-200);
+    expect(r.items[4]).toEqual({ name: "Sales tax", priceCents: 190, discountCents: null, category: "Tax" });
+    expect(sumCheck(r.items.map((i) => i.priceCents), r.totalCents)).toEqual({ itemsCents: 1837, differenceCents: 0 });
   });
   it("throws when there is nothing usable, so the receipt can be retried", () => {
     expect(() => parseReading(null)).toThrow();
@@ -76,7 +80,7 @@ describe("matchCategory", () => {
 });
 
 describe("validateReview", () => {
-  const item = { name: "Bread", priceCents: 149, categoryId: null, proposedCategory: null };
+  const item = { name: "Bread", priceCents: 149, discountCents: null, categoryId: null, proposedCategory: null };
   it("allows unsorted items", () => {
     expect(validateReview({ storeName: "Lidl", purchaseDate: null, items: [item] })).toEqual({});
   });
@@ -84,8 +88,9 @@ describe("validateReview", () => {
     const e = validateReview({
       storeName: "Lidl",
       purchaseDate: "2026-02-30",
-      items: [{ ...item, name: " " }, { ...item, categoryId: "c1", proposedCategory: "New" }],
+      items: [{ ...item, name: " " }, { ...item, categoryId: "c1", proposedCategory: "New" }, { ...item, discountCents: -5 }],
     });
+    expect(e["item.2"]).toBeDefined();
     expect(e.purchaseDate).toBeDefined();
     expect(e["item.0"]).toBeDefined();
     expect(e["item.1"]).toBeDefined();

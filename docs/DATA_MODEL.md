@@ -103,6 +103,7 @@ The sharing rule. No rows for a category means it has no rule yet: its items are
 | name | text | as printed |
 | price_cents | integer | negative allowed for discount lines |
 | category_id | uuid | FK categories.id, null = unsorted |
+| discount_cents | integer | discount printed for this item, positive; information only, never summed or split (SPEC.md rule 6). Check `items_discount_positive` |
 | proposed_category | text | a new category name suggested by the reading while the receipt is under review; becomes a real category on save and is then cleared (SPEC.md rule 7). Check `items_one_category`: never set together with category_id |
 | updated_by | uuid | FK users.id, null when set by the reading step |
 | updated_at | timestamptz | |

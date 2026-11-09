@@ -10,8 +10,9 @@
  * is never trusted as it comes: anything malformed is dropped or refused here, prices become whole
  * cents, and the person reviewing sees whether the items match the printed total before saving.
  *
- * Business rules: SPEC.md rules 6 (store, date, total, items; discounts negative; tax lines are
- * items), 7 (category from the group's list or a proposed new one), 8 (sum check, edits before
+ * Business rules: SPEC.md rules 6 (store, date, total, items; an item's price is what was paid
+ * after its discount, and the discount is kept for information only; tax lines are items),
+ * 7 (category, at product type level, from the group's list or a proposed new one), 8 (sum check, edits before
  * saving) and 9 (unsorted items never block saving). Stories US2 and US5.
  * Pure functions. Tests: tests/unit/receipts.test.ts, with sample readings in tests/fixtures.
  */
@@ -25,10 +26,15 @@ export const CATEGORY_NAME_MAX = 40;
 /** Most items on one receipt. A guard against a broken reading, far above a real shop. */
 export const MAX_ITEMS = 300;
 
-/** One line as read from the receipt: name, price in cents (negative for a discount) and a category name, if any. */
+/**
+ * One line as read from the receipt: name, the price paid in cents, the discount on that item in
+ * cents (information only, null if none) and a category name, if any. A price is negative only for
+ * a discount on the whole receipt, such as a voucher, which stays its own line until version 2.
+ */
 export interface ReadItem {
   name: string;
   priceCents: number;
+  discountCents: number | null;
   category: string | null;
 }
 
@@ -80,7 +86,10 @@ export function parseReading(raw: unknown): Reading {
     const name = cleanText(e.name, ITEM_NAME_MAX);
     const priceCents = cleanAmount(e.price);
     if (!name || priceCents === null) continue;
-    items.push({ name, priceCents, category: cleanText(e.category, CATEGORY_NAME_MAX) });
+    // A discount is stored as a positive amount whichever way it was written; zero means none.
+    const discount = cleanAmount(e.discount);
+    const discountCents = discount === null || discount === 0 ? null : Math.abs(discount);
+    items.push({ name, priceCents, discountCents, category: cleanText(e.category, CATEGORY_NAME_MAX) });
   }
   if (items.length === 0) throw new Error("Reading has no items");
   const date = cleanText(r.date, 10);
@@ -122,10 +131,11 @@ export function matchCategory(
   return found ? { categoryId: found.id, proposed: null } : { categoryId: null, proposed: name.trim() };
 }
 
-/** One line of the review form as sent when saving. */
+/** One line of the review form as sent when saving. discountCents is information only (rule 6). */
 export interface ReviewItem {
   name: string;
   priceCents: number;
+  discountCents: number | null;
   categoryId: string | null;
   proposedCategory: string | null;
 }
@@ -147,6 +157,7 @@ export function validateReview(input: { storeName: string; purchaseDate: string 
     if (item.name.trim().length === 0) errors[`item.${i}`] = "Give the item a name.";
     else if (item.name.trim().length > ITEM_NAME_MAX) errors[`item.${i}`] = `Keep the name under ${ITEM_NAME_MAX} characters.`;
     else if (!Number.isInteger(item.priceCents) || Math.abs(item.priceCents) > 100_000_000) errors[`item.${i}`] = "Check the price.";
+    else if (item.discountCents !== null && (!Number.isInteger(item.discountCents) || item.discountCents <= 0)) errors[`item.${i}`] = "Check the discount.";
     else if (item.categoryId !== null && item.proposedCategory !== null) errors[`item.${i}`] = "Choose one category.";
     else if (item.proposedCategory !== null && (item.proposedCategory.trim().length === 0 || item.proposedCategory.trim().length > CATEGORY_NAME_MAX)) {
       errors[`item.${i}`] = `Category names are 1 to ${CATEGORY_NAME_MAX} characters.`;

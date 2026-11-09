@@ -1,7 +1,7 @@
 /**
  * POST /api/v1/receipts/{receiptId}/save: save a reviewed receipt (SPEC.md rules 7 to 9, stories
  * US2 and US5). Body: { storeName, purchaseDate, totalCents, paidBy, items: [{ name, priceCents,
- * categoryId, proposedCategory }] }. Items may have no category. Members only. Documented in docs/API.md.
+ * discountCents, categoryId, proposedCategory }] }. discountCents is information only (rule 6). Items may have no category. Members only. Documented in docs/API.md.
  */
 
 import { readJson, withUser } from "@/server/api";
@@ -30,6 +30,7 @@ function toSaveInput(body: Record<string, unknown>, callerId: string): SaveRecei
       return {
         name: typeof i.name === "string" ? i.name : "",
         priceCents: typeof i.priceCents === "number" ? i.priceCents : Number.NaN,
+        discountCents: typeof i.discountCents === "number" ? i.discountCents : null,
         categoryId: textOrNull(i.categoryId),
         proposedCategory: textOrNull(i.proposedCategory),
       };

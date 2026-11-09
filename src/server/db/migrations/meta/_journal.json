@@ -36,6 +36,13 @@
       "when": 1794022379385,
       "tag": "0004_item_proposed_category",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794246689681,
+      "tag": "0005_item_discount",
+      "breakpoints": true
     }
   ]
 }

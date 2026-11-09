@@ -150,3 +150,15 @@ export function parseAmount(text: string): number | null {
   return cents === 0 ? 0 : negative ? -cents : cents;
 }
 
+/**
+ * Where the group's currency symbol goes around an amount, for fields where the person types the
+ * number: "€" after it for euros ("1,70 €"), "$" before it for dollars ("$1.70") (SPEC.md rule 2b).
+ */
+export function currencyAffix(currency: string): { prefix: string; suffix: string } {
+  const parts = new Intl.NumberFormat(localeFor(currency), { style: "currency", currency, currencyDisplay: "narrowSymbol" }).formatToParts(1);
+  const at = parts.findIndex((p) => p.type === "currency");
+  const firstNumber = parts.findIndex((p) => p.type === "integer");
+  const symbol = parts[at]?.value ?? currency;
+  return at < firstNumber ? { prefix: symbol, suffix: "" } : { prefix: "", suffix: symbol };
+}
+

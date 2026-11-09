@@ -1,7 +1,7 @@
 /** Tests for src/domain/currencies.ts and the currency formatting in src/domain/money.ts (SPEC.md rule 2b). */
 import { describe, expect, it } from "vitest";
 import { CURRENCIES, DEFAULT_CURRENCY, isSupportedCurrency } from "@/domain/currencies";
-import { formatCents, formatMoney } from "@/domain/money";
+import { currencyAffix, formatCents, formatMoney } from "@/domain/money";
 
 describe("currency list", () => {
   it("has no duplicates and includes the default", () => {
@@ -43,3 +43,12 @@ describe("formatCents with a currency", () => {
     expect(formatCents(1290, "EUR")).toBe("12,90");
   });
 });
+
+describe("currencyAffix", () => {
+  it("puts the euro after and the dollar before", () => {
+    expect(currencyAffix("EUR")).toEqual({ prefix: "", suffix: "€" });
+    expect(currencyAffix("USD")).toEqual({ prefix: "$", suffix: "" });
+    expect(currencyAffix("NGN")).toEqual({ prefix: "₦", suffix: "" });
+  });
+});
+

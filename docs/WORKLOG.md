@@ -97,3 +97,18 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Verified here: type check, lint, 46 unit tests (new: reading checks with two sample answers, amounts in both styles, sum check, category matching, save checks), 5 end to end tests (signed out only), production build. Not verifiable here: upload, Gemini reading and saving, because this environment cannot reach Supabase or Gemini. Checked by hand on the deployed app next.
 - Left open: changing items after saving, item change log and sharing rules (step 3); more photos per receipt (step 4); whether 2500 px is enough for long receipts.
 
+## 2026-11-09: step 2 fixes from Maduabuchi's testing
+
+- Goal: fix the issues he listed while testing the receipt screens on his phone (7 and 9 Nov). Each fix was agreed one by one before any code was changed; the review layout was agreed as a mockup first ("Review receipt v3" on the Distill screens canvas, approved 9 Nov).
+- Prompts: "you are treating a discount as an individual expense"; "there needs to be a delete photo"; "See photo ... error page"; "the app is giving me details like soft drinks, when it is nectar laranja"; "the date ... needs to go up to the top of the tile ... prices bigger ... drop down more aesthetically pleasing"; "we need to be able to change the name"; "I approve of the new mockup ... proceed with executing the other changes".
+- Changed:
+  1. Discounts: each item has a price paid (summed and split) and a discount (information only), whichever way the shop prints it. Whole-receipt vouchers stay a negative line; proper handling moved to the roadmap. Migration 0005 adds `items.discount_cents`. SPEC rule 6.
+  2. Delete: an unsaved receipt can be deleted with its photo after an in-app confirm, from the review and "couldn't read" screens. Saved receipts cannot. SPEC rule 9b.
+  3. Photo link: "See photo" now goes through `/api/v1/receipts/<id>/photos/1`, which makes a fresh link on every tap. Cause of the error: links were made when the page loaded and expired after 10 minutes.
+  4. Categories: Gemini is told to use product types (Orange juice, Cola), never shop aisles (Soft drinks) or brands. SPEC rule 7.
+  5. Review layout rebuilt to mockup v3: date at the top of the card, larger store and total, item name on its own line, a full width category dropdown beside the price, prices larger with the currency symbol, discount under the price, Delete beside Save.
+  6. Missing store and item names: cause found. The name fields and price fields shared a full width style that overrode the price field's fixed width, so the price field took the whole row and the name field shrank to nothing. Fixed in the new layout; checked by rendering the form in a browser at 390 px.
+  7. Display name: restored to v1. "Your name in Distill" on the members screen; pages and API now use the stored name, not the Google name. SPEC rule 1.
+- Verified: type check, lint, 49 unit tests, end to end tests (signed out), production build, and a browser render of the new review form and its delete confirm with sample data. Not verifiable here: real reading, upload, delete and name change against Supabase and Gemini; checked by hand next.
+- Left open: whether the new category instructions give the right level on real receipts; whole-receipt discounts (roadmap).
+

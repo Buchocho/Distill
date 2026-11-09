@@ -17,7 +17,8 @@ import { ServiceError, STATUS } from "@/server/services/errors";
  *
  * Before the handler runs: finds the caller (browser cookie or bearer token) and refuses with
  * 401 if they are not signed in, then makes sure their user row exists.
- * After: sends the handler's result as JSON, or { ok: true } when it returns nothing.
+ * After: sends the handler's result as JSON, or { ok: true } when it returns nothing. A handler that
+ * returns a ready Response (for example a redirect to a photo) has it sent as it is.
  * On failure: an expected ServiceError becomes its status code and message; anything else is
  * logged on the server and the caller only sees "Something went wrong." with status 500.
  */
@@ -26,8 +27,10 @@ export function withUser<C>(handler: (user: AuthUser, request: Request, context:
     try {
       const user = await apiUser(request);
       if (!user) throw new ServiceError("unauthorized", "Sign in first.");
-      await ensureUser(user);
-      const result = await handler(user, request, context);
+      // Use the name stored in Distill, which the person may have changed (SPEC.md rule 1).
+      const row = await ensureUser(user);
+      const result = await handler({ ...user, name: row.displayName }, request, context);
+      if (result instanceof Response) return result;
       return Response.json(result ?? { ok: true });
     } catch (error) {
       if (error instanceof ServiceError) {

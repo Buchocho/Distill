@@ -1,14 +1,43 @@
 {
   "store": "  Trader   Joe's ",
   "date": "2026-13-40",
-  "total": "21.37",
+  "total": "18.37",
   "items": [
-    { "name": "Bananas", "price": "1.99", "category": "Fruit" },
-    { "name": "Oat Milk", "price": "4.49", "category": "Oat milk" },
-    { "name": "Coffee Beans", "price": "12.99", "category": "Coffee" },
-    { "name": "Member discount", "price": "-1.00", "category": "Coffee" },
-    { "name": "Sales tax", "price": "1.90", "category": "Tax" },
-    { "name": "", "price": "3.00", "category": "Junk" },
-    { "name": "Unreadable line", "price": "abc", "category": null }
+    {
+      "name": "Bananas",
+      "price": "1.99",
+      "category": "Fruit"
+    },
+    {
+      "name": "Oat Milk",
+      "price": "4.49",
+      "category": "Oat milk"
+    },
+    {
+      "name": "Coffee Beans",
+      "price": "11.99",
+      "discount": "-1.00",
+      "category": "Coffee beans"
+    },
+    {
+      "name": "Store voucher",
+      "price": "-2.00",
+      "category": null
+    },
+    {
+      "name": "Sales tax",
+      "price": "1.90",
+      "category": "Tax"
+    },
+    {
+      "name": "",
+      "price": "3.00",
+      "category": "Junk"
+    },
+    {
+      "name": "Unreadable line",
+      "price": "abc",
+      "category": null
+    }
   ]
 }

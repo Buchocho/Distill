@@ -2,6 +2,7 @@
  * Invite screen. Route: /groups/<id>/invite. Story US1.
  * Shows the group's invite link with Share and Copy, and the member list. Opened right after a
  * group is created (title "Group created") and from the initial on Home (title "Invite people").
+ * Also where a person changes the name they are shown as (DisplayNameForm, SPEC.md rule 1).
  * The link is built from the address the app is running at, so it works on any deploy.
  */
 
@@ -11,6 +12,7 @@ import { Icon } from "@/components/Icon";
 import { requireUser } from "@/server/session";
 import { groupOr404 } from "@/server/pageData";
 import { CopyLink } from "./CopyLink";
+import { DisplayNameForm } from "./DisplayNameForm";
 
 export default async function Invite({ params, searchParams }: {
   params: Promise<{ groupId: string }>;
@@ -43,6 +45,7 @@ export default async function Invite({ params, searchParams }: {
             ))}
           </ul>
         </div>
+        <DisplayNameForm current={user.name} />
         <Link href={`/groups/${groupId}`} className="mt-auto flex min-h-13 items-center justify-center rounded-xl border-[1.5px] border-ink bg-white font-extrabold text-ink no-underline">Go to Home</Link>
       </div>
     </main>

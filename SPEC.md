@@ -36,7 +36,7 @@ Not in this MVP (should and could from Assignment 1): spending by category, dupl
 Term: a period in the app is stored as a ledger in the database.
 
 **Groups and members**
-1. Signing in uses a Google account. The name shown in the app is the user's Google name.
+1. Signing in uses a Google account. The Google name is shown at first; a user can change the name they are shown as (1 to 30 characters), once for all their groups, and signing in again does not overwrite it.
 2. The group creator is a member. Anyone with the invite link who signs in becomes a member.
 2b. The group chooses a currency when it is created (default euro). It is display only: amounts are shown in that currency and nothing is converted. Only currencies with two decimal places are offered, so money stays in whole cents. The currency cannot be changed after the group is created.
 2c. Dates follow the local date of the device doing the action (for example creating a group or scanning a receipt), not the server's date. No time zone is stored.
@@ -46,11 +46,12 @@ Term: a period in the app is stored as a ledger in the database.
 **Receipts**
 4. Any member can add a receipt and choose who paid. The default is the person adding it.
 5. A receipt belongs to the period that is open when it is added, whatever date is printed on it.
-6. The reading step returns store, date, printed total, and items with name and price. Discount lines are items with a negative price. Tax printed as a separate line (for example US or Canadian sales tax) is an item, categorised and split like any other, so the items still sum to the printed total.
-7. Each item is given a category from the group's list. If none fits, the reading step may propose a new category name. A proposed category is created only when the receipt is saved; saving counts as confirming it. After that it is reused for later receipts. If the reading step cannot choose, the item is unsorted.
+6. The reading step returns store, date, printed total, and items with name, price and discount. An item's price is what was paid for it after its own discount, however the shop prints it; the discount is kept for information only and is never summed or split. A discount on the whole receipt that belongs to no item (a voucher) stays its own line with a negative price. Tax printed as a separate line (for example US or Canadian sales tax) is an item, categorised and split like any other, so the items still sum to the printed total.
+7. Each item is given a category from the group's list. Categories are at the level of the product type (Cola, Orange juice, Apple juice, Milk, Oat milk), never a shop aisle (Soft drinks, Dairy) and never a brand or pack size, because the sharing rule is set per category and products one person buys only for themselves need their own category. If none fits, the reading step may propose a new category name. A proposed category is created only when the receipt is saved; saving counts as confirming it. After that it is reused for later receipts. If the reading step cannot choose, the item is unsorted.
 8. The review screen shows the sum check: items total against printed total, and the difference if they do not match. The user can edit names and prices before saving.
 9. Saving is never blocked by unsorted items (US5).
 9a. A receipt can have any number of photos. Once it is saved into the ledger, no photos can be added or removed.
+9b. A receipt that is not saved yet can be deleted with its photo, after a confirm step. A saved receipt cannot be deleted.
 10. If reading fails, the receipt is kept with its photos and status "failed", and the user can retry.
 
 **Sharing**
@@ -131,7 +132,7 @@ Group "Rua das Flores 12" with members Ana, Rui and Sam. A seed script loads cat
 
 - Home section order per person: each member can reorder the three Home sections to put what matters to them first. For now the order is fixed: Receipts, Categories, Balance.
 - Notifications when a category is created or its rule changes.
-- Changing your display name (dropped from this MVP on 6 Nov; the Google name is used).
+- Whole-receipt discounts (vouchers, coupons on the total) spread across the items or shared by rule. Until then they are a negative line (rule 6).
 - Rename or merge categories, duplicate receipt warning, spending by category, close date reminder, export of the payment record.
 
 ## 9. Open questions

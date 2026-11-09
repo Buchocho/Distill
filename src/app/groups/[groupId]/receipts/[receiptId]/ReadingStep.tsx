@@ -5,13 +5,15 @@
  *
  * A freshly uploaded receipt (draft) starts its reading as soon as this appears. A receipt already
  * being read is checked again every few seconds. A failed reading shows Retry, which reads the same
- * photo again (SPEC.md rule 10). When the reading is done the page reloads with the review form.
+ * photo again (SPEC.md rule 10), or Delete for a photo that will never read well (rule 9b).
+ * When the reading is done the page reloads with the review form.
  */
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DeleteReceipt } from "./DeleteReceipt";
 
-export function ReadingStep({ receiptId, status }: { receiptId: string; status: "draft" | "reading" | "failed" }) {
+export function ReadingStep({ receiptId, groupId, status }: { receiptId: string; groupId: string; status: "draft" | "reading" | "failed" }) {
   const router = useRouter();
   const [busy, setBusy] = useState(status !== "failed");
   const [failed, setFailed] = useState(status === "failed");
@@ -51,6 +53,7 @@ export function ReadingStep({ receiptId, status }: { receiptId: string; status: 
         <p className="font-bold">We couldn&apos;t read this receipt</p>
         <p className="text-sm text-sand">The photo is kept. Try reading it again. If it fails again, take a clearer photo with the whole receipt in view.</p>
         <button type="button" onClick={() => void read()} className="min-h-13 rounded-xl bg-orange font-extrabold text-ink">Retry</button>
+        <DeleteReceipt receiptId={receiptId} groupId={groupId} />
       </div>
     );
   }

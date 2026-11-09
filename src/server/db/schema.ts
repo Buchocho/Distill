@@ -194,6 +194,10 @@ export const items = pgTable(
     priceCents: integer("price_cents").notNull(),
     // Null means unsorted, unless proposedCategory is set.
     categoryId: uuid("category_id").references(() => categories.id),
+    // Discount printed for this item, as a positive number of cents. Information only: price_cents
+    // is already what was paid after the discount, and only price_cents is summed and split
+    // (SPEC.md rule 6). Null when the item had no discount.
+    discountCents: integer("discount_cents"),
     // A new category name suggested by the reading step, while the receipt is under review. It
     // becomes a real category only when the receipt is saved, and is then cleared (SPEC.md rule 7).
     proposedCategory: text("proposed_category"),
@@ -206,6 +210,7 @@ export const items = pgTable(
     index("items_category").on(t.categoryId),
     // An item has an existing category or a proposed one, never both.
     check("items_one_category", sql`${t.categoryId} is null or ${t.proposedCategory} is null`),
+    check("items_discount_positive", sql`${t.discountCents} is null or ${t.discountCents} > 0`),
   ],
 );
 

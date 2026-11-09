@@ -1,7 +1,7 @@
 # Distill: business rules register
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 7 Nov 2026, build step 2 (scan, read, review and save).
+Last updated: 9 Nov 2026, step 2 fixes from testing.
 
 Each business rule in SPEC.md section 4, whether it is built, and the files that enforce it. Rule numbers are the SPEC.md numbers, so a code comment that says "SPEC.md rule 15" points to the same row here.
 
@@ -15,7 +15,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
-| 1 | Sign in with Google; the Google name is shown | Built (changing the name was dropped on 6 Nov, now on the roadmap) | `src/server/auth.ts`, `src/app/login`, `src/app/auth/callback/route.ts`, `src/server/services/users.ts` |
+| 1 | Sign in with Google; a person can change the name they are shown as | Built (restored 9 Nov at Maduabuchi's request) | `src/server/auth.ts`, `src/app/login`, `src/server/services/users.ts` (`ensureUser`, `setDisplayName`), `src/domain/users.ts`, `invite/DisplayNameForm.tsx`, `src/server/session.ts` and `src/server/api.ts` (use the stored name) |
 | 2 | The creator is a member; anyone with the invite link who signs in joins | Built | `src/server/services/groups.ts` (`createGroup`, `joinByToken`), `src/server/session.ts` (returns to the link after sign in) |
 | 2b | Group currency chosen at creation, cannot be changed, display only, two decimal currencies only | Built for creation and the API. Amounts on screens use it from step 2, through `formatMoney`. | `src/domain/currencies.ts`, `src/domain/money.ts` (`formatMoney`), `src/domain/groups.ts`, `groups_currency_code` in `src/server/db/schema.ts`, `src/app/groups/new/NewGroupForm.tsx` |
 | 2c | Dates follow the device's local date | Built for group creation (first period). Receipts send it from step 2; closing uses it from step 5. | `src/domain/groups.ts` (`isValidLocalDate`), `src/app/actions.ts`, `src/app/api/v1/groups/route.ts`, `src/app/groups/new/NewGroupForm.tsx` |
@@ -28,11 +28,12 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 |---|---|---|---|
 | 4 | Any member adds a receipt and chooses who paid | Built: Paid by on Receipts and on Review, default you; must be a member | `src/server/services/receipts.ts` (`startReceipt`, `saveReceipt`), `receipts/ScanPanel.tsx`, `ReviewForm.tsx` |
 | 5 | A receipt belongs to the period open when it is added | Built: the open period at the moment the receipt is started. Moving to the next period on the close date is step 5 | `startReceipt` in `src/server/services/receipts.ts` |
-| 6 | Reading returns store, date, total and items; discounts are negative; tax lines are items | Built: reading through Gemini, checked by `parseReading`; tax lines asked for as items in category Tax | `src/server/integrations/gemini.ts`, `src/domain/receipts.ts` (`parseReading`), `src/domain/money.ts` (`parseAmount`) |
-| 7 | Items get a category; new ones are created when the receipt is saved | Built: matched ignoring capitals, otherwise kept as `items.proposed_category` until save; a new name can also be typed | `src/domain/receipts.ts` (`matchCategory`), `saveReceipt`, `ReviewForm.tsx`, `categories_name_per_group` and `items_one_category` in `src/server/db/schema.ts` |
+| 6 | Reading returns store, date, total and items; an item's price is after its discount, the discount is information only; vouchers stay a negative line; tax lines are items | Built: reading through Gemini, checked by `parseReading`; `items.discount_cents` holds the discount; tax lines asked for as items in category Tax | `src/server/integrations/gemini.ts`, `src/domain/receipts.ts` (`parseReading`), `src/domain/money.ts` (`parseAmount`) |
+| 7 | Items get a category at product type level; new ones are created when the receipt is saved | Built: the level is set in the Gemini instructions (`src/server/integrations/gemini.ts`); matched ignoring capitals, otherwise kept as `items.proposed_category` until save; a new name can also be typed | `src/domain/receipts.ts` (`matchCategory`), `saveReceipt`, `ReviewForm.tsx`, `categories_name_per_group` and `items_one_category` in `src/server/db/schema.ts` |
 | 8 | Review shows items total against printed total; names and prices editable | Built | `src/domain/receipts.ts` (`sumCheck`), `ReviewForm.tsx` |
 | 9 | Saving is never blocked by unsorted items | Built: Skip for now; unsorted count on Receipts and Home | `src/domain/receipts.ts` (`validateReview`), `saveReceipt`, `ReviewForm.tsx` |
 | 9a | Any number of photos; locked once saved | Partly built: one photo per receipt; saved receipts cannot be read or saved again. More photos are step 4 | `src/server/services/receipts.ts`, `src/server/db/schema.ts` |
+| 9b | An unsaved receipt can be deleted with its photo; a saved one cannot | Built | `deleteReceipt` in `src/server/services/receipts.ts`, `DeleteReceipt.tsx`, `src/server/integrations/storage.ts` (`deletePhotos`) |
 | 10 | A failed reading keeps the receipt with status "failed" for retry | Built: Retry reads the same photo again | `readReceipt` in `src/server/services/receipts.ts`, `ReadingStep.tsx` |
 
 ## Sharing (build step 3)
