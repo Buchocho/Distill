@@ -29,7 +29,7 @@ A group of people who shop together scan their receipts. Each item gets a catego
 | US8 | As the low-effort member, I want one amount to check and agree to, so that settling takes one tap. | Each member's agreement is recorded. A change resets it. |
 | US9 | As the main shopper, I want a payment recorded once both of us confirm it, so that there is a history of what I was paid back. | Shown as paid only when both people confirm. |
 
-Not in this MVP (should and could from Assignment 1): spending by category, duplicate receipt warning, rename or merge categories, close date reminder, export of the payment record.
+Not in this MVP (should and could from Assignment 1): spending by category, rename or merge categories, close date reminder, export of the payment record.
 
 ## 4. Business rules
 
@@ -46,12 +46,13 @@ Term: a period in the app is stored as a ledger in the database.
 **Receipts**
 4. Any member can add a receipt and choose who paid. The default is the person adding it.
 5. A receipt belongs to the period that is open when it is added, whatever date is printed on it.
-6. The reading step returns store, date, printed total, and items with name, price and discount. An item's price is what was paid for it after its own discount, however the shop prints it; the discount is kept for information only and is never summed or split. A discount on the whole receipt that belongs to no item (a voucher) stays its own line with a negative price. Tax printed as a separate line (for example US or Canadian sales tax) is an item, categorised and split like any other, so the items still sum to the printed total.
+6. The reading step returns store, date, printed total, receipt number, and items with name, price and discount. Dates are read using the device's date to settle the order (some shops print year first, 26/10/18 for 18 Oct 2026); the review screen asks to check a date in the future or more than 60 days ago. An item's price is what was paid for it after its own discount, however the shop prints it; the discount is kept for information only and is never summed or split. A discount on the whole receipt that belongs to no item (a voucher) stays its own line with a negative price. Tax printed as a separate line (for example US or Canadian sales tax) is an item, categorised and split like any other, so the items still sum to the printed total.
 7. Each item is given a category from the group's list. Categories are at the level of the product type (Cola, Orange juice, Apple juice, Milk, Oat milk), never a shop aisle (Soft drinks, Dairy) and never a brand or pack size, because the sharing rule is set per category and products one person buys only for themselves need their own category. If none fits, the reading step may propose a new category name. A proposed category is created only when the receipt is saved; saving counts as confirming it. After that it is reused for later receipts. If the reading step cannot choose, the item is unsorted.
 8. The review screen shows the sum check: items total against printed total, and the difference if they do not match. The user can edit names and prices before saving.
 9. Saving is never blocked by unsorted items (US5).
 9a. A receipt can have any number of photos. Once it is saved into the ledger, no photos can be added or removed.
 9b. A receipt that is not saved yet can be deleted with its photo, after a confirm step. A saved receipt cannot be deleted.
+9c. The reading step also returns the receipt's own number (document or transaction number, not a tax number). A receipt with the same store and receipt number as a saved receipt in the group cannot be saved. Without a number to compare, a receipt with the same store, date and total as a saved one shows a warning, and the person can delete it or save it anyway.
 10. If reading fails, the receipt is kept with its photos and status "failed", and the user can retry.
 
 **Sharing**
@@ -133,7 +134,7 @@ Group "Rua das Flores 12" with members Ana, Rui and Sam. A seed script loads cat
 - Home section order per person: each member can reorder the three Home sections to put what matters to them first. For now the order is fixed: Receipts, Categories, Balance.
 - Notifications when a category is created or its rule changes.
 - Whole-receipt discounts (vouchers, coupons on the total) spread across the items or shared by rule. Until then they are a negative line (rule 6).
-- Rename or merge categories, duplicate receipt warning, spending by category, close date reminder, export of the payment record.
+- Rename or merge categories, spending by category, close date reminder, export of the payment record.
 
 ## 9. Open questions
 

@@ -84,6 +84,7 @@ The sharing rule. No rows for a category means it has no rule yet: its items are
 | created_by | uuid | FK users.id |
 | created_at | timestamptz | |
 | saved_at | timestamptz | null until saved |
+| receipt_number | text | the receipt's own number as printed, null if none was read; same store plus same number cannot be saved twice in a group (SPEC.md rule 9c, checked in the service) |
 
 ### receipt_photos
 | Column | Type | Key / rule |

@@ -7,7 +7,10 @@
  * What the person can do (SPEC.md rules 4 and 6 to 9b, stories US2 and US5):
  * - correct the store, date, total, who paid, and each item's name and price (rule 8);
  * - give an item a category: one of the group's, one proposed by the reading, or a new name
- *   (rule 7); or leave it with "Skip for now" (rule 9, US5);
+ *   (rule 7); or choose "Leave unsorted" to sort it later (rule 9, US5);
+ * - correct the receipt number, and see a warning when the date looks misread (rule 8);
+ * - see when the receipt is already saved: blocked for the same store and receipt number,
+ *   a warning for the same store, date and total (rule 9c);
  * - see each item's discount, for information only: the price shown is already what was paid (rule 6);
  * - see the sum check: whether the items add up to the printed total, and the difference (rule 8);
  * - delete the receipt instead of saving it (rule 9b).
@@ -19,7 +22,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { currencyAffix, formatCents, formatMoney, parseAmount } from "@/domain/money";
-import { sumCheck } from "@/domain/receipts";
+import { findDuplicate, sumCheck } from "@/domain/receipts";
+import { dateLooksWrong, deviceToday, longDate } from "@/domain/dates";
 import { DeleteReceipt } from "./DeleteReceipt";
 
 type Category = { id: string; name: string };
@@ -33,35 +37,45 @@ type Item = {
   proposedCategory: string | null;
 };
 
-/** One editable line. choice is "none", "c:<category id>", "p:<new category name>" or NEW while typing one. */
+type Saved = {
+  id: string;
+  storeName: string | null;
+  purchaseDate: string | null;
+  totalCents: number | null;
+  receiptNumber: string | null;
+  paidByName: string;
+};
+
+/**
+ * One editable line. choice is "none" (not decided yet), "skip" (left unsorted on purpose),
+ * "c:<category id>", "p:<new category name>", or NEW while a new name is being typed.
+ * "none" and "skip" both save as no category; they only look different.
+ */
 interface Row {
   key: string;
   name: string;
   price: string;
   discountCents: number | null;
   choice: string;
-  skipped: boolean;
 }
 
 const NEW = "__new";
-
-/** "28 Sep 2026" from YYYY-MM-DD, the date style used across the app. Built by hand so every phone shows the same. */
-export function longDate(iso: string): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  const month = d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
-  return `${d.getUTCDate()} ${month} ${d.getUTCFullYear()}`;
-}
+const SKIP = "skip";
 
 /** Width of an amount field: just wide enough for what is typed, so the category dropdown keeps the room. */
 const amountWidth = (text: string, min: number) => ({ width: `${Math.max(min, text.length) + 0.3}ch` });
 
-/** A dropdown with the app's own arrow, so it looks the same on every phone. */
-function Picker({ id, label, value, onChange, attention, children }: {
+/**
+ * A dropdown with the app's own arrow, so it looks the same on every phone. attention: orange,
+ * nothing chosen yet. muted: grey, left unsorted on purpose.
+ */
+function Picker({ id, label, value, onChange, attention, muted, children }: {
   id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
   attention: boolean;
+  muted: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -70,10 +84,11 @@ function Picker({ id, label, value, onChange, attention, children }: {
       <select id={id} value={value} onChange={(e) => onChange(e.target.value)}
         className={`min-h-11 w-full appearance-none truncate rounded-xl pl-3.5 pr-9 text-[15px] ${attention
           ? "border-2 border-orange bg-dark font-bold text-orange"
+          : muted ? "border-2 border-dashed border-dark-line bg-dark font-semibold text-sand"
           : "border-0 bg-dark-line font-semibold text-paper"}`}>
         {children}
       </select>
-      <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${attention ? "text-orange" : "text-paper"}`}>
+      <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${attention ? "text-orange" : muted ? "text-sand" : "text-paper"}`}>
         <Icon name="chevron" size={14} strokeWidth={2.5} />
       </span>
     </div>
@@ -93,6 +108,8 @@ export function ReviewForm(props: {
   categories: Category[];
   members: Member[];
   photoCount: number;
+  receiptNumber: string | null;
+  saved: Saved[];
 }) {
   const router = useRouter();
   const { prefix, suffix } = currencyAffix(props.currency);
@@ -100,6 +117,7 @@ export function ReviewForm(props: {
   const [date, setDate] = useState(props.purchaseDate ?? "");
   const [total, setTotal] = useState(props.totalCents === null ? "" : formatCents(props.totalCents, props.currency));
   const [paidBy, setPaidBy] = useState(props.paidBy);
+  const [number, setNumber] = useState(props.receiptNumber ?? "");
   const [rows, setRows] = useState<Row[]>(() =>
     props.items.map((i) => ({
       key: i.id,
@@ -107,7 +125,6 @@ export function ReviewForm(props: {
       price: formatCents(i.priceCents, props.currency),
       discountCents: i.discountCents,
       choice: i.categoryId ? `c:${i.categoryId}` : i.proposedCategory ? `p:${i.proposedCategory}` : "none",
-      skipped: false,
     })),
   );
   const [newName, setNewName] = useState<Record<string, string>>({});
@@ -122,6 +139,10 @@ export function ReviewForm(props: {
   const prices = rows.map((r) => parseAmount(r.price));
   const totalCents = total.trim() ? parseAmount(total) : null;
   const check = sumCheck(prices.filter((p): p is number => p !== null), totalCents);
+  // Checked again on every change, so correcting the store or number updates the warning (rule 9c).
+  const duplicate = findDuplicate({ storeName: store, purchaseDate: date || null, totalCents, receiptNumber: number || null }, props.saved);
+  const blocked = duplicate?.kind === "block";
+  const odd = date !== "" && dateLooksWrong(date, deviceToday());
 
   /** Changes one line of the form. */
   function update(key: string, change: Partial<Row>) {
@@ -143,6 +164,7 @@ export function ReviewForm(props: {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         storeName: store,
+        receiptNumber: number || null,
         purchaseDate: date || null,
         totalCents,
         paidBy,
@@ -169,11 +191,33 @@ export function ReviewForm(props: {
   // check, and Delete and Save (mockup Review receipt v3).
   return (
     <>
+      {duplicate && (
+        <div role="alert" className={`flex flex-col gap-1 rounded-2xl p-4 ${blocked ? "bg-red-tint text-red" : "bg-orange-tint text-orange-text"}`}>
+          <p className="font-extrabold">{blocked ? "This receipt is already saved" : "This looks like a receipt already saved"}</p>
+          <p className="text-sm font-semibold">
+            {duplicate.match.storeName}
+            {duplicate.match.purchaseDate ? `, ${longDate(duplicate.match.purchaseDate)}` : ""}
+            {duplicate.match.totalCents !== null ? `, ${formatMoney(duplicate.match.totalCents, props.currency)}` : ""}
+            , paid by {duplicate.match.paidByName}.
+          </p>
+          <p className="text-sm">{blocked ? "It has the same receipt number. Delete this one." : "Delete this one, or save it if it is a different shop."}</p>
+        </div>
+      )}
+
       <section aria-label="Receipt details" className="flex flex-col gap-1.5 rounded-2xl bg-dark-card px-4 pb-2.5 pt-3">
-        <div className="relative self-start">
-          <span className="text-[13px] font-semibold text-sand">{date ? longDate(date) : "Add the date"}</span>
-          <input type="date" aria-label="Date on the receipt" value={date} onChange={(e) => setDate(e.target.value)}
-            className="absolute inset-0 cursor-pointer opacity-0" />
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <span className={`text-[13px] font-semibold ${odd ? "text-orange" : "text-sand"}`}>{date ? longDate(date) : "Add the date"}</span>
+            <input type="date" aria-label="Date on the receipt" value={date} onChange={(e) => setDate(e.target.value)}
+              className="absolute inset-0 cursor-pointer opacity-0" />
+          </div>
+          {odd && <span className="text-[13px] font-bold text-orange">Check the date</span>}
+          <span className="flex-1" />
+          <label className="flex items-center gap-1 text-xs text-sand">
+            No.
+            <input aria-label="Receipt number" value={number} onChange={(e) => setNumber(e.target.value)} maxLength={60} placeholder="none"
+              className="w-28 rounded-md bg-transparent text-left text-xs text-sand placeholder:text-grey-400 focus:outline focus:outline-1 focus:outline-sand" />
+          </label>
         </div>
         <div className="flex items-baseline gap-3">
           <input aria-label="Store" value={store} onChange={(e) => setStore(e.target.value)} placeholder="Store name" maxLength={60}
@@ -202,25 +246,27 @@ export function ReviewForm(props: {
           <span className="flex-1" />
           {props.photoCount > 0 && (
             <a href={`/api/v1/receipts/${props.receiptId}/photos/1`} target="_blank" rel="noreferrer"
-              className="inline-flex min-h-9 items-center font-bold text-orange">See photo</a>
+              className="inline-flex min-h-9 items-center font-bold text-orange underline underline-offset-2">See photo</a>
           )}
         </div>
       </section>
 
       <ul aria-label="Items" className="rounded-2xl bg-dark-card px-4">
         {rows.map((r, i) => {
-          const attention = r.choice === "none" && !r.skipped;
+          const attention = r.choice === "none";
+          const skipped = r.choice === SKIP;
           return (
             <li key={r.key} className="flex flex-col gap-2 border-b border-dark-line py-3.5 last:border-0">
               <input aria-label={`Item ${i + 1} name`} value={r.name} onChange={(e) => update(r.key, { name: e.target.value })} maxLength={80}
                 className="w-full rounded-md bg-transparent text-base font-bold text-paper focus:outline focus:outline-1 focus:outline-sand" />
               <div className="flex items-center gap-3">
-                <Picker id={`cat-${r.key}`} label={`Category for ${r.name || `item ${i + 1}`}`} value={r.choice} attention={attention}
-                  onChange={(v) => update(r.key, { choice: v, skipped: false })}>
-                  <option value="none">{r.skipped ? "No category (sort later)" : "Choose a category"}</option>
+                <Picker id={`cat-${r.key}`} label={`Category for ${r.name || `item ${i + 1}`}`} value={r.choice} attention={attention} muted={skipped}
+                  onChange={(v) => update(r.key, { choice: v })}>
+                  {attention && <option value="none">Choose a category</option>}
                   {props.categories.map((c) => <option key={c.id} value={`c:${c.id}`}>{c.name}</option>)}
                   {proposed.map((n) => <option key={n} value={`p:${n}`}>{n} (new)</option>)}
                   <option value={NEW}>New category...</option>
+                  <option value={SKIP}>{skipped ? "Unsorted, sort later" : "Leave unsorted"}</option>
                 </Picker>
                 <label className="flex h-11 shrink-0 items-center justify-end text-[23px] font-extrabold tabular-nums">
                   <span className="sr-only">Price of {r.name || `item ${i + 1}`}</span>
@@ -250,10 +296,6 @@ export function ReviewForm(props: {
                     className="min-h-11 rounded-xl bg-orange px-4 font-bold text-ink disabled:opacity-50">Add</button>
                 </div>
               )}
-              {attention && (
-                <button type="button" onClick={() => update(r.key, { skipped: true })}
-                  className="min-h-9 self-start text-sm font-bold text-orange underline">Skip for now</button>
-              )}
               {errors[`item.${i}`] && <p className="text-sm font-semibold text-orange">{errors[`item.${i}`]}</p>}
             </li>
           );
@@ -280,9 +322,9 @@ export function ReviewForm(props: {
         {errors.form && <p role="alert" className="px-1 text-sm font-semibold text-orange">{errors.form}{errors.items ? ` ${errors.items}` : ""}</p>}
         <div className="flex flex-wrap gap-2.5">
           <DeleteReceipt receiptId={props.receiptId} groupId={props.groupId} compact />
-          <button type="button" onClick={() => void save()} disabled={saving}
-            className="min-h-13 flex-1 rounded-xl bg-orange text-base font-extrabold text-ink disabled:opacity-60">
-            {saving ? "Saving..." : "Save receipt"}
+          <button type="button" onClick={() => void save()} disabled={saving || blocked}
+            className="min-h-13 flex-1 rounded-xl bg-orange text-base font-extrabold text-ink disabled:opacity-40">
+            {saving ? "Saving..." : duplicate?.kind === "warn" ? "Save anyway" : "Save receipt"}
           </button>
         </div>
       </div>

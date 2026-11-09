@@ -22,6 +22,7 @@ const RESPONSE_SCHEMA = {
   type: "OBJECT",
   properties: {
     store: { type: "STRING", nullable: true },
+    receipt_number: { type: "STRING", nullable: true, description: "The receipt's own document or transaction number as printed" },
     date: { type: "STRING", nullable: true, description: "Purchase date as YYYY-MM-DD" },
     total: { type: "STRING", nullable: true, description: "Final total paid, digits with a point, e.g. 12.90" },
     items: {
@@ -41,12 +42,24 @@ const RESPONSE_SCHEMA = {
   required: ["items"],
 };
 
-/** The instructions sent with every photo. The group's own category names are added so they are reused. */
-function instructions(categoryNames: readonly string[]): string {
+/**
+ * The instructions sent with every photo. The group's own category names are added so they are
+ * reused, and today's date so a date printed in an unusual order can be read correctly.
+ */
+function instructions(categoryNames: readonly string[], today: string): string {
   const list = categoryNames.length > 0 ? categoryNames.map((n) => `- ${n}`).join("\n") : "(none yet)";
   return [
     "You read shop receipts for an app that splits shared shopping between people.",
-    "Return the store name, the purchase date (YYYY-MM-DD), the final total paid, and every line item.",
+    "Return the store name, the purchase date (YYYY-MM-DD), the final total paid, the receipt number, and every line item.",
+    "",
+    `Today is ${today}. A receipt is almost always from today or the last few weeks.`,
+    "Shops print dates in different orders: day/month/year, month/day/year, and year/month/day",
+    "(for example Intermarché prints 26/10/18 for 18 October 2026). When a date could be read more",
+    "than one way, choose the reading that falls on or shortly before today.",
+    "",
+    "The receipt number is the receipt's own document or transaction number, as printed",
+    "(for example FS 0123/456789, Fatura simplificada no., Trans #, Receipt #). Not a tax or VAT",
+    "number, not the ATCUD code, not a phone number, not a card number. Null if there is none.",
     "Write each item name as printed. Write amounts with digits and a point, for example 12.90.",
     "",
     "Discounts on an item are never items of their own. Attach each one to the item it belongs to:",
@@ -80,13 +93,15 @@ function instructions(categoryNames: readonly string[]): string {
 }
 
 /**
- * Sends the photos of one receipt to Gemini and returns its JSON answer, unchecked.
+ * Sends the photos of one receipt to Gemini and returns its JSON answer, unchecked. today is the
+ * device's date as YYYY-MM-DD (SPEC.md rule 2c), used to read ambiguous dates.
  * Throws if Gemini cannot be reached, refuses, or does not answer in JSON within 50 seconds;
  * the caller then marks the receipt "failed" so the user can retry (SPEC.md rule 10).
  */
 export async function readReceiptPhotos(
   photos: readonly { bytes: Buffer; mimeType: string }[],
   categoryNames: readonly string[],
+  today: string,
 ): Promise<unknown> {
   const model = process.env.GEMINI_MODEL;
   const key = process.env.GEMINI_API_KEY;
@@ -104,7 +119,7 @@ export async function readReceiptPhotos(
           {
             role: "user",
             parts: [
-              { text: instructions(categoryNames) },
+              { text: instructions(categoryNames, today) },
               ...photos.map((p) => ({ inline_data: { mime_type: p.mimeType, data: p.bytes.toString("base64") } })),
             ],
           },

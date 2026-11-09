@@ -43,6 +43,13 @@
       "when": 1794246689681,
       "tag": "0005_item_discount",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794250943400,
+      "tag": "0006_receipt_number",
+      "breakpoints": true
     }
   ]
 }

@@ -112,3 +112,12 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Verified: type check, lint, 49 unit tests, end to end tests (signed out), production build, and a browser render of the new review form and its delete confirm with sample data. Not verifiable here: real reading, upload, delete and name change against Supabase and Gemini; checked by hand next.
 - Left open: whether the new category instructions give the right level on real receipts; whole-receipt discounts (roadmap).
 
+## 2026-11-09 (evening): second round of step 2 fixes
+
+- His test results on the first round: name change, delete, discount, photo link passed; layout good. Failed or new: opening a saved receipt showed "Something went wrong"; See photo did not look clickable; leaving an item unsorted meant picking "Choose a category"; an Intermarché date printed year first (26/10/18) was read as 26 Oct; duplicate receipts could be saved. The Categories tab saying "No categories yet" is expected: it is the step 3 screen.
+- Decisions: block a duplicate only on the same store and receipt number (a number is unique per shop, not across shops); warn, not block, on the same store, date and total, because two genuine identical shops happen and there is no manual entry to recover a wrongly blocked receipt. He asked whether to block all duplicates and then chose this. Duplicate warning moved from the roadmap into v1 (rule 9c).
+- Prompts: "#4 Failed ... #5 ... #7 ... more intuitive way"; "the date was structured as 26/10/18"; "the app is accepting and saving duplicate receipts"; "should we block duplicate receipts"; "can't we track the receipts by their ID"; "Yes".
+- Changed: date formatting moved from a browser only file into `src/domain/dates.ts` (cause of the saved receipt error, seen 10 times in the Vercel logs); See photo underlined; "Leave unsorted" option in the category dropdown with a dashed grey state, "Skip for now" link removed; Gemini told today's date and that some shops print year first; "Check the date" shown for a future date or one over 60 days old; receipt number read, stored (migration 0006), shown and editable; duplicate banner on review (block or warning, "Save anyway"), and the block enforced again on save.
+- Verified: type check, lint, 58 unit tests, end to end tests, build, and a browser render of the warning, the unsorted state and the underlined link with sample data. Not verifiable here: real readings of dates and receipt numbers.
+- Left open: how reliably Gemini reads receipt numbers on real receipts.
+

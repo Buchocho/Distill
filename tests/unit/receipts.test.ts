@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import continente from "../fixtures/reading-continente.json";
 import usReceipt from "../fixtures/reading-us-tax-discount.json";
 import { parseAmount } from "@/domain/money";
-import { matchCategory, parseReading, receiptStatus, sumCheck, validateReview } from "@/domain/receipts";
+import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, sumCheck, validateReview } from "@/domain/receipts";
 
 describe("parseAmount", () => {
   it("reads both decimal styles", () => {
@@ -106,5 +106,32 @@ describe("receiptStatus", () => {
     expect(receiptStatus("saved", 1)).toEqual({ label: "1 item unsorted", tone: "act" });
     expect(receiptStatus("saved", 0).tone).toBe("done");
     expect(receiptStatus("failed", 0).tone).toBe("error");
+  });
+});
+
+
+describe("findDuplicate", () => {
+  const saved = [
+    { id: "1", storeName: "Intermarché", purchaseDate: "2026-10-18", totalCents: 2345, receiptNumber: "FS 0123/4567" },
+    { id: "2", storeName: "Lidl", purchaseDate: "2026-10-20", totalCents: 1000, receiptNumber: null },
+  ];
+  it("normalises receipt numbers", () => {
+    expect(receiptNumberKey(" fs 0123/4567 ")).toBe("FS0123/4567");
+    expect(receiptNumberKey("  ")).toBeNull();
+  });
+  it("blocks the same store and receipt number, whatever the date or total", () => {
+    const r = findDuplicate({ storeName: "intermarché", purchaseDate: null, totalCents: null, receiptNumber: "fs0123/4567" }, saved);
+    expect(r?.kind).toBe("block");
+    expect(r?.match.id).toBe("1");
+  });
+  it("does not match the same number at another store", () => {
+    expect(findDuplicate({ storeName: "Pingo Doce", purchaseDate: null, totalCents: null, receiptNumber: "FS 0123/4567" }, saved)).toBeNull();
+  });
+  it("warns on same store, date and total when there is no number to compare", () => {
+    const r = findDuplicate({ storeName: "Lidl", purchaseDate: "2026-10-20", totalCents: 1000, receiptNumber: "X1" }, saved);
+    expect(r?.kind).toBe("warn");
+  });
+  it("does not warn when both receipts have different numbers", () => {
+    expect(findDuplicate({ storeName: "Intermarché", purchaseDate: "2026-10-18", totalCents: 2345, receiptNumber: "FS 9999/1" }, saved)).toBeNull();
   });
 });

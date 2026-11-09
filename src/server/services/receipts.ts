@@ -14,7 +14,8 @@
  * belongs to the period open when it is added), 6 to 9 (reading, categories, sum check, saving
  * never blocked by unsorted items), 9a (photos locked once saved), 10 (failed readings can be
  * retried) and 14a (creating a category is logged). Deleting an unsaved receipt and its photo was
- * agreed with Maduabuchi on 9 Nov 2026 (rule 9b); saved receipts cannot be deleted.
+ * agreed with Maduabuchi on 9 Nov 2026 (rule 9b); saved receipts cannot be deleted. The same day,
+ * duplicate checking (rule 9c): the same store and receipt number cannot be saved twice.
  * Step 2 handles one photo per receipt; more photos come in step 4.
  */
 
@@ -22,7 +23,7 @@ import "server-only";
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/server/db/client";
 import { categories, categoryChanges, groups, items, ledgers, receiptPhotos, receipts, users } from "@/server/db/schema";
-import { categoryKey, matchCategory, parseReading, type ReviewItem, validateReview } from "@/domain/receipts";
+import { categoryKey, findDuplicate, matchCategory, parseReading, type ReviewItem, validateReview } from "@/domain/receipts";
 import { readReceiptPhotos } from "@/server/integrations/gemini";
 import { createUploadLink, deletePhotos, downloadPhoto, photoPath, viewLink } from "@/server/integrations/storage";
 import { assertMember, getGroupForMember, isMember, UUID } from "./groups";
@@ -102,6 +103,7 @@ export async function startReceipt(userId: string, groupId: string, paidBy: stri
 
 /**
  * Reads a receipt's photo with Gemini and fills in its items for review (SPEC.md rules 6 and 7).
+ * localToday is the device's date (rule 2c); Gemini uses it to read dates printed in an unusual order.
  *
  * Each item's category name is matched to the group's list; a name that is not on the list is
  * kept as a proposal and only becomes a category when the receipt is saved (rule 7). Any earlier
@@ -109,7 +111,7 @@ export async function startReceipt(userId: string, groupId: string, paidBy: stri
  * If anything goes wrong the receipt is marked "failed" and kept with its photo; the result says so
  * rather than throwing, so the screen can show Retry.
  */
-export async function readReceipt(userId: string, receiptId: string): Promise<{ status: "ready" | "failed" }> {
+export async function readReceipt(userId: string, receiptId: string, localToday: string): Promise<{ status: "ready" | "failed" }> {
   const receipt = await receiptForMember(userId, receiptId);
   if (receipt.status === "saved") throw new ServiceError("invalid", "This receipt is already saved.");
   await db.update(receipts).set({ status: "reading" }).where(eq(receipts.id, receiptId));
@@ -125,7 +127,7 @@ export async function readReceipt(userId: string, receiptId: string): Promise<{ 
       .from(categories)
       .where(eq(categories.groupId, receipt.groupId));
     const files = await Promise.all(photos.map((p) => downloadPhoto(p.storagePath)));
-    const reading = parseReading(await readReceiptPhotos(files, groupCategories.map((c) => c.name)));
+    const reading = parseReading(await readReceiptPhotos(files, groupCategories.map((c) => c.name), localToday));
 
     await db.transaction(async (tx) => {
       await tx.delete(items).where(eq(items.receiptId, receiptId));
@@ -145,7 +147,13 @@ export async function readReceipt(userId: string, receiptId: string): Promise<{ 
       );
       await tx
         .update(receipts)
-        .set({ status: "ready", storeName: reading.storeName, purchaseDate: reading.purchaseDate, totalCents: reading.totalCents })
+        .set({
+          status: "ready",
+          storeName: reading.storeName,
+          receiptNumber: reading.receiptNumber,
+          purchaseDate: reading.purchaseDate,
+          totalCents: reading.totalCents,
+        })
         .where(eq(receipts.id, receiptId));
     });
     return { status: "ready" };
@@ -158,8 +166,8 @@ export async function readReceipt(userId: string, receiptId: string): Promise<{ 
 
 /**
  * Everything the review screen (screen 3) needs: the receipt, its items in printed order, the
- * group's categories and members to choose from, the group's currency (rule 2b) and how many photos
- * it has. Photo links are not made here: they expire, so each is made when it is tapped (photoLink).
+ * group's categories and members to choose from, the group's currency (rule 2b), how many photos
+ * it has, and the group's other saved receipts, so the screen can flag a duplicate (rule 9c). Photo links are not made here: they expire, so each is made when it is tapped (photoLink).
  */
 export async function getReceipt(userId: string, receiptId: string) {
   const receipt = await receiptForMember(userId, receiptId);
@@ -172,6 +180,7 @@ export async function getReceipt(userId: string, receiptId: string) {
     .orderBy(asc(categories.name));
   const [{ photoCount }] = await db.select({ photoCount: count() }).from(receiptPhotos).where(eq(receiptPhotos.receiptId, receiptId));
   const { members } = await getGroupForMember(userId, receipt.groupId);
+  const saved = receipt.status === "saved" ? [] : await savedReceiptsFor(receipt.groupId, receiptId);
   return {
     receipt,
     currency: group.currency,
@@ -179,7 +188,30 @@ export async function getReceipt(userId: string, receiptId: string) {
     categories: groupCategories,
     members,
     photoCount,
+    saved,
   };
+}
+
+/**
+ * The group's saved receipts, without the one being reviewed, with what duplicate checking needs
+ * (SPEC.md rule 9c) and who paid, so the warning can say which receipt it matches.
+ * Limited to the latest 500, which covers months of normal use.
+ */
+async function savedReceiptsFor(groupId: string, exceptId: string) {
+  return db
+    .select({
+      id: receipts.id,
+      storeName: receipts.storeName,
+      purchaseDate: receipts.purchaseDate,
+      totalCents: receipts.totalCents,
+      receiptNumber: receipts.receiptNumber,
+      paidByName: users.displayName,
+    })
+    .from(receipts)
+    .innerJoin(users, eq(users.id, receipts.paidBy))
+    .where(and(eq(receipts.groupId, groupId), eq(receipts.status, "saved"), ne(receipts.id, exceptId)))
+    .orderBy(desc(receipts.savedAt))
+    .limit(500);
 }
 
 /**
@@ -216,6 +248,7 @@ export async function deleteReceipt(userId: string, receiptId: string): Promise<
 /** What the review screen sends when Save receipt is tapped. */
 export interface SaveReceiptInput {
   storeName: string;
+  receiptNumber: string | null;
   purchaseDate: string | null;
   totalCents: number | null;
   paidBy: string;
@@ -237,6 +270,13 @@ export async function saveReceipt(userId: string, receiptId: string, input: Save
   const errors = validateReview(input);
   if (!(await isMember(input.paidBy, receipt.groupId))) errors.paidBy = "Choose someone in the group.";
   if (input.totalCents !== null && !Number.isInteger(input.totalCents)) errors.totalCents = "Check the total.";
+  if (input.receiptNumber !== null && input.receiptNumber.trim().length > 60) errors.receiptNumber = "Check the receipt number.";
+  // The same store and receipt number is already saved: refuse, whatever the screen showed (rule 9c).
+  const duplicate = findDuplicate(
+    { storeName: input.storeName, purchaseDate: input.purchaseDate, totalCents: input.totalCents, receiptNumber: input.receiptNumber },
+    await savedReceiptsFor(receipt.groupId, receiptId),
+  );
+  if (duplicate?.kind === "block") throw new ServiceError("invalid", "This receipt is already saved in the group.");
   const chosenIds = [...new Set(input.items.map((i) => i.categoryId).filter((id): id is string => id !== null))];
   if (chosenIds.length > 0) {
     if (chosenIds.some((id) => !UUID.test(id))) errors.items = "A chosen category no longer exists.";
@@ -258,6 +298,7 @@ export async function saveReceipt(userId: string, receiptId: string, input: Save
         status: "saved",
         savedAt: new Date(),
         storeName: input.storeName.trim() || null,
+        receiptNumber: input.receiptNumber?.trim() || null,
         purchaseDate: input.purchaseDate,
         totalCents: input.totalCents,
         paidBy: input.paidBy,

@@ -150,6 +150,9 @@ export const receipts = pgTable(
     ledgerId: uuid("ledger_id").notNull().references(() => ledgers.id),
     paidBy: uuid("paid_by").notNull().references(() => users.id),
     storeName: text("store_name"),
+    // The receipt's own number as printed (for example "FS 0123/456789"), used to block saving the same
+    // receipt twice in a group (SPEC.md rule 9c). Not a tax number. Null when none could be read.
+    receiptNumber: text("receipt_number"),
     purchaseDate: date("purchase_date"),
     totalCents: integer("total_cents"),
     status: text("status", { enum: ["draft", "reading", "ready", "failed", "saved"] })

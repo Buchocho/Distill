@@ -4,16 +4,16 @@
  * What it holds: the check on Gemini's answer (parseReading), the "items add up to the total"
  * check shown on the review screen (sumCheck), how a category name from the reading is matched
  * to the group's list (matchCategory), and the check on a receipt before it is saved
- * (validateReview).
+ * (validateReview), and duplicate checking (receiptNumberKey, findDuplicate).
  *
  * Why it matters: the reading step is the part of Distill most likely to be wrong. Gemini's answer
  * is never trusted as it comes: anything malformed is dropped or refused here, prices become whole
  * cents, and the person reviewing sees whether the items match the printed total before saving.
  *
- * Business rules: SPEC.md rules 6 (store, date, total, items; an item's price is what was paid
+ * Business rules: SPEC.md rules 6 (store, date, total, receipt number, items; an item's price is what was paid
  * after its discount, and the discount is kept for information only; tax lines are items),
  * 7 (category, at product type level, from the group's list or a proposed new one), 8 (sum check, edits before
- * saving) and 9 (unsorted items never block saving). Stories US2 and US5.
+ * saving), 9 (unsorted items never block saving) and 9c (duplicates). Stories US2 and US5.
  * Pure functions. Tests: tests/unit/receipts.test.ts, with sample readings in tests/fixtures.
  */
 
@@ -41,6 +41,7 @@ export interface ReadItem {
 /** What the reading step returns (SPEC.md rule 6). Any field it could not read is null. */
 export interface Reading {
   storeName: string | null;
+  receiptNumber: string | null;
   purchaseDate: string | null;
   totalCents: number | null;
   items: ReadItem[];
@@ -95,6 +96,7 @@ export function parseReading(raw: unknown): Reading {
   const date = cleanText(r.date, 10);
   return {
     storeName: cleanText(r.store, 60),
+    receiptNumber: cleanText(r.receipt_number, 60),
     purchaseDate: date && isIsoDate(date) ? date : null,
     totalCents: cleanAmount(r.total),
     items,
@@ -177,4 +179,52 @@ export function receiptStatus(status: string, unsortedCount: number): { label: s
   if (status === "ready") return { label: "Review and save", tone: "act" };
   if (unsortedCount > 0) return { label: `${unsortedCount} item${unsortedCount === 1 ? "" : "s"} unsorted`, tone: "act" };
   return { label: "All sorted", tone: "done" };
+}
+
+/**
+ * A receipt number in a form that can be compared: capitals, no spaces. "FS 0123/4567" and
+ * "fs0123/4567" give the same key. Null when there is no number.
+ */
+export function receiptNumberKey(value: string | null | undefined): string | null {
+  const key = (value ?? "").toUpperCase().replace(/\s+/g, "");
+  return key.length === 0 ? null : key;
+}
+
+/** What duplicate checking needs to know about a receipt. */
+export interface DuplicateFacts {
+  storeName: string | null;
+  purchaseDate: string | null;
+  totalCents: number | null;
+  receiptNumber: string | null;
+}
+
+/**
+ * Looks for this receipt among the group's saved receipts (SPEC.md rule 9c, agreed 9 Nov 2026).
+ * - "block": same store and same receipt number. It is the same piece of paper; it cannot be saved.
+ * - "warn": no number to compare (on either side), but same store, date and total. Probably the
+ *   same receipt, but two genuine identical shops happen, so the person decides.
+ * A receipt number is unique per shop, not across shops, so the store must match too.
+ * Returns the first saved receipt that matches, or null.
+ */
+export function findDuplicate<T extends DuplicateFacts>(
+  current: DuplicateFacts,
+  saved: readonly T[],
+): { kind: "block" | "warn"; match: T } | null {
+  const store = current.storeName ? categoryKey(current.storeName) : null;
+  if (!store) return null;
+  const number = receiptNumberKey(current.receiptNumber);
+  const sameStore = saved.filter((s) => s.storeName && categoryKey(s.storeName) === store);
+  if (number) {
+    const exact = sameStore.find((s) => receiptNumberKey(s.receiptNumber) === number);
+    if (exact) return { kind: "block", match: exact };
+  }
+  const similar = sameStore.find(
+    (s) =>
+      (!number || !receiptNumberKey(s.receiptNumber)) &&
+      current.purchaseDate !== null &&
+      s.purchaseDate === current.purchaseDate &&
+      current.totalCents !== null &&
+      s.totalCents === current.totalCents,
+  );
+  return similar ? { kind: "warn", match: similar } : null;
 }

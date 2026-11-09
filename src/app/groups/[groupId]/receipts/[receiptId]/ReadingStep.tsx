@@ -12,6 +12,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DeleteReceipt } from "./DeleteReceipt";
+import { deviceToday } from "@/domain/dates";
 
 export function ReadingStep({ receiptId, groupId, status }: { receiptId: string; groupId: string; status: "draft" | "reading" | "failed" }) {
   const router = useRouter();
@@ -24,7 +25,12 @@ export function ReadingStep({ receiptId, groupId, status }: { receiptId: string;
     setBusy(true);
     setFailed(false);
     try {
-      const res = await fetch(`/api/v1/receipts/${receiptId}/read`, { method: "POST" });
+      // The phone's own date helps read dates printed in an unusual order (SPEC.md rule 2c).
+      const res = await fetch(`/api/v1/receipts/${receiptId}/read`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ localDate: deviceToday() }),
+      });
       const body = (await res.json()) as { status?: string };
       if (!res.ok || body.status !== "ready") throw new Error("failed");
       router.refresh();

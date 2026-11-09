@@ -19,7 +19,8 @@ import { getReceipt } from "@/server/services/receipts";
 import { ServiceError } from "@/server/services/errors";
 import { formatMoney } from "@/domain/money";
 import { ReadingStep } from "./ReadingStep";
-import { longDate, ReviewForm } from "./ReviewForm";
+import { ReviewForm } from "./ReviewForm";
+import { longDate } from "@/domain/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,8 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
         {receipt.status === "ready" && (
           <ReviewForm receiptId={receipt.id} groupId={groupId} currency={currency} storeName={receipt.storeName}
             purchaseDate={receipt.purchaseDate} totalCents={receipt.totalCents} paidBy={receipt.paidBy} me={user.id}
-            items={data.items} categories={data.categories} members={data.members} photoCount={data.photoCount} />
+            items={data.items} categories={data.categories} members={data.members} photoCount={data.photoCount}
+            receiptNumber={receipt.receiptNumber} saved={data.saved} />
         )}
 
         {receipt.status === "saved" && (
@@ -70,8 +72,8 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
                 {receipt.totalCents !== null && <span className="text-[22px] font-extrabold tabular-nums">{formatMoney(receipt.totalCents, currency)}</span>}
               </div>
               <div className="flex items-center justify-between text-[13px] text-sand">
-                <span>{receipt.purchaseDate ? longDate(receipt.purchaseDate) : "No date"} · Paid by {payer}</span>
-                {data.photoCount > 0 && <a href={`/api/v1/receipts/${receipt.id}/photos/1`} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center font-bold text-orange">See photo</a>}
+                <span>{receipt.purchaseDate ? longDate(receipt.purchaseDate) : "No date"} · Paid by {payer}{receipt.receiptNumber ? ` · No. ${receipt.receiptNumber}` : ""}</span>
+                {data.photoCount > 0 && <a href={`/api/v1/receipts/${receipt.id}/photos/1`} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center font-bold text-orange underline underline-offset-2">See photo</a>}
               </div>
             </div>
             <ul className="rounded-2xl bg-dark-card px-4">

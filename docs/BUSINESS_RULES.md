@@ -1,7 +1,7 @@
 # Distill: business rules register
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 9 Nov 2026, step 2 fixes from testing.
+Last updated: 9 Nov 2026, second round of step 2 fixes.
 
 Each business rule in SPEC.md section 4, whether it is built, and the files that enforce it. Rule numbers are the SPEC.md numbers, so a code comment that says "SPEC.md rule 15" points to the same row here.
 
@@ -31,9 +31,10 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 6 | Reading returns store, date, total and items; an item's price is after its discount, the discount is information only; vouchers stay a negative line; tax lines are items | Built: reading through Gemini, checked by `parseReading`; `items.discount_cents` holds the discount; tax lines asked for as items in category Tax | `src/server/integrations/gemini.ts`, `src/domain/receipts.ts` (`parseReading`), `src/domain/money.ts` (`parseAmount`) |
 | 7 | Items get a category at product type level; new ones are created when the receipt is saved | Built: the level is set in the Gemini instructions (`src/server/integrations/gemini.ts`); matched ignoring capitals, otherwise kept as `items.proposed_category` until save; a new name can also be typed | `src/domain/receipts.ts` (`matchCategory`), `saveReceipt`, `ReviewForm.tsx`, `categories_name_per_group` and `items_one_category` in `src/server/db/schema.ts` |
 | 8 | Review shows items total against printed total; names and prices editable | Built | `src/domain/receipts.ts` (`sumCheck`), `ReviewForm.tsx` |
-| 9 | Saving is never blocked by unsorted items | Built: Skip for now; unsorted count on Receipts and Home | `src/domain/receipts.ts` (`validateReview`), `saveReceipt`, `ReviewForm.tsx` |
+| 9 | Saving is never blocked by unsorted items | Built: Leave unsorted in the category dropdown; unsorted count on Receipts and Home | `src/domain/receipts.ts` (`validateReview`), `saveReceipt`, `ReviewForm.tsx` |
 | 9a | Any number of photos; locked once saved | Partly built: one photo per receipt; saved receipts cannot be read or saved again. More photos are step 4 | `src/server/services/receipts.ts`, `src/server/db/schema.ts` |
 | 9b | An unsaved receipt can be deleted with its photo; a saved one cannot | Built | `deleteReceipt` in `src/server/services/receipts.ts`, `DeleteReceipt.tsx`, `src/server/integrations/storage.ts` (`deletePhotos`) |
+| 9c | Same store and receipt number cannot be saved twice; same store, date and total warns | Built | `src/domain/receipts.ts` (`findDuplicate`), `saveReceipt` and `savedReceiptsFor` in `src/server/services/receipts.ts`, `ReviewForm.tsx`, `receipts.receipt_number` |
 | 10 | A failed reading keeps the receipt with status "failed" for retry | Built: Retry reads the same photo again | `readReceipt` in `src/server/services/receipts.ts`, `ReadingStep.tsx` |
 
 ## Sharing (build step 3)
