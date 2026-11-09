@@ -1,4 +1,5 @@
-// End to end tests for the receipt screens and API that can run without signing in (story US2).
+// End to end tests for the receipt, category and balance screens and API that can run without
+// signing in (stories US2 to US4).
 // The signed in scan, read and save flow is checked by hand on the deployed app, because tests
 // cannot reach the real Google sign in or the real Gemini API (CLAUDE.md).
 
@@ -21,8 +22,16 @@ test("the receipt API refuses callers who are not signed in", async ({ request }
     ["DELETE", `/api/v1/receipts/${RECEIPT}`],
     ["GET", `/api/v1/receipts/${RECEIPT}/photos/1`],
     ["PATCH", `/api/v1/me`],
+    ["GET", `/api/v1/groups/${GROUP}/categories`],
+    ["POST", `/api/v1/groups/${GROUP}/categories`],
+    ["GET", `/api/v1/groups/${GROUP}/categories/history`],
+    ["GET", `/api/v1/groups/${GROUP}/to-sort`],
+    ["GET", `/api/v1/groups/${GROUP}/balance`],
+    ["GET", `/api/v1/categories/${RECEIPT}`],
+    ["PUT", `/api/v1/categories/${RECEIPT}/rule`],
+    ["PATCH", `/api/v1/items/${RECEIPT}`],
   ] as const) {
-    const res = await request.fetch(url, { method, data: method === "POST" || method === "PATCH" ? {} : undefined, maxRedirects: 0 });
+    const res = await request.fetch(url, { method, data: method === "GET" || method === "DELETE" ? undefined : {}, maxRedirects: 0 });
     expect(res.status(), `${method} ${url}`).toBe(401);
   }
 });

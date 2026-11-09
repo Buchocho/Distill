@@ -10,7 +10,8 @@
  * retry (SPEC.md rule 10). Services are the only layer that touches the database (architecture
  * rule 2), and every function checks group membership first (architecture rule 4).
  *
- * Business rules: SPEC.md rules 4 (any member adds a receipt and chooses who paid), 5 (a receipt
+ * Business rules: SPEC.md rules 4 (a member adds only their own receipts; the payer is the person
+ * who scans, and only they can review, save or delete it before saving), 5 (a receipt
  * belongs to the period open when it is added), 6 to 9 (reading, categories, sum check, saving
  * never blocked by unsorted items), 9a (photos locked once saved), 10 (failed readings can be
  * retried) and 14a (creating a category is logged). Deleting an unsaved receipt and its photo was
@@ -26,7 +27,8 @@ import { categories, categoryChanges, groups, items, ledgers, receiptPhotos, rec
 import { categoryKey, findDuplicate, matchCategory, parseReading, type ReviewItem, validateReview } from "@/domain/receipts";
 import { readReceiptPhotos } from "@/server/integrations/gemini";
 import { createUploadLink, deletePhotos, downloadPhoto, photoPath, viewLink } from "@/server/integrations/storage";
-import { assertMember, getGroupForMember, isMember, UUID } from "./groups";
+import { assertMember, getGroupForMember, UUID } from "./groups";
+import { itemHistory } from "./categories";
 import { ServiceError } from "./errors";
 
 /** How many receipts the Receipts screen lists. */
@@ -44,6 +46,16 @@ async function receiptForMember(userId: string, receiptId: string) {
     throw new ServiceError("not_found", "Receipt not found.");
   });
   return receipt;
+}
+
+/**
+ * Stops unless the user is the one who scanned the receipt. Only they can read, review, save or
+ * delete it before it is saved: it is their purchase (SPEC.md rule 4). Other members can view it.
+ */
+function assertOwnReceipt(receipt: { createdBy: string }, userId: string) {
+  if (receipt.createdBy !== userId) {
+    throw new ServiceError("forbidden", "Only the person who scanned this receipt can change it.");
+  }
 }
 
 /**
@@ -75,14 +87,14 @@ export async function listReceipts(userId: string, groupId: string) {
 
 /**
  * Starts a receipt when a member takes or chooses a photo (SPEC.md rules 4 and 5).
- * Creates the receipt in the group's open period, paid by the chosen member, and returns a one
- * time link for the browser to upload the photo straight to storage (architecture rule 6).
+ * Creates the receipt in the group's open period, paid by the person scanning: a member adds
+ * only their own receipts, so nobody can record a purchase as someone else's (rule 4, decided
+ * 9 Nov 2026). Returns a one time link for the browser to upload the photo straight to storage
+ * (architecture rule 6).
  */
-export async function startReceipt(userId: string, groupId: string, paidBy: string) {
+export async function startReceipt(userId: string, groupId: string) {
   await assertMember(userId, groupId);
-  if (!(await isMember(paidBy, groupId))) {
-    throw new ServiceError("invalid", "Check the form.", { paidBy: "Choose someone in the group." });
-  }
+  const paidBy = userId;
   const [openLedger] = await db
     .select()
     .from(ledgers)
@@ -113,6 +125,7 @@ export async function startReceipt(userId: string, groupId: string, paidBy: stri
  */
 export async function readReceipt(userId: string, receiptId: string, localToday: string): Promise<{ status: "ready" | "failed" }> {
   const receipt = await receiptForMember(userId, receiptId);
+  assertOwnReceipt(receipt, userId);
   if (receipt.status === "saved") throw new ServiceError("invalid", "This receipt is already saved.");
   await db.update(receipts).set({ status: "reading" }).where(eq(receipts.id, receiptId));
 
@@ -167,7 +180,8 @@ export async function readReceipt(userId: string, receiptId: string, localToday:
 /**
  * Everything the review screen (screen 3) needs: the receipt, its items in printed order, the
  * group's categories and members to choose from, the group's currency (rule 2b), how many photos
- * it has, and the group's other saved receipts, so the screen can flag a duplicate (rule 9c). Photo links are not made here: they expire, so each is made when it is tapped (photoLink).
+ * it has, the group's other saved receipts, so the screen can flag a duplicate (rule 9c), and for a
+ * saved receipt the change history of its items (rule 14). Photo links are not made here: they expire, so each is made when it is tapped (photoLink).
  */
 export async function getReceipt(userId: string, receiptId: string) {
   const receipt = await receiptForMember(userId, receiptId);
@@ -181,6 +195,8 @@ export async function getReceipt(userId: string, receiptId: string) {
   const [{ photoCount }] = await db.select({ photoCount: count() }).from(receiptPhotos).where(eq(receiptPhotos.receiptId, receiptId));
   const { members } = await getGroupForMember(userId, receipt.groupId);
   const saved = receipt.status === "saved" ? [] : await savedReceiptsFor(receipt.groupId, receiptId);
+  // On a saved receipt, each item's change history is shown under it (SPEC.md rule 14).
+  const history = receipt.status === "saved" ? await itemHistory(receiptId) : [];
   return {
     receipt,
     currency: group.currency,
@@ -189,6 +205,7 @@ export async function getReceipt(userId: string, receiptId: string) {
     members,
     photoCount,
     saved,
+    history,
   };
 }
 
@@ -238,6 +255,7 @@ export async function photoLink(userId: string, receiptId: string, position: num
  */
 export async function deleteReceipt(userId: string, receiptId: string): Promise<void> {
   const receipt = await receiptForMember(userId, receiptId);
+  assertOwnReceipt(receipt, userId);
   if (receipt.status === "saved") throw new ServiceError("invalid", "A saved receipt cannot be deleted.");
   const photos = await db.select().from(receiptPhotos).where(eq(receiptPhotos.receiptId, receiptId));
   // Photos and items are removed with the receipt (cascade in the database).
@@ -251,7 +269,6 @@ export interface SaveReceiptInput {
   receiptNumber: string | null;
   purchaseDate: string | null;
   totalCents: number | null;
-  paidBy: string;
   items: ReviewItem[];
 }
 
@@ -266,9 +283,9 @@ export interface SaveReceiptInput {
  */
 export async function saveReceipt(userId: string, receiptId: string, input: SaveReceiptInput) {
   const receipt = await receiptForMember(userId, receiptId);
+  assertOwnReceipt(receipt, userId);
   if (receipt.status !== "ready") throw new ServiceError("invalid", "This receipt cannot be saved now.");
   const errors = validateReview(input);
-  if (!(await isMember(input.paidBy, receipt.groupId))) errors.paidBy = "Choose someone in the group.";
   if (input.totalCents !== null && !Number.isInteger(input.totalCents)) errors.totalCents = "Check the total.";
   if (input.receiptNumber !== null && input.receiptNumber.trim().length > 60) errors.receiptNumber = "Check the receipt number.";
   // The same store and receipt number is already saved: refuse, whatever the screen showed (rule 9c).
@@ -301,7 +318,6 @@ export async function saveReceipt(userId: string, receiptId: string, input: Save
         receiptNumber: input.receiptNumber?.trim() || null,
         purchaseDate: input.purchaseDate,
         totalCents: input.totalCents,
-        paidBy: input.paidBy,
       })
       .where(and(eq(receipts.id, receiptId), eq(receipts.status, "ready")))
       .returning({ id: receipts.id });

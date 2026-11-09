@@ -1,7 +1,7 @@
 # Distill: code map
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 9 Nov 2026, second round of step 2 fixes (saved receipt error, leave unsorted, dates, duplicates).
+Last updated: 9 Nov 2026, build step 3 (sharing rules, item category changes, open period balance) and scan for yourself.
 
 This document lists every file in the repository, what it holds and the main functions in it. Use it to find where something lives before changing it. For why a rule exists, see [BUSINESS_RULES.md](BUSINESS_RULES.md). For the tables, see [DATA_MODEL.md](DATA_MODEL.md).
 
@@ -63,6 +63,8 @@ Where to look when something needs changing:
 | `currencies.ts` | Currencies a group can choose | `CURRENCIES` lists every two decimal currency. `isSupportedCurrency` checks a code. `DEFAULT_CURRENCY` is EUR. | 2b |
 | `ledgers.ts` | Period dates | `validateCloseSetting` checks a close choice. `nextCloseDate` finds the next close date. `firstLedger` and `nextLedger` give a period's start and end. `describeClose` gives the sentence shown on Join. `daysUntil` gives the days left. | 18, 19 |
 | `receipts.ts` | Receipt rules | `parseReading` checks Gemini's answer and turns prices into cents. `sumCheck` gives the items total and the difference from the printed total. `matchCategory` matches a read category to the group's list or keeps it as a proposal. `validateReview` checks a receipt before saving. `receiptStatus` gives the status shown in the list. `storeKey` and `receiptNumberKey` make names and numbers comparable; `findDuplicate` finds a saved receipt with the same store and number (block) or the same store, date and total (warning, even if numbers differ). | 6, 7, 8, 9, 9c, 10, US2, US5 |
+| `rules.ts` | Sharing rules | `validateRule` checks a rule (shares total 100%). `describeRule` gives "Everyone equal", "Whoever paid", "Izu 70%, Butch 30%". `weightsFor` says who carries an item. `percentToBp`, `bpToPercent`, `equalShares`. | 11, 12, 13 |
+| `balance.ts` | Who owes whom | `computeBalance` splits every ruled item by its rule in cents, nets each pair to one line, and counts left out items. `netFor` gives one person's position. | 15, 16, 17 |
 | `dates.ts` | Date style and checks, shared by server and browser | `longDate` gives 28 Sep 2026. `dateLooksWrong` flags a future date or one over 60 days old. `deviceToday` is the phone's date. | 2c, 6, 8 |
 | `users.ts` | Display name check | `checkDisplayName` cleans a chosen name or gives an error. `DISPLAY_NAME_MAX` is 30. | 1 |
 | `groups.ts` | New group form check, device date | `validateNewGroup` returns a message per field (name, close, currency), or none when valid. `isValidLocalDate` checks the date sent by the device. `utcToday` is the fallback date. | 2b, 2c, 18, US1 |
@@ -76,15 +78,17 @@ Where to look when something needs changing:
 | `integrations/gemini.ts` | Receipt reading | `readReceiptPhotos` sends photos and the group's category names to the model in `GEMINI_MODEL`, returns its JSON answer unchecked. |
 | `integrations/storage.ts` | Photo storage | `createUploadLink`, `downloadPhoto`, `viewLink` (10 minutes), `deletePhotos`, `photoPath`. Uses the service key, server only. |
 | `services/users.ts` | The app's record of each person | `ensureUser` creates the user's row on first sign in and never overwrites a chosen name. `setDisplayName` changes the name shown. |
+| `services/categories.ts` | Categories, rules, history, item category changes | `listCategories`, `getCategory`, `setRule` (logged), `createCategory`, `categoryHistory`, `listToSort`, `changeItemCategory` (open period, logged), `itemHistory`, `countToSort`, `rulesForGroup`, `openPeriodItems`. |
+| `services/balance.ts` | Open period balance | `getOpenBalance` works out the balance from current items and rules. |
 | `services/system.ts` | Health and keep alive | `keepAlive` stops the free Supabase project from pausing. `databaseIsUp` for the health check. |
-| `services/errors.ts` | Expected failures | `ServiceError` (invalid, not found, not signed in) and `STATUS`, the HTTP code for each. |
+| `services/errors.ts` | Expected failures | `ServiceError` (invalid, not found, not signed in, forbidden) and `STATUS`, the HTTP code for each. |
 | `auth.ts` | Who is signed in | `currentUser` for pages, `apiUser` for the API (cookie or bearer token). |
 | `session.ts` | Sign in guard for pages | `requireUser` sends signed out users to Sign in and back afterwards. |
 | `pageData.ts` | Shared page loading | `groupOr404` loads a group or shows Not found. |
 | `api.ts` | Shared API behaviour | `withUser` (sign in required, same error format everywhere), `readJson`. |
 | `db/client.ts` | The database connection | `db`, used only by services. |
 | `db/schema.ts` | All 12 tables | One definition per table, with the database level checks that protect business rules. |
-| `db/migrations/` | Database changes in order | `0000_init.sql` creates all tables. `0001_enable_rls.sql` blocks the browser from reading tables directly. `0002_category_changes.sql` adds the category history table. `0003_group_currency.sql` adds the group currency. `0004_item_proposed_category.sql` adds the proposed category on items. `0005_item_discount.sql` adds the item discount. `0006_receipt_number.sql` adds the receipt number. Generated by the tool; once applied they are never edited. |
+| `db/migrations/` | Database changes in order | `0000_init.sql` creates all tables. `0001_enable_rls.sql` blocks the browser from reading tables directly. `0002_category_changes.sql` adds the category history table. `0003_group_currency.sql` adds the group currency. `0004_item_proposed_category.sql` adds the proposed category on items. `0005_item_discount.sql` adds the item discount. `0006_receipt_number.sql` adds the receipt number. `0007_category_rule_kind.sql` adds the rule kind on categories. Generated by the tool; once applied they are never edited. |
 
 Planned, not yet created: `services/receipts.ts`, `services/categories.ts`, `services/ledgers.ts`, `services/payments.ts`, `integrations/gemini.ts`, `integrations/storage.ts`, and in `src/domain`: `split.ts`, `balance.ts`, `agreement.ts` (ARCHITECTURE.md section 4).
 
@@ -108,12 +112,15 @@ Screen numbers match SPEC.md section 5.
 | `/start` | `start/page.tsx` | 0a, Start: create a group or use an invite link | Built |
 | `/join/<code>` | `join/[token]/page.tsx` | 0b, Join a group | Built |
 | `/groups/new` | `groups/new/page.tsx`, `groups/new/NewGroupForm.tsx` | 1, New group | Built |
-| `/groups/<id>` | `groups/[groupId]/page.tsx` | 0c, Home | Built. Receipts status line is live; Categories line is a placeholder (step 3) |
+| `/groups/<id>` | `groups/[groupId]/page.tsx` | 0c, Home | Built. Receipts and Categories status lines are live |
 | `/groups/<id>/invite` | `groups/[groupId]/invite/page.tsx`, `invite/CopyLink.tsx`, `invite/DisplayNameForm.tsx` | Invite link, members, and "Your name in Distill" | Built |
 | `/groups/<id>/receipts` | `groups/[groupId]/receipts/page.tsx`, `receipts/ScanPanel.tsx` | 2, Receipts: take a photo or choose a file, paid by, recent receipts with status | Built (one photo per receipt; more in step 4) |
-| `/groups/<id>/receipts/<receiptId>` | `receipts/[receiptId]/page.tsx`, `ReadingStep.tsx`, `ReviewForm.tsx`, `DeleteReceipt.tsx` | 3, Review receipt: reading, Retry, review and save (layout from mockup v3), delete before saving, saved view | Built. Changing items after saving is step 3 |
-| `/groups/<id>/categories` | `groups/[groupId]/categories/page.tsx` | 4, Categories | Placeholder (step 3) |
-| `/groups/<id>/balance` | `groups/[groupId]/balance/page.tsx` | 5, Balance | Placeholder, shows period dates (steps 3, 5) |
+| `/groups/<id>/receipts/<receiptId>` | `receipts/[receiptId]/page.tsx`, `ReadingStep.tsx`, `ReviewForm.tsx`, `DeleteReceipt.tsx` | 3, Review receipt: reading, Retry, review and save (layout from mockup v3), delete before saving, saved view | Built. On a saved receipt any member can change an item's category; changes shown under the item |
+| `/groups/<id>/categories` | `groups/[groupId]/categories/page.tsx`, `categories/AddCategory.tsx` | 4, Categories: needs sorting flag, categories with rules, History, Add category | Built |
+| `/groups/<id>/categories/<categoryId>` | `categories/[categoryId]/page.tsx`, `RuleForm.tsx` | 4b, Sharing rule: Everyone equal, Whoever paid, One person, Custom | Built |
+| `/groups/<id>/categories/history` | `categories/history/page.tsx` | 4c, Category history | Built |
+| `/groups/<id>/categories/sort` | `categories/sort/page.tsx` | Needs sorting: items without a category, categories without a rule | Built |
+| `/groups/<id>/balance` | `groups/[groupId]/balance/page.tsx` | 5, Balance: your position, who owes whom, left out items | Open period built; closing and Agree in step 5, Payments in step 6 |
 | `/auth/callback` | `auth/callback/route.ts` | No screen. Where Google sends the user back after sign in. | Built |
 
 Shared screen files:
@@ -142,6 +149,13 @@ Full detail in [API.md](API.md). Each file is a thin wrapper that calls a servic
 | `GET /api/v1/receipts/<id>/photos/<n>` | `api/v1/receipts/[receiptId]/photos/[position]/route.ts` | Fresh link to a photo |
 | `POST /api/v1/receipts/<id>/read` | `api/v1/receipts/[receiptId]/read/route.ts` | Read or retry |
 | `POST /api/v1/receipts/<id>/save` | `api/v1/receipts/[receiptId]/save/route.ts` | Save a reviewed receipt |
+| `GET, POST /api/v1/groups/<id>/categories` | `api/v1/groups/[groupId]/categories/route.ts` | List and add categories |
+| `GET /api/v1/groups/<id>/categories/history` | `.../categories/history/route.ts` | Category history |
+| `GET /api/v1/groups/<id>/to-sort` | `api/v1/groups/[groupId]/to-sort/route.ts` | What needs sorting |
+| `GET /api/v1/groups/<id>/balance` | `api/v1/groups/[groupId]/balance/route.ts` | Open period balance |
+| `GET /api/v1/categories/<id>` | `api/v1/categories/[categoryId]/route.ts` | One category |
+| `PUT /api/v1/categories/<id>/rule` | `api/v1/categories/[categoryId]/rule/route.ts` | Set a rule |
+| `PATCH /api/v1/items/<id>` | `api/v1/items/[itemId]/route.ts` | Change a saved item's category |
 | `GET /api/cron/keep-alive` | `api/cron/keep-alive/route.ts` | Daily keep alive, Vercel only |
 
 ## src/components: shared pieces of screen
@@ -149,6 +163,8 @@ Full detail in [API.md](API.md). Each file is a thin wrapper that calls a servic
 | File | What it holds |
 |---|---|
 | `TabScreen.tsx` | Layout for the first screen of each tab. |
+| `SubScreen.tsx` | Layout for an inner screen: Back, title, tab colour. |
+| `ItemCategoryPicker.tsx` | Change a saved item's category, dark or light. |
 | `TabBar.tsx` | Bottom tab bar: Receipts, Categories, Balance. |
 | `DistillMark.tsx` | The Distill wordmark, also the link back to Home. |
 | `Icon.tsx` | Line icons. |
@@ -158,6 +174,6 @@ Full detail in [API.md](API.md). Each file is a thin wrapper that calls a servic
 
 | Folder | What it holds |
 |---|---|
-| `tests/unit` | One test file per file in `src/domain`: `money.test.ts`, `ledgers.test.ts`, `groups.test.ts`, `currencies.test.ts`, `receipts.test.ts`, `users.test.ts`, `dates.test.ts`. |
-| `tests/e2e` | `auth.spec.ts`: Sign in screen, redirect to sign in, sign in error. `receipts.spec.ts`: receipt screen and API (including delete, photo link and name change) refuse signed out users. Signed in flows are checked by hand for now. |
+| `tests/unit` | One test file per file in `src/domain`: `money.test.ts`, `ledgers.test.ts`, `groups.test.ts`, `currencies.test.ts`, `receipts.test.ts`, `users.test.ts`, `dates.test.ts`, `rules.test.ts`, `balance.test.ts`. |
+| `tests/e2e` | `auth.spec.ts`: Sign in screen, redirect to sign in, sign in error. `receipts.spec.ts`: receipt, category and balance API and screens refuse signed out users. Signed in flows are checked by hand for now. |
 | `tests/fixtures` | Sample Gemini answers: `reading-continente.json` (clean Portuguese receipt), `reading-us-tax-discount.json` (sales tax, a discount, broken lines, a false date). |

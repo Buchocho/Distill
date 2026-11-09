@@ -3,7 +3,7 @@
  * Members only. Documented in docs/API.md. The Receipts screen uses these same routes.
  */
 
-import { readJson, withUser } from "@/server/api";
+import { withUser } from "@/server/api";
 import { listReceipts, startReceipt } from "@/server/services/receipts";
 
 export const dynamic = "force-dynamic";
@@ -17,13 +17,11 @@ export const GET = withUser<Ctx>(async (user, _request, { params }) => {
 });
 
 /**
- * POST: start a receipt. Body { paidBy } (a member's user id; defaults to the caller, SPEC.md rule 4).
+ * POST: start a receipt, paid by the caller (SPEC.md rule 4: a member adds only their own receipts).
  * Returns the receipt id and a one time upload link { path, token } for the photo. After uploading,
  * call POST /api/v1/receipts/{id}/read.
  */
-export const POST = withUser<Ctx>(async (user, request, { params }) => {
+export const POST = withUser<Ctx>(async (user, _request, { params }) => {
   const { groupId } = await params;
-  const body = await readJson(request);
-  const paidBy = typeof body.paidBy === "string" && body.paidBy ? body.paidBy : user.id;
-  return startReceipt(user.id, groupId, paidBy);
+  return startReceipt(user.id, groupId);
 });

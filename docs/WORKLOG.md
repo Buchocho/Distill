@@ -137,3 +137,15 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Deferred by his decision: a receipt stuck in "reading" (a reading cut off by the 60 second limit or a lost connection) cannot be retried or deleted from the screen; rare, to fix later. Long receipts at 2500 px are untested (no long receipt to hand); step 4 (several photos) addresses them.
 - Known gap: signed in flows have no automated end to end tests because tests cannot sign in with Google; covered by his hand checks.
 
+## 2026-11-09 (night): scan for yourself, and step 3 built: sharing rules, item changes, open period balance
+
+- Decisions by Maduabuchi before building:
+  - After saving, only an item's category can change; name and price are fixed, as protection against a member changing what someone else bought.
+  - A member scans only their own receipts; the payer is always the person scanning (SPEC rule 4 changed). Pros and cons were discussed: it removes wrong or dishonest "paid by" and makes "Whoever paid" safe; it changes the approved spec and is a weaker fit for the low-effort persona, who must now scan their own receipts. Workaround for a receipt in the wrong pocket: send the photo to the payer to upload.
+  - A rule kind he asked for: "Whoever paid" (each person pays for their own chocolate bars), so rules are Everyone equal, Whoever paid, One person, Custom. Shortcuts accepted.
+  - One "needs sorting" flag, shown only when at least one item is unsorted or in a category without a rule, not one per item.
+- Prompts: "What does Step 3 involve?"; "flag uncategorized items ... just have a tab whenever there is at least one"; "whoever bought it pays for it"; "only change the category"; "you can only scan ... for that person"; "Yes, proceed".
+- Built: scan for yourself (Paid by removed; only the scanner reviews, saves or deletes an unsaved receipt; others see "still adding"); rule kinds (migration 0007, `categories.rule_kind`); Categories tab with the needs sorting flag, rules in words, History, Add category; Sharing rule screen with the four options, Split evenly and the 100% check; Category history; Needs sorting screen; changing a saved item's category with its history shown under the item; Balance tab with your position, netted lines and left out items; live Categories line on Home. API routes for each.
+- Verified: type check, lint, 76 unit tests (new: rules and balance, including Whoever paid moving no money, netting, vouchers, left out items), end to end tests (signed out), build, and a browser render of the rule form. Not verifiable here: the screens against real data; checked by hand next.
+- Left open: closing a period and Agree (step 5), payments (step 6). The stuck "reading" fix stays deferred.
+

@@ -1,7 +1,7 @@
 # Distill: business rules register
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 9 Nov 2026, second round of step 2 fixes.
+Last updated: 9 Nov 2026, build step 3 (sharing rules, item category changes, open period balance).
 
 Each business rule in SPEC.md section 4, whether it is built, and the files that enforce it. Rule numbers are the SPEC.md numbers, so a code comment that says "SPEC.md rule 15" points to the same row here.
 
@@ -26,7 +26,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
-| 4 | Any member adds a receipt and chooses who paid | Built: Paid by on Receipts and on Review, default you; must be a member | `src/server/services/receipts.ts` (`startReceipt`, `saveReceipt`), `receipts/ScanPanel.tsx`, `ReviewForm.tsx` |
+| 4 | A member adds only their own receipts; the payer is the person scanning; only they review, save or delete it before saving | Built (changed 9 Nov from "choose who paid") | `startReceipt`, `assertOwnReceipt` in `src/server/services/receipts.ts`, `receipts/ScanPanel.tsx`, `receipts/[receiptId]/page.tsx` |
 | 5 | A receipt belongs to the period open when it is added | Built: the open period at the moment the receipt is started. Moving to the next period on the close date is step 5 | `startReceipt` in `src/server/services/receipts.ts` |
 | 6 | Reading returns store, date, total and items; an item's price is after its discount, the discount is information only; vouchers stay a negative line; tax lines are items | Built: reading through Gemini, checked by `parseReading`; `items.discount_cents` holds the discount; tax lines asked for as items in category Tax | `src/server/integrations/gemini.ts`, `src/domain/receipts.ts` (`parseReading`), `src/domain/money.ts` (`parseAmount`) |
 | 7 | Items get a category at product type level; new ones are created when the receipt is saved | Built: the level is set in the Gemini instructions (`src/server/integrations/gemini.ts`); matched ignoring capitals, otherwise kept as `items.proposed_category` until save; a new name can also be typed | `src/domain/receipts.ts` (`matchCategory`), `saveReceipt`, `ReviewForm.tsx`, `categories_name_per_group` and `items_one_category` in `src/server/db/schema.ts` |
@@ -41,20 +41,20 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
-| 11 | A category's rule lists sharers and percentages totalling 100% | Prepared: each share must be 1 to 10000. The 100% total is not checked yet. | `src/server/db/schema.ts`, `src/domain/money.ts` (`FULL_SHARE_BP`) |
-| 12 | A category with no rule is not split; its items count as unsorted | Not built (step 3) | |
-| 13 | Any member changes an item's category; items always follow their category's rule | Not built (step 3) | |
-| 13a | A rule change applies to the open period only | Not built (step 3) | |
-| 14 | Every item change is logged and shown | Prepared: `item_changes` table | `src/server/db/schema.ts` |
-| 14a | Category creation and rule changes are logged and shown | Partly built: creation on save is logged. Rule changes and the history screen are step 3 | `saveReceipt` in `src/server/services/receipts.ts` |
-| 15 | Shares in cents, largest remainder rounding, always adds up to the price | Built and tested; not used by any screen yet | `src/domain/money.ts` (`splitCents`) |
+| 11 | A category's rule: Everyone equal, Whoever paid, One person, or Custom percentages totalling 100% | Built | `src/domain/rules.ts` (`validateRule`), `categories.rule_kind` and `category_shares`, `setRule` in `src/server/services/categories.ts`, `RuleForm.tsx` |
+| 12 | A category with no rule is not split; its items count as needing sorting; one flag shows the count | Built | `src/domain/balance.ts`, `listCategories` and `countToSort` in `src/server/services/categories.ts`, `categories/page.tsx`, `categories/sort/page.tsx`, Home |
+| 13 | Any member changes a saved item's category while the period is open; name and price are fixed after saving; items follow their category's rule | Built | `changeItemCategory` in `src/server/services/categories.ts`, `src/components/ItemCategoryPicker.tsx` |
+| 13a | A rule change applies to every item in the open period | Built: the balance is worked out from the current rules each time. Closed periods are kept separately in step 5 | `src/server/services/balance.ts` |
+| 14 | Every item change is logged and shown | Built (category changes, the only change allowed after saving) | `changeItemCategory`, `itemHistory`, `receipts/[receiptId]/page.tsx` |
+| 14a | Category creation and rule changes are logged and shown | Built | `saveReceipt`, `createCategory`, `setRule`, `categoryHistory`, `categories/history/page.tsx` |
+| 15 | Shares in cents, largest remainder rounding, always adds up to the price | Built and used by the balance | `src/domain/money.ts` (`splitCents`), `src/domain/balance.ts` |
 
 ## Balance (build step 3)
 
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
-| 16 | Each sharer owes the payer; debts netted to one line per pair | Not built (step 3) | |
-| 17 | Unsorted items are left out of the balance and counted | Not built (step 3) | |
+| 16 | Each sharer owes the payer; debts netted to one line per pair | Built | `src/domain/balance.ts` (`computeBalance`), `balance/page.tsx` |
+| 17 | Unsorted items are left out of the balance and counted | Built | `src/domain/balance.ts`, `balance/page.tsx` |
 | 17a | Balance opens on the open period; a closed period needing agreement shows as one card | Partly built: the open period's dates show; the rest is step 5 | `src/app/groups/[groupId]/balance/page.tsx` |
 
 ## Periods and closing (build step 5)

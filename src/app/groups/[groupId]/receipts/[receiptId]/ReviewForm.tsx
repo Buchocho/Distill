@@ -4,8 +4,9 @@
  * The review form of screen 3: check and correct what was read, then save. Runs in the browser.
  * Layout follows mockup "Review receipt v3", approved by Maduabuchi on 9 Nov 2026.
  *
- * What the person can do (SPEC.md rules 4 and 6 to 9b, stories US2 and US5):
- * - correct the store, date, total, who paid, and each item's name and price (rule 8);
+ * Only the person who scanned the receipt sees this form; they are its payer (SPEC.md rule 4).
+ * What they can do (SPEC.md rules 6 to 9c, stories US2 and US5):
+ * - correct the store, date, total, and each item's name and price (rule 8);
  * - give an item a category: one of the group's, one proposed by the reading, or a new name
  *   (rule 7); or choose "Leave unsorted" to sort it later (rule 9, US5);
  * - correct the receipt number, and see a warning when the date looks misread (rule 8);
@@ -27,7 +28,6 @@ import { dateLooksWrong, deviceToday, longDate } from "@/domain/dates";
 import { DeleteReceipt } from "./DeleteReceipt";
 
 type Category = { id: string; name: string };
-type Member = { id: string; name: string };
 type Item = {
   id: string;
   name: string;
@@ -102,11 +102,8 @@ export function ReviewForm(props: {
   storeName: string | null;
   purchaseDate: string | null;
   totalCents: number | null;
-  paidBy: string;
-  me: string;
   items: Item[];
   categories: Category[];
-  members: Member[];
   photoCount: number;
   receiptNumber: string | null;
   saved: Saved[];
@@ -116,7 +113,6 @@ export function ReviewForm(props: {
   const [store, setStore] = useState(props.storeName ?? "");
   const [date, setDate] = useState(props.purchaseDate ?? "");
   const [total, setTotal] = useState(props.totalCents === null ? "" : formatCents(props.totalCents, props.currency));
-  const [paidBy, setPaidBy] = useState(props.paidBy);
   const [number, setNumber] = useState(props.receiptNumber ?? "");
   const [rows, setRows] = useState<Row[]>(() =>
     props.items.map((i) => ({
@@ -167,7 +163,6 @@ export function ReviewForm(props: {
         receiptNumber: number || null,
         purchaseDate: date || null,
         totalCents,
-        paidBy,
         items: rows.map((r, i) => ({
           name: r.name,
           priceCents: prices[i],
@@ -233,16 +228,7 @@ export function ReviewForm(props: {
         </div>
         {errors.totalCents && <p className="text-right text-sm font-semibold text-orange">{errors.totalCents}</p>}
         <div className="flex items-center gap-2 text-sm text-sand">
-          <label htmlFor="reviewPaidBy">Paid by</label>
-          <div className="relative">
-            <select id="reviewPaidBy" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}
-              className="min-h-9 appearance-none rounded-[10px] bg-dark-line pl-2.5 pr-8 text-sm font-bold text-paper">
-              {props.members.map((m) => (
-                <option key={m.id} value={m.id}>{m.id === props.me ? `${m.name} (you)` : m.name}</option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-paper"><Icon name="chevron" size={14} strokeWidth={2.5} /></span>
-          </div>
+          <span>Paid by you</span>
           <span className="flex-1" />
           {props.photoCount > 0 && (
             <a href={`/api/v1/receipts/${props.receiptId}/photos/1`} target="_blank" rel="noreferrer"

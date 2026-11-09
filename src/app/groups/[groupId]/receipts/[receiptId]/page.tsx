@@ -4,9 +4,12 @@
  * Shows a receipt in whichever state it is in:
  * - being read (draft or reading): ReadingStep starts or waits for the reading;
  * - failed: ReadingStep shows Retry (SPEC.md rule 10) and Delete (rule 9b);
- * - ready: ReviewForm, to check, correct, save or delete (rules 6 to 9b);
- * - saved: the saved items with their categories, read only. Changing items after saving
- *   (story US4, with the change log) is built in step 3.
+ * - ready: ReviewForm, to check, correct, save or delete (rules 6 to 9c);
+ * Before saving, only the person who scanned it sees these; other members see that it is still
+ * being added (rule 4).
+ * - saved: the saved items. Any member can change an item's category while the period is open,
+ *   and each change is shown under the item with who made it (story US4, SPEC.md rules 13, 14).
+ *   The name and price cannot change after saving.
  * Dark like the rest of the Receipts journey (approved design, Review2). Members only.
  */
 
@@ -14,6 +17,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { TabBar } from "@/components/TabBar";
+import { ItemCategoryPicker } from "@/components/ItemCategoryPicker";
 import { requireUser } from "@/server/session";
 import { getReceipt } from "@/server/services/receipts";
 import { ServiceError } from "@/server/services/errors";
@@ -40,8 +44,9 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
   const data = await load(user.id, receiptId);
   if (data.receipt.groupId !== groupId) notFound();
   const { receipt, currency } = data;
-  const categoryName = new Map(data.categories.map((c) => [c.id, c.name]));
   const payer = data.members.find((m) => m.id === receipt.paidBy)?.name.split(" ")[0] ?? "";
+  // Only the person who scanned a receipt reads, reviews, saves or deletes it (SPEC.md rule 4).
+  const mine = receipt.createdBy === user.id;
 
   // The return draws the back link and title, then the part that matches the receipt's state.
   return (
@@ -53,15 +58,22 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
         <h1 className="flex-1 text-xl font-extrabold">{receipt.status === "saved" ? receipt.storeName ?? "Receipt" : "Review receipt"}</h1>
       </header>
       <div className="flex flex-1 flex-col gap-2.5 px-3 pt-1">
-        {(receipt.status === "draft" || receipt.status === "reading" || receipt.status === "failed") && (
+        {mine && (receipt.status === "draft" || receipt.status === "reading" || receipt.status === "failed") && (
           <ReadingStep receiptId={receipt.id} groupId={groupId} status={receipt.status} />
         )}
 
-        {receipt.status === "ready" && (
+        {mine && receipt.status === "ready" && (
           <ReviewForm receiptId={receipt.id} groupId={groupId} currency={currency} storeName={receipt.storeName}
-            purchaseDate={receipt.purchaseDate} totalCents={receipt.totalCents} paidBy={receipt.paidBy} me={user.id}
-            items={data.items} categories={data.categories} members={data.members} photoCount={data.photoCount}
+            purchaseDate={receipt.purchaseDate} totalCents={receipt.totalCents}
+            items={data.items} categories={data.categories} photoCount={data.photoCount}
             receiptNumber={receipt.receiptNumber} saved={data.saved} />
+        )}
+
+        {!mine && receipt.status !== "saved" && (
+          <div className="rounded-2xl bg-dark-card p-5">
+            <p className="font-bold">{payer} is still adding this receipt</p>
+            <p className="mt-1 text-sm text-sand">It counts once {payer} has checked and saved it.</p>
+          </div>
         )}
 
         {receipt.status === "saved" && (
@@ -77,20 +89,28 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
               </div>
             </div>
             <ul className="rounded-2xl bg-dark-card px-4">
-              {data.items.map((item) => (
-                <li key={item.id} className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 border-b border-dark-line py-2.5 last:border-0">
-                  <span className="text-[15px] font-bold">{item.name}</span>
-                  <span className="text-[15px] font-bold tabular-nums">{formatMoney(item.priceCents, currency)}</span>
-                  {item.categoryId ? (
-                    <span className="text-[13px] text-sand">{categoryName.get(item.categoryId)}</span>
-                  ) : (
-                    <span className="inline-flex h-[26px] w-fit items-center rounded-full bg-orange px-2.5 text-xs font-bold text-ink">No category</span>
-                  )}
-                  {item.discountCents !== null && (
-                    <span className="text-right text-[13px] text-sand">Discount {formatMoney(item.discountCents, currency)}</span>
-                  )}
-                </li>
-              ))}
+              {data.items.map((item) => {
+                const changes = data.history.filter((h) => h.itemId === item.id);
+                return (
+                  <li key={item.id} className="flex flex-col gap-2 border-b border-dark-line py-3 last:border-0">
+                    <span className="text-base font-bold">{item.name}</span>
+                    <div className="flex items-center gap-3">
+                      <ItemCategoryPicker itemId={item.id} itemName={item.name} categoryId={item.categoryId} categories={data.categories} tone="dark" />
+                      <span className="flex h-11 shrink-0 items-center text-[23px] font-extrabold tabular-nums">{formatMoney(item.priceCents, currency)}</span>
+                    </div>
+                    {item.discountCents !== null && (
+                      <span className="self-end text-[13px] font-semibold text-sand">Discount {formatMoney(item.discountCents, currency)} (already in the price)</span>
+                    )}
+                    {changes.length > 0 && (
+                      <ul aria-label={`Changes to ${item.name}`} className="flex flex-col gap-0.5 text-[13px] italic text-sand">
+                        {changes.map((c, i) => (
+                          <li key={i}>{c.summary} by {c.by.split(" ")[0]}, {longDate(c.at.toISOString().slice(0, 10))}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </>
         )}

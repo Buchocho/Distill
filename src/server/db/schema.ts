@@ -115,13 +115,20 @@ export const categories = pgTable(
     // For a category proposed by the reading step: the user who saved the receipt.
     createdBy: uuid("created_by").notNull().references(() => users.id),
     createdAt: createdAt(),
+    // The kind of sharing rule (src/domain/rules.ts, SPEC.md rule 11): everyone (equal between all
+    // members), payer (whoever paid carries it), shares (the rows in category_shares). Null means
+    // no rule yet: the category's items stay out of the balance (rule 12).
+    ruleKind: text("rule_kind", { enum: ["everyone", "payer", "shares"] }),
   },
-  (t) => [uniqueIndex("categories_name_per_group").on(t.groupId, sql`lower(${t.name})`)],
+  (t) => [
+    uniqueIndex("categories_name_per_group").on(t.groupId, sql`lower(${t.name})`),
+    check("categories_rule_kind", sql`${t.ruleKind} is null or ${t.ruleKind} in ('everyone', 'payer', 'shares')`),
+  ],
 );
 
-// The sharing rule: who shares a category and each person's share. Shares for one category must
-// total 10000 (100%, SPEC.md rule 11). No rows means no rule yet: its items stay out of the balance
-// and block agreement until a rule is set (SPEC.md rules 12, 17, 21).
+// The people and percentages of a category whose rule kind is "shares". Shares for one category
+// must total 10000 (100%, SPEC.md rule 11), checked in src/domain/rules.ts before saving. Other
+// rule kinds have no rows here.
 export const categoryShares = pgTable(
   "category_shares",
   {

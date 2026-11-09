@@ -1,0 +1,2 @@
+ALTER TABLE "categories" ADD COLUMN "rule_kind" text;--> statement-breakpoint
+ALTER TABLE "categories" ADD CONSTRAINT "categories_rule_kind" CHECK ("categories"."rule_kind" is null or "categories"."rule_kind" in ('everyone', 'payer', 'shares'));

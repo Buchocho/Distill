@@ -3,8 +3,8 @@
  * Three stacked sections, dark to light, each opening its tab: Receipts, Categories, Balance
  * (approved design, canvas "Distill screens" page v2). No amounts are shown on Home by design;
  * the Balance section only says when the period closes.
- * The Receipts status line is live: no receipts yet, receipts waiting for review, unsorted items,
- * or all sorted (SPEC.md rule 9). The Categories line is a placeholder until step 3.
+ * The status lines are live: Receipts says what is waiting (SPEC.md rule 9); Categories says how
+ * many items need sorting (rules 12 and 17), the same count as the flag on the Categories tab.
  */
 
 import Link from "next/link";
@@ -15,6 +15,7 @@ import { requireUser } from "@/server/session";
 import { groupOr404 } from "@/server/pageData";
 import { daysUntil } from "@/domain/ledgers";
 import { listReceipts } from "@/server/services/receipts";
+import { countToSort } from "@/server/services/categories";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function Home({ params }: { params: Promise<{ groupId: stri
   const { group, openLedger } = await groupOr404(user.id, groupId);
   const first = user.name.split(" ")[0];
   const recent = await listReceipts(user.id, groupId);
+  const toSort = await countToSort(user.id, groupId);
   const toReview = recent.filter((r) => r.status === "ready").length;
   const unsorted = recent.filter((r) => r.status === "saved").reduce((n, r) => n + r.unsortedCount, 0);
   const receiptsLine =
@@ -66,7 +68,7 @@ export default async function Home({ params }: { params: Promise<{ groupId: stri
         <div className="z-10 flex flex-1 flex-col gap-2">
           <span className="text-xs font-bold tracking-[1.4px]">CATEGORIES</span>
           <span className="text-2xl font-extrabold leading-tight tracking-tight">Who shares<br />what</span>
-          <span className="text-[13px] font-semibold">Categories appear as receipts come in</span>
+          <span className="text-[13px] font-semibold">{toSort > 0 ? `${toSort} item${toSort === 1 ? " needs" : "s need"} sorting` : recent.length === 0 ? "Categories appear as receipts come in" : "Everything is sorted"}</span>
           <span className={`${pill} bg-ink text-paper`}>See categories<Icon name="arrow" size={16} strokeWidth={2.5} /></span>
         </div>
         <TagFigure />

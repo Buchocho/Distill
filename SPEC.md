@@ -44,7 +44,7 @@ Term: a period in the app is stored as a ledger in the database.
 3a. After sign in, a user with no group sees a short choice: create a group or join one with a link. A user with a group goes straight to Home.
 
 **Receipts**
-4. Any member can add a receipt and choose who paid. The default is the person adding it.
+4. A member adds only their own receipts: the payer is always the person who scans it, and only they can review, save or delete it before it is saved. Someone holding another member's receipt sends them a photo to upload. (Changed 9 Nov 2026 from "any member chooses who paid", so nobody can record a purchase as someone else's.)
 5. A receipt belongs to the period that is open when it is added, whatever date is printed on it.
 6. The reading step returns store, date, printed total, receipt number, and items with name, price and discount. Dates are read using the device's date to settle the order (some shops print year first, 26/10/18 for 18 Oct 2026); the review screen asks to check a date in the future or more than 60 days ago. An item's price is what was paid for it after its own discount, however the shop prints it; the discount is kept for information only and is never summed or split. A discount on the whole receipt that belongs to no item (a voucher) stays its own line with a negative price. Tax printed as a separate line (for example US or Canadian sales tax) is an item, categorised and split like any other, so the items still sum to the printed total.
 7. Each item is given a category from the group's list. Categories are at the level of the product type (Cola, Orange juice, Apple juice, Milk, Oat milk), never a shop aisle (Soft drinks, Dairy) and never a brand or pack size, because the sharing rule is set per category and products one person buys only for themselves need their own category. If none fits, the reading step may propose a new category name. A proposed category is created only when the receipt is saved; saving counts as confirming it. After that it is reused for later receipts. If the reading step cannot choose, the item is unsorted.
@@ -56,9 +56,9 @@ Term: a period in the app is stored as a ledger in the database.
 10. If reading fails, the receipt is kept with its photos and status "failed", and the user can retry.
 
 **Sharing**
-11. A category's rule lists the members who share it and each one's percentage. Percentages total exactly 100%.
-12. A category with no rule is not split. Its items are treated like unsorted items: left out of the balance and flagged as needing a rule. The person who saved the receipt that created the category is prompted to set the rule; any member can set it.
-13. Any member can change an item's category. An item always follows its category's rule; there are no per item splits.
+11. A category's rule is one of: Everyone equal (split between all current members); Whoever paid (the receipt's payer carries the item, so it moves no money, for example each person's own chocolate bars); One person (always the same member); Custom (chosen members and percentages totalling exactly 100%).
+12. A category with no rule is not split. Its items are treated like unsorted items: left out of the balance and flagged as needing a rule. One "needs sorting" flag on the Categories tab and a line on Home show how many items are unsorted or without a rule, whenever there is at least one; any member can set the rule.
+13. Any member can change a saved item's category while its period is open. After saving, the item's name and price cannot change. An item always follows its category's rule; there are no per item splits.
 13a. A rule change applies to every item in that category in the open period, including items already added. Closed periods are not changed.
 14. Every change to an item is logged with who made it and when, and shown on the item (US4).
 14a. Any member can create a category or change its rule. Every creation and rule change is logged with who made it and when. All members can see this history from the Categories screen. (Notifications about these changes are for a later version.)

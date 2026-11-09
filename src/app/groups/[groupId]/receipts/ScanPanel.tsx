@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * The scan part of the Receipts screen (screen 2): Take a photo, or choose a file, and Paid by.
+ * The scan part of the Receipts screen (screen 2): Take a photo, or choose a file.
+ * A member scans only their own receipts, so the payer is always the person scanning (SPEC.md
+ * rule 4). Someone holding another member's receipt sends them a photo to upload.
  * Runs in the browser.
  *
  * What happens on a photo: it is shrunk (src/lib/photos.ts), the receipt is started through the
@@ -17,14 +19,11 @@ import { Icon } from "@/components/Icon";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { PHOTO_BUCKET, PhotoError, preparePhoto } from "@/lib/photos";
 
-type Member = { id: string; name: string };
-
-/** The Take a photo button, the choose a file link and the Paid by choice. Defaults to the current user as payer (rule 4). */
-export function ScanPanel({ groupId, members, me }: { groupId: string; members: Member[]; me: string }) {
+/** The Take a photo button and the choose a file link. The receipt is paid by the person scanning (rule 4). */
+export function ScanPanel({ groupId }: { groupId: string }) {
   const router = useRouter();
   const camera = useRef<HTMLInputElement>(null);
   const picker = useRef<HTMLInputElement>(null);
-  const [paidBy, setPaidBy] = useState(me);
   const [stage, setStage] = useState<"idle" | "preparing" | "uploading">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -38,8 +37,6 @@ export function ScanPanel({ groupId, members, me }: { groupId: string; members: 
       setStage("uploading");
       const res = await fetch(`/api/v1/groups/${groupId}/receipts`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ paidBy }),
       });
       const body = (await res.json()) as { receiptId?: string; upload?: { path: string; token: string }; error?: string };
       if (!res.ok || !body.receiptId || !body.upload) throw new Error(body.error ?? "Could not start the receipt.");
@@ -58,7 +55,7 @@ export function ScanPanel({ groupId, members, me }: { groupId: string; members: 
   }
 
   const busy = stage !== "idle";
-  // The return draws the orange Take a photo area, then the file link and Paid by on one line.
+  // The return draws the orange Take a photo area, then the file link and "Paid by you" on one line.
   return (
     <div className="flex flex-col gap-3">
       <button type="button" disabled={busy} onClick={() => camera.current?.click()}
@@ -75,13 +72,7 @@ export function ScanPanel({ groupId, members, me }: { groupId: string; members: 
         <button type="button" disabled={busy} onClick={() => picker.current?.click()}
           className="min-h-11 text-[15px] font-semibold text-paper underline">or choose a file</button>
         <span className="flex-1" />
-        <label htmlFor="paidBy" className="text-sm text-sand">Paid by</label>
-        <select id="paidBy" value={paidBy} onChange={(e) => setPaidBy(e.target.value)} disabled={busy}
-          className="min-h-11 max-w-36 truncate rounded-lg bg-dark-card px-2 text-sm font-bold text-paper">
-          {members.map((m) => (
-            <option key={m.id} value={m.id}>{m.id === me ? `${m.name.split(" ")[0]} (you)` : m.name.split(" ")[0]}</option>
-          ))}
-        </select>
+        <span className="text-sm text-sand">Paid by you</span>
       </div>
       {error && <p role="alert" className="rounded-xl bg-red-tint p-3 text-sm font-semibold text-red">{error}</p>}
     </div>

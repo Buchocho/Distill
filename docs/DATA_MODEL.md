@@ -53,6 +53,9 @@ Shown in the app as a period. One group has many ledgers; at most one is open.
 Rule: at most one `open` ledger per group (partial unique index on group_id where status = 'open').
 
 ### categories
+
+`rule_kind` text: `everyone`, `payer` or `shares` (check `categories_rule_kind`); null means no rule yet (SPEC.md rules 11, 12). Only `shares` has rows in `category_shares`.
+
 | Column | Type | Key / rule |
 |---|---|---|
 | id | uuid | PK |
