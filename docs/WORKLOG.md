@@ -129,3 +129,11 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Verified: type check, lint, 60 unit tests (new: the AMM/AMW case, accents), end to end tests, build.
 - Test fix: the sign in error end to end test was flaky (failed 1 run in 3): Next.js sometimes adds its own role="alert" announcer, so the test now picks the alert by its text. Passed 3 runs in a row after the fix.
 - Left open: misread letters in receipt numbers cannot be prevented by instructions; the warning is the safety net.
+
+## 2026-11-09: step 2 passed
+
+- Hand check by Maduabuchi on the deployed app, all passed: scan and read, review layout (mockup v3), item discounts, delete before saving, See photo, categories at product type level, Leave unsorted, dates, display name, duplicate block and warning (including the misread number case). His brother has joined the group by invite link, which closes the open step 1 check.
+- Design: the "Review receipt v3" artboard on the Distill screens canvas was updated to match what was built (Leave unsorted, receipt number, underlined See photo) and renamed "approved, built".
+- Deferred by his decision: a receipt stuck in "reading" (a reading cut off by the 60 second limit or a lost connection) cannot be retried or deleted from the screen; rare, to fix later. Long receipts at 2500 px are untested (no long receipt to hand); step 4 (several photos) addresses them.
+- Known gap: signed in flows have no automated end to end tests because tests cannot sign in with Google; covered by his hand checks.
+
