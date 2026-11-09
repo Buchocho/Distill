@@ -127,5 +127,5 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Cause: the block worked as written (the numbers differ). The logic error was that the store, date and total warning ran only when one receipt had no number, so two different numbers were taken to mean two different receipts.
 - Changed (he asked for the trace plus the store, date and total check "in case a cropped receipt is added"): the warning now runs whenever store, date and total match, whatever the numbers say; store names are compared without accents, capitals or punctuation (`storeKey`). SPEC rule 9c updated.
 - Verified: type check, lint, 60 unit tests (new: the AMM/AMW case, accents), end to end tests, build.
+- Test fix: the sign in error end to end test was flaky (failed 1 run in 3): Next.js sometimes adds its own role="alert" announcer, so the test now picks the alert by its text. Passed 3 runs in a row after the fix.
 - Left open: misread letters in receipt numbers cannot be prevented by instructions; the warning is the safety net.
-

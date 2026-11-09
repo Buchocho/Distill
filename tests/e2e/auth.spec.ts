@@ -16,5 +16,6 @@ test("signed out visitors are sent to sign in", async ({ page }) => {
 
 test("a failed sign in shows an error", async ({ page }) => {
   await page.goto("/login?error=1");
-  await expect(page.getByRole("alert")).toContainText("Sign in failed");
+  // Filter by text: Next.js adds its own role="alert" announcer, which sometimes exists at this moment.
+  await expect(page.getByRole("alert").filter({ hasText: "Sign in failed" })).toBeVisible();
 });
