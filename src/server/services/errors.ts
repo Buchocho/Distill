@@ -9,9 +9,10 @@
 /**
  * invalid: the input is wrong. not_found: it does not exist or the user is not a member.
  * unauthorized: not signed in. forbidden: a member, but not the one allowed to do this
- * (for example saving someone else's receipt, SPEC.md rule 4).
+ * (for example saving someone else's receipt, SPEC.md rule 4). too_many: a limit was reached
+ * (receipt readings, SPEC.md rule 10a).
  */
-export type ServiceErrorCode = "invalid" | "not_found" | "unauthorized" | "forbidden";
+export type ServiceErrorCode = "invalid" | "not_found" | "unauthorized" | "forbidden" | "too_many";
 
 /**
  * An expected failure, with a message safe to show the user and, for forms,
@@ -28,4 +29,4 @@ export class ServiceError extends Error {
 }
 
 /** The HTTP status code the API returns for each kind of failure. */
-export const STATUS: Record<ServiceErrorCode, number> = { invalid: 400, unauthorized: 401, forbidden: 403, not_found: 404 };
+export const STATUS: Record<ServiceErrorCode, number> = { invalid: 400, unauthorized: 401, forbidden: 403, not_found: 404, too_many: 429 };

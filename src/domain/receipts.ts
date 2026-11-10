@@ -359,3 +359,17 @@ export function spreadTax<T extends { priceCents: number }>(
   const shares = splitCents(taxCents, weights);
   return { items: rest.map((i, k) => ({ ...i, priceCents: i.priceCents + shares[k], taxShareCents: shares[k] })), taxCents };
 }
+
+/** Most receipt readings one person can start in a day, Retry included (SPEC.md rule 10a). */
+export const READING_DAILY_LIMIT = 20;
+
+/**
+ * Whether a person may start a reading now (SPEC.md rule 10a, decided 10 Nov 2026). Readings cost
+ * Gemini quota or money, and they are the one action a member can repeat at will, so each person
+ * gets 20 a day and one at a time. Returns the message to show, or null when the reading can go.
+ */
+export function readingBlockedBy(readingsToday: number, otherReadingRunning: boolean): string | null {
+  if (otherReadingRunning) return "Another receipt of yours is still being read. Wait for it to finish, then try again.";
+  if (readingsToday >= READING_DAILY_LIMIT) return `You have read ${READING_DAILY_LIMIT} receipts today. Try again tomorrow.`;
+  return null;
+}

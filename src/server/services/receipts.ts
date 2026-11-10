@@ -21,11 +21,11 @@
  */
 
 import "server-only";
-import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/server/db/client";
-import { categories, categoryChanges, groups, items, ledgers, receiptPhotos, receipts, users } from "@/server/db/schema";
-import { categoryKey, findDuplicate, isTaxLine, matchCategory, parseReading, type ReviewItem, shownStatus, spreadTax, validateReview } from "@/domain/receipts";
-import { readReceiptPhotos } from "@/server/integrations/gemini";
+import { categories, categoryChanges, groups, items, ledgers, readings, receiptPhotos, receipts, users } from "@/server/db/schema";
+import { categoryKey, findDuplicate, isTaxLine, readingBlockedBy, matchCategory, parseReading, type ReviewItem, shownStatus, spreadTax, validateReview } from "@/domain/receipts";
+import { GeminiBusyError, readReceiptPhotos } from "@/server/integrations/gemini";
 import { createUploadLink, deletePhotos, downloadPhoto, photoPath, viewLink } from "@/server/integrations/storage";
 import { assertCurrentMember, assertMember, getGroupForMember, UUID } from "./groups";
 import { itemHistory } from "./categories";
@@ -129,16 +129,42 @@ export async function startReceipt(userId: string, groupId: string) {
  * kept as a proposal and only becomes a category when the receipt is saved (rule 7). Any earlier
  * reading of the same receipt is replaced, which is what Retry does (rule 10).
  * If anything goes wrong the receipt is marked "failed" and kept with its photo; the result says so
- * rather than throwing, so the screen can show Retry.
+ * rather than throwing, so the screen can show Retry. When Gemini's quota is reached the result
+ * says "busy", so the screen can ask to try again in a minute.
+ *
+ * Limits (rule 10a, decided 10 Nov 2026): each person can start 20 readings a day, Retry included,
+ * and one at a time. Over a limit the reading is refused with "too_many" (HTTP 429) and nothing is
+ * sent to Gemini.
  */
-export async function readReceipt(userId: string, receiptId: string, localToday: string): Promise<{ status: "ready" | "failed" }> {
+export async function readReceipt(
+  userId: string,
+  receiptId: string,
+  localToday: string,
+): Promise<{ status: "ready" | "failed"; reason?: "busy" }> {
   const receipt = await receiptForMember(userId, receiptId);
   assertOwnReceipt(receipt, userId);
   // Someone who left cannot add receipts (rule 2e).
   await assertCurrentMember(userId, receipt.groupId);
   if (receipt.status === "saved") throw new ServiceError("invalid", "This receipt is already saved.");
+
+  // One reading at a time per person, including a double tap on this receipt (rule 10a).
+  const now = new Date();
+  const running = await db
+    .select({ id: receipts.id, status: receipts.status, startedAt: receipts.readingStartedAt })
+    .from(receipts)
+    .where(and(eq(receipts.createdBy, userId), eq(receipts.status, "reading")));
+  const otherRunning = running.some((r) => shownStatus(r.status, r.startedAt, now) === "reading");
+  // Readings started since the start of the person's day (device date, rule 2c).
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(readings)
+    .where(and(eq(readings.userId, userId), gte(readings.startedAt, new Date(`${localToday}T00:00:00Z`))));
+  const blocked = readingBlockedBy(n, otherRunning);
+  if (blocked) throw new ServiceError("too_many", blocked);
+
+  await db.insert(readings).values({ userId, receiptId });
   // The start time lets a reading cut off by the server time limit show as failed later (rule 10).
-  await db.update(receipts).set({ status: "reading", readingStartedAt: new Date() }).where(eq(receipts.id, receiptId));
+  await db.update(receipts).set({ status: "reading", readingStartedAt: now }).where(eq(receipts.id, receiptId));
 
   try {
     const photos = await db
@@ -189,7 +215,7 @@ export async function readReceipt(userId: string, receiptId: string, localToday:
   } catch (error) {
     console.error("Receipt reading failed", receiptId, error);
     await db.update(receipts).set({ status: "failed" }).where(eq(receipts.id, receiptId));
-    return { status: "failed" };
+    return error instanceof GeminiBusyError ? { status: "failed", reason: "busy" } : { status: "failed" };
   }
 }
 

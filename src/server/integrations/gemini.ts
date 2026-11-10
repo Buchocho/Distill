@@ -18,6 +18,12 @@
 
 import "server-only";
 
+/**
+ * Gemini refused because the key's quota or spend cap was reached (HTTP 429). Kept apart from other
+ * failures so the screen can say "busy, try again in a minute" instead of "couldn't read" (rule 10a).
+ */
+export class GeminiBusyError extends Error {}
+
 /** The answer format Gemini must follow. Amounts are text so no rounding happens on the way. */
 const RESPONSE_SCHEMA = {
   type: "OBJECT",
@@ -156,6 +162,7 @@ export async function readReceiptPhotos(
     });
   let response = await send(true);
   if (response.status === 400) response = await send(false);
+  if (response.status === 429) throw new GeminiBusyError(`Gemini quota reached: ${(await response.text()).slice(0, 200)}`);
   if (!response.ok) throw new Error(`Gemini answered ${response.status}: ${(await response.text()).slice(0, 300)}`);
 
   const body = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };

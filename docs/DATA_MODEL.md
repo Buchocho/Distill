@@ -176,6 +176,16 @@ Rule: any change to an item in a closed ledger deletes that ledger's agreements 
 
 Rules kept by the service (step 6): a payment is recorded only by its payer (so `recorded_by` always equals `from_user` from step 6 on), only on an agreed, unsettled ledger, for a pair that owes in its frozen amounts, and never above what is left after waiting payments. A cancelled or declined payment is kept with `removed_at` and no longer counts. `ledgers.settled_at` is set when confirmed payments cover every frozen amount, or at agreement when nothing is owed. Step 6 schema change: migration 0010 (`removed_at`, `removed_by`).
 
+### readings
+| Column | Type | Key / rule |
+|---|---|---|
+| id | uuid | PK |
+| user_id | uuid | FK users.id, who started the reading |
+| receipt_id | uuid | FK receipts.id, set to null when the receipt is deleted, so deleting does not reset the count |
+| started_at | timestamptz | indexed with user_id; counted for the daily limit of 20 (SPEC.md rule 10a) |
+
+Row Level Security on, no policies (migration 0017).
+
 ## Relations
 
 ```
@@ -189,6 +199,7 @@ items 1..* item_changes
 categories 1..* category_changes
 ledgers 1..* agreements *..1 users
 ledgers 1..* payments
+users 1..* readings *..0..1 receipts
 ```
 
 ## Derived, not stored

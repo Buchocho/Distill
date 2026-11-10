@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import continente from "../fixtures/reading-continente.json";
 import usReceipt from "../fixtures/reading-us-tax-discount.json";
 import { parseAmount } from "@/domain/money";
-import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, reconcileTax, shownStatus, spreadTax, storeKey, suggestPrice, sumCheck, validateReview } from "@/domain/receipts";
+import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, readingBlockedBy, reconcileTax, shownStatus, spreadTax, storeKey, suggestPrice, sumCheck, validateReview } from "@/domain/receipts";
 
 describe("parseAmount", () => {
   it("reads both decimal styles", () => {
@@ -245,5 +245,14 @@ describe("spreadTax (rule 6b)", () => {
   it("changes nothing without a tax line", () => {
     const r = spreadTax([{ name: "A", priceCents: 100 }], isTax);
     expect(r.items[0]).toEqual({ name: "A", priceCents: 100, taxShareCents: 0 });
+  });
+});
+
+describe("readingBlockedBy (rule 10a)", () => {
+  it("allows up to 20 readings a day, one at a time", () => {
+    expect(readingBlockedBy(0, false)).toBeNull();
+    expect(readingBlockedBy(19, false)).toBeNull();
+    expect(readingBlockedBy(20, false)).toMatch(/20 receipts today/);
+    expect(readingBlockedBy(3, true)).toMatch(/still being read/);
   });
 });

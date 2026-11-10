@@ -45,6 +45,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 9b | An unsaved receipt can be deleted with its photo; a saved one cannot | Built | `deleteReceipt` in `src/server/services/receipts.ts`, `DeleteReceipt.tsx`, `src/server/integrations/storage.ts` (`deletePhotos`) |
 | 9c | Same store and receipt number cannot be saved twice; same store, date and total warns, even with different numbers | Built | `src/domain/receipts.ts` (`findDuplicate`), `saveReceipt` and `savedReceiptsFor` in `src/server/services/receipts.ts`, `ReviewForm.tsx`, `receipts.receipt_number` |
 | 10 | A failed reading keeps the receipt with status "failed" for retry; a reading cut off by the time limit shows as failed after 90 seconds | Built: Retry reads the same photo again | `readReceipt`, `getReceipt`, `listReceipts` in `src/server/services/receipts.ts`, `shownStatus` in `src/domain/receipts.ts`, `receipts.reading_started_at`, `ReadingStep.tsx` |
+| 10a | 20 readings a day per person, one at a time; Gemini busy shown as such | Built | `readingBlockedBy` and `READING_DAILY_LIMIT` in `src/domain/receipts.ts`, `readReceipt` in `src/server/services/receipts.ts`, `readings` table, `GeminiBusyError` in `src/server/integrations/gemini.ts`, `ReadingStep.tsx` |
 
 ## Sharing (build step 3)
 

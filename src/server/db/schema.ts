@@ -350,3 +350,19 @@ export const payments = pgTable(
     ),
   ],
 );
+
+/**
+ * One row per receipt reading sent to Gemini, for the daily limit per person (SPEC.md rule 10a,
+ * 20 a day, decided 10 Nov 2026). Retry counts too. Kept when the receipt is deleted, so deleting
+ * receipts does not give more readings.
+ */
+export const readings = pgTable(
+  "readings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    receiptId: uuid("receipt_id").references(() => receipts.id, { onDelete: "set null" }),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("readings_user_started").on(t.userId, t.startedAt)],
+);

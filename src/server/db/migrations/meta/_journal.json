@@ -120,6 +120,13 @@
       "when": 1794345452861,
       "tag": "0016_tax_spread",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794347376075,
+      "tag": "0017_readings",
+      "breakpoints": true
     }
   ]
 }

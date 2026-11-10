@@ -1,6 +1,8 @@
 /**
  * POST /api/v1/receipts/{receiptId}/read: read the receipt's photo with Gemini (SPEC.md rules 6, 7)
- * and return { status: "ready" } or { status: "failed" }. Calling it again is Retry (rule 10).
+ * and return { status: "ready" } or { status: "failed" } ({ reason: "busy" } when Gemini's quota is
+ * reached). Calling it again is Retry (rule 10). Refused with 429 over the limits of rule 10a:
+ * 20 readings a day per person, one at a time.
  * Optional body { localDate: "YYYY-MM-DD" }, the caller's own date (rule 2c), used to read dates
  * printed in an unusual order; the UTC date is used without it.
  * Members only. Documented in docs/API.md.
