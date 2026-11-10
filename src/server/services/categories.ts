@@ -22,7 +22,8 @@ import { agreements, categories, categoryChanges, categoryShares, itemChanges, i
 import { periodStage } from "@/domain/periods";
 import { describeRule, type Rule, type RuleKind, validateRule } from "@/domain/rules";
 import { CATEGORY_NAME_MAX, categoryKey } from "@/domain/receipts";
-import { assertMember, getGroupForMember, UUID } from "./groups";
+import { assertCurrentMember, assertMember, getGroupForMember, membershipsOf, UUID } from "./groups";
+import { withMembership } from "@/domain/members";
 import { ServiceError } from "./errors";
 
 /**
@@ -80,9 +81,14 @@ export async function ledgerItems(ledgerId: string) {
     .orderBy(asc(receipts.savedAt), asc(items.position));
 }
 
-/** Saved items in the group's open period, with their receipt's payer. The balance and the sort list use these. */
+/**
+ * Saved items in the group's open period, with their receipt's payer, who shares each one and the
+ * rule that applies on its day (rules 2d and 2e). The balance, the Categories counts and the sort
+ * list all use these, so they agree on what needs a rule.
+ */
 export async function openPeriodItems(groupId: string) {
-  return db
+  const [open] = await db.select().from(ledgers).where(and(eq(ledgers.groupId, groupId), eq(ledgers.status, "open")));
+  const rows = await db
     .select({
       id: items.id,
       name: items.name,
@@ -91,12 +97,17 @@ export async function openPeriodItems(groupId: string) {
       receiptId: receipts.id,
       storeName: receipts.storeName,
       payerId: receipts.paidBy,
+      purchaseDate: receipts.purchaseDate,
+      savedAt: receipts.savedAt,
     })
     .from(items)
     .innerJoin(receipts, eq(receipts.id, items.receiptId))
     .innerJoin(ledgers, eq(ledgers.id, receipts.ledgerId))
     .where(and(eq(receipts.groupId, groupId), eq(receipts.status, "saved"), eq(ledgers.status, "open"), isNull(items.deletedAt)))
     .orderBy(asc(receipts.savedAt), asc(items.position));
+  if (!open) return [];
+  const rules = await rulesForGroup(groupId);
+  return withMembership(rows, await membershipsOf(groupId), open.startsOn, (c) => (c ? rules.get(c) ?? null : null));
 }
 
 /**
@@ -112,11 +123,13 @@ export async function listCategories(userId: string, groupId: string) {
   const open = await openPeriodItems(groupId);
   const list = cats.map((c) => {
     const rule = rules.get(c.id) ?? null;
-    return { id: c.id, name: c.name, hasRule: rule !== null, ruleText: describeRule(rule, nameOf), itemCount: open.filter((i) => i.categoryId === c.id).length };
+    // A rule naming someone who has left no longer covers new items (rule 2e): it needs redoing.
+    const needsRule = rule === null || open.some((i) => i.categoryId === c.id && i.rule === null);
+    return { id: c.id, name: c.name, hasRule: !needsRule, ruleText: describeRule(rule, nameOf), itemCount: open.filter((i) => i.categoryId === c.id).length };
   });
   list.sort((a, b) => Number(a.hasRule) - Number(b.hasRule));
   const unsortedItems = open.filter((i) => i.categoryId === null).length;
-  const noRuleItems = open.filter((i) => i.categoryId !== null && rules.get(i.categoryId) === null).length;
+  const noRuleItems = open.filter((i) => i.categoryId !== null && i.rule === null).length;
   return { categories: list, needsSorting: unsortedItems + noRuleItems, unsortedItems, noRuleItems };
 }
 
@@ -146,7 +159,16 @@ export async function getCategory(userId: string, categoryId: string) {
     .where(eq(categoryChanges.categoryId, category.id))
     .orderBy(desc(categoryChanges.changedAt))
     .limit(1);
-  return { category: { id: category.id, name: category.name, groupId: category.groupId }, rule, members, lastChange: last ?? null };
+  // The rule editor offers current members only; a leaver opening it sees it read only (rule 2e).
+  const me = members.find((m) => m.id === userId);
+  return {
+    category: { id: category.id, name: category.name, groupId: category.groupId },
+    rule,
+    members: members.filter((m) => m.leftOn === null),
+    allMembers: members,
+    canEdit: me?.leftOn === null,
+    lastChange: last ?? null,
+  };
 }
 
 /**
@@ -157,8 +179,10 @@ export async function getCategory(userId: string, categoryId: string) {
  */
 export async function setRule(userId: string, categoryId: string, rule: Rule) {
   const category = await categoryForMember(userId, categoryId);
+  await assertCurrentMember(userId, category.groupId);
   const { members } = await getGroupForMember(userId, category.groupId);
-  const error = validateRule(rule, members.map((m) => m.id));
+  // Only current members can be given a share (rule 2e).
+  const error = validateRule(rule, members.filter((m) => m.leftOn === null).map((m) => m.id));
   if (error) throw new ServiceError("invalid", error, { rule: error });
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name.split(" ")[0] ?? "Someone";
   await db.transaction(async (tx) => {
@@ -179,7 +203,7 @@ export async function setRule(userId: string, categoryId: string, rule: Rule) {
  * rule. A name already used in the group, ignoring capitals, is refused.
  */
 export async function createCategory(userId: string, groupId: string, rawName: string) {
-  await assertMember(userId, groupId);
+  await assertCurrentMember(userId, groupId);
   const name = rawName.trim().replace(/\s+/g, " ");
   if (name.length === 0 || name.length > CATEGORY_NAME_MAX) {
     throw new ServiceError("invalid", "Check the name.", { name: `Category names are 1 to ${CATEGORY_NAME_MAX} characters.` });
@@ -215,14 +239,13 @@ export async function categoryHistory(userId: string, groupId: string) {
  */
 export async function listToSort(userId: string, groupId: string) {
   await assertMember(userId, groupId);
-  const rules = await rulesForGroup(groupId);
   const open = await openPeriodItems(groupId);
   const cats = await db.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.groupId, groupId)).orderBy(asc(categories.name));
   return {
     unsorted: open.filter((i) => i.categoryId === null),
+    // Categories with items whose rule does not apply: no rule, or a rule naming someone who left.
     noRule: cats
-      .filter((c) => rules.get(c.id) === null)
-      .map((c) => ({ ...c, itemCount: open.filter((i) => i.categoryId === c.id).length }))
+      .map((c) => ({ ...c, itemCount: open.filter((i) => i.categoryId === c.id && i.rule === null).length }))
       .filter((c) => c.itemCount > 0),
     categories: cats,
   };
@@ -247,6 +270,8 @@ export async function changeItemCategory(userId: string, itemId: string, categor
   await assertMember(userId, row.receipt.groupId).catch(() => {
     throw new ServiceError("not_found", "Item not found.");
   });
+  // Someone who left can see items but not change them (rule 2e).
+  await assertCurrentMember(userId, row.receipt.groupId);
   if (row.receipt.status !== "saved") throw new ServiceError("invalid", "Save the receipt first.");
   if (row.item.deletedAt) throw new ServiceError("invalid", "This item was removed.");
   const stage = periodStage(row.ledger);
@@ -288,6 +313,8 @@ export async function deleteItem(userId: string, itemId: string) {
   await assertMember(userId, row.receipt.groupId).catch(() => {
     throw new ServiceError("not_found", "Item not found.");
   });
+  // Someone who left can see items but not change them (rule 2e).
+  await assertCurrentMember(userId, row.receipt.groupId);
   if (row.item.deletedAt) return { itemId };
   if (periodStage(row.ledger) !== "closed") throw new ServiceError("invalid", "Items can only be removed from a closed period before everyone agrees.");
   if (row.item.categoryId !== null) throw new ServiceError("invalid", "Only items without a category can be removed.");
@@ -314,7 +341,6 @@ export async function itemHistory(receiptId: string) {
 /** How many items need sorting in the open period, for the line on Home (SPEC.md rule 12). */
 export async function countToSort(userId: string, groupId: string): Promise<number> {
   await assertMember(userId, groupId);
-  const rules = await rulesForGroup(groupId);
   const open = await openPeriodItems(groupId);
-  return open.filter((i) => i.categoryId === null || rules.get(i.categoryId) === null).length;
+  return open.filter((i) => i.categoryId === null || i.rule === null).length;
 }

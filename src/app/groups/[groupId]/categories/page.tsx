@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function Categories({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const user = await requireUser(`/groups/${groupId}/categories`);
-  await groupOr404(user.id, groupId);
+  const { me } = await groupOr404(user.id, groupId);
   const { categories, needsSorting } = await listCategories(user.id, groupId);
 
   // The return draws the needs sorting flag, then Add category, then the categories. Add category
@@ -44,7 +44,7 @@ export default async function Categories({ params }: { params: Promise<{ groupId
         </Link>
       )}
 
-      <AddCategory groupId={groupId} />
+      {me.leftOn === null && <AddCategory groupId={groupId} />}
 
       {categories.length === 0 ? (
         <div className="rounded-2xl bg-white p-5 text-center text-ink">

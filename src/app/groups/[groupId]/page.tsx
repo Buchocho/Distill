@@ -11,6 +11,7 @@
  */
 
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { DistillMark } from "@/components/DistillMark";
 import { CartFigure, ScaleFigure, TagFigure } from "@/components/Figures";
 import { Icon } from "@/components/Icon";
@@ -29,7 +30,9 @@ export const dynamic = "force-dynamic";
 export default async function Home({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const user = await requireUser(`/groups/${groupId}`);
-  const { group, openLedger } = await groupOr404(user.id, groupId);
+  const { group, openLedger, me } = await groupOr404(user.id, groupId);
+  // Someone who left only has settling left to do, so they go straight to Balance (rule 2e).
+  if (me.leftOn) redirect(`/groups/${groupId}/balance`);
   const first = user.name.split(" ")[0];
   const recent = await listReceipts(user.id, groupId);
   const toSort = await countToSort(user.id, groupId);

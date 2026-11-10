@@ -20,7 +20,8 @@ import { agreeBlockedBy, periodStage } from "@/domain/periods";
 import type { Rule } from "@/domain/rules";
 import { type CloseSetting, endAfterRuleChange, validateCloseSetting } from "@/domain/ledgers";
 import { requestToday } from "./periodClock";
-import { assertMember, getGroupForMember, UUID } from "./groups";
+import { assertMember, getGroupForMember, membershipsOf, UUID } from "./groups";
+import { periodMembers, withMembership, type Membership } from "@/domain/members";
 import { ledgerItems, rulesForGroup } from "./categories";
 import { ServiceError } from "./errors";
 
@@ -40,23 +41,24 @@ async function ledgerForMember(userId: string, ledgerId: string) {
  * rules are used, so later rule changes do not touch it (SPEC.md rule 22a); before that, the current
  * rules. Items left out of the balance (unsorted, no rule) are returned for sorting (rules 17, 20).
  */
-async function periodBalance(ledger: typeof ledgers.$inferSelect, memberIds: string[]) {
-  const periodItems = await ledgerItems(ledger.id);
+async function periodBalance(ledger: typeof ledgers.$inferSelect, memberships: Membership[]) {
   const current = await rulesForGroup(ledger.groupId);
   const ruleOf = (categoryId: string | null): Rule | null => {
     if (!categoryId) return null;
     if (ledger.frozenRules) return (ledger.frozenRules[categoryId] as Rule | null | undefined) ?? null;
     return current.get(categoryId) ?? null;
   };
+  // Each item is shared by who was in the group on its day, under the rule for that day (rules 2d, 2e).
+  const periodItems = withMembership(await ledgerItems(ledger.id), memberships, ledger.startsOn, ruleOf);
   const live = computeBalance(
-    periodItems.map((i) => ({ priceCents: i.priceCents, payerId: i.payerId, categoryId: i.categoryId, rule: ruleOf(i.categoryId) })),
-    memberIds,
+    periodItems.map((i) => ({ priceCents: i.priceCents, payerId: i.payerId, categoryId: i.categoryId, rule: i.rule, sharers: i.sharers })),
+    periodMembers(memberships, ledger.startsOn, ledger.endsOn),
   );
   const lines: BalanceLine[] = ledger.frozenLines ?? live.lines;
-  const noRuleCategories = [...new Set(periodItems.filter((i) => i.categoryId && ruleOf(i.categoryId) === null).map((i) => i.categoryId as string))];
+  const noRuleCategories = [...new Set(periodItems.filter((i) => i.categoryId && i.rule === null).map((i) => i.categoryId as string))];
   return {
     lines,
-    items: periodItems.map((i) => ({ ...i, rule: ruleOf(i.categoryId) })),
+    items: periodItems,
     unsorted: periodItems.filter((i) => i.categoryId === null),
     noRuleCount: live.noRuleCount,
     noRuleCategories,
@@ -68,11 +70,12 @@ async function periodBalance(ledger: typeof ledgers.$inferSelect, memberIds: str
 /**
  * The group's past periods, newest first, for the Past periods list on the Balance tab (approved
  * 10 Nov 2026): each with its stage, the user's own amount, whether the user has agreed, and how
- * many members have (stories US7, US8). Goes back two years.
+ * many members have (stories US7, US8). Goes back two years. Only periods the user was part of
+ * (rule 2d): someone who joined later does not see, or agree, periods from before they joined.
  */
 export async function listClosedPeriods(userId: string, groupId: string) {
-  const { members } = await getGroupForMember(userId, groupId);
-  const memberIds = members.map((m) => m.id);
+  await getGroupForMember(userId, groupId);
+  const memberships = await membershipsOf(groupId);
   const closed = await db
     .select()
     .from(ledgers)
@@ -81,16 +84,18 @@ export async function listClosedPeriods(userId: string, groupId: string) {
     .limit(24);
   const result = [];
   for (const l of closed) {
+    const inPeriod = periodMembers(memberships, l.startsOn, l.endsOn);
+    if (!inPeriod.includes(userId)) continue;
     const agreed = await db.select({ userId: agreements.userId }).from(agreements).where(eq(agreements.ledgerId, l.id));
     result.push({
       id: l.id,
       startsOn: l.startsOn,
       endsOn: l.endsOn,
       stage: periodStage(l),
-      myNet: netFor(userId, (await periodBalance(l, memberIds)).lines),
+      myNet: netFor(userId, (await periodBalance(l, memberships)).lines),
       iAgreed: agreed.some((a) => a.userId === userId),
-      agreedCount: agreed.length,
-      memberCount: members.length,
+      agreedCount: agreed.filter((a) => inPeriod.includes(a.userId)).length,
+      memberCount: inPeriod.length,
     });
   }
   return result;
@@ -104,10 +109,13 @@ export async function listClosedPeriods(userId: string, groupId: string) {
  */
 export async function getPeriod(userId: string, ledgerId: string) {
   const ledger = await ledgerForMember(userId, ledgerId);
-  const { group, members } = await getGroupForMember(userId, ledger.groupId);
+  const { group, members, me } = await getGroupForMember(userId, ledger.groupId);
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? "Someone";
   const stage = periodStage(ledger);
-  const balance = await periodBalance(ledger, members.map((m) => m.id));
+  const memberships = await membershipsOf(ledger.groupId);
+  const balance = await periodBalance(ledger, memberships);
+  // The people in this period: they agree it, and the breakdown can show their statements (rule 2d).
+  const inPeriod = periodMembers(memberships, ledger.startsOn, ledger.endsOn);
   const agreed = await db.select({ userId: agreements.userId }).from(agreements).where(eq(agreements.ledgerId, ledger.id));
   const cats = await db.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.groupId, ledger.groupId)).orderBy(asc(categories.name));
   return {
@@ -125,12 +133,16 @@ export async function getPeriod(userId: string, ledgerId: string) {
       date: i.purchaseDate ?? i.savedAt?.toISOString().slice(0, 10) ?? ledger.endsOn,
       storeName: i.storeName,
       rule: i.rule,
+      sharers: i.sharers,
     })),
     unsorted: stage === "closed" ? balance.unsorted : [],
     noRule: stage === "closed" ? cats.filter((c) => balance.noRuleCategories.includes(c.id)) : [],
     categories: cats,
     agreeBlockedBy: stage === "closed" ? agreeBlockedBy(balance.unsorted.length, balance.noRuleCount) : null,
-    members: members.map((m) => ({ id: m.id, name: m.name, agreed: agreed.some((a) => a.userId === m.id) })),
+    members: members.filter((m) => inPeriod.includes(m.id)).map((m) => ({ id: m.id, name: m.name, agreed: agreed.some((a) => a.userId === m.id) })),
+    // Someone who left can agree and pay, but not sort or remove items (rule 2e).
+    canEdit: me.leftOn === null,
+    inPeriod: inPeriod.includes(userId),
   };
 }
 
@@ -144,9 +156,11 @@ export async function agree(userId: string, ledgerId: string) {
   const stage = periodStage(ledger);
   if (stage === "open") throw new ServiceError("invalid", "This period is still open.");
   if (stage !== "closed") return { stage };
-  const { members } = await getGroupForMember(userId, ledger.groupId);
-  const memberIds = members.map((m) => m.id);
-  const balance = await periodBalance(ledger, memberIds);
+  const memberships = await membershipsOf(ledger.groupId);
+  // Everyone who was in the group during the period agrees it, leavers included (rules 21, 2e).
+  const memberIds = periodMembers(memberships, ledger.startsOn, ledger.endsOn);
+  if (!memberIds.includes(userId)) throw new ServiceError("forbidden", "You were not in the group during this period.");
+  const balance = await periodBalance(ledger, memberships);
   const blocked = agreeBlockedBy(balance.unsorted.length, balance.noRuleCount);
   if (blocked) throw new ServiceError("invalid", blocked);
   await db.insert(agreements).values({ ledgerId, userId }).onConflictDoNothing();

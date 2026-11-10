@@ -92,6 +92,13 @@
       "when": 1794330426832,
       "tag": "0012_reading_started",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794338329642,
+      "tag": "0013_membership_dates",
+      "breakpoints": true
     }
   ]
 }

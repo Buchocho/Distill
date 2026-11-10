@@ -10,17 +10,19 @@
  * they are not in. Pages and API routes both call these functions.
  *
  * Business rules: SPEC.md rules 2 (creator is a member; anyone with the link who signs in
- * joins), 3 (every member has the same rights, so there is no role check), 18 and 19
+ * joins), 2d and 2e (membership has dates; leaving and removing, 10 Nov 2026), 3 (every member has the same rights, so there is no role check), 18 and 19
  * (the first period opens when the group is made), 2b (currency) and 2c (dates follow the device's local date).
  */
 
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/server/db/client";
 import { groupMembers, groups, ledgers, users } from "@/server/db/schema";
 import { type NewGroupInput, validateNewGroup } from "@/domain/groups";
 import { firstLedger } from "@/domain/ledgers";
+import { periodMembers, type Membership } from "@/domain/members";
+import { periodStage } from "@/domain/periods";
 import { ServiceError } from "./errors";
 import { ensurePeriods, requestToday } from "./periodClock";
 
@@ -30,16 +32,39 @@ export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 const newInviteToken = () => randomBytes(18).toString("base64url");
 
 /**
- * The groups a user belongs to, oldest joined first. After sign in, one group opens straight
- * away and two or more are listed on Your groups to choose from (see src/app/page.tsx, rule 3b).
+ * The groups a user belongs to, oldest joined first, with the day they left (null while still in).
+ * A group they left stays listed until every period they were part of is settled (rule 2e), so
+ * they can still agree and pay; then it drops off. After sign in, one group opens straight away
+ * and two or more are listed on Your groups to choose from (see src/app/page.tsx, rule 3b).
  */
 export async function listMyGroups(userId: string) {
-  return db
-    .select({ id: groups.id, name: groups.name })
+  const rows = await db
+    .select({ id: groups.id, name: groups.name, leftOn: groupMembers.leftOn, joinedOn: groupMembers.joinedOn })
     .from(groupMembers)
     .innerJoin(groups, eq(groups.id, groupMembers.groupId))
     .where(eq(groupMembers.userId, userId))
     .orderBy(asc(groupMembers.joinedAt));
+  const shown = [];
+  for (const r of rows) {
+    if (r.leftOn === null || (await stillToSettle(r.id, { userId, joinedOn: r.joinedOn, leftOn: r.leftOn }))) {
+      shown.push({ id: r.id, name: r.name, leftOn: r.leftOn });
+    }
+  }
+  return shown;
+}
+
+/** True while a period the person was part of is not settled yet, open periods included (rule 2e). */
+async function stillToSettle(groupId: string, m: Membership): Promise<boolean> {
+  const all = await db.select().from(ledgers).where(eq(ledgers.groupId, groupId));
+  return all.some((l) => periodMembers([m], l.startsOn, l.endsOn).length > 0 && periodStage(l) !== "settled");
+}
+
+/** Every membership of a group, current and past, for working out who shares what (rule 2d). */
+export async function membershipsOf(groupId: string): Promise<Membership[]> {
+  return db
+    .select({ userId: groupMembers.userId, joinedOn: groupMembers.joinedOn, leftOn: groupMembers.leftOn })
+    .from(groupMembers)
+    .where(eq(groupMembers.groupId, groupId));
 }
 
 /**
@@ -71,7 +96,7 @@ export async function createGroup(userId: string, input: NewGroupInput, localTod
         createdBy: userId,
       })
       .returning();
-    await tx.insert(groupMembers).values({ groupId: group.id, userId });
+    await tx.insert(groupMembers).values({ groupId: group.id, userId, joinedOn: localToday });
     await tx.insert(ledgers).values({ groupId: group.id, startsOn: range.startsOn, endsOn: range.endsOn });
     return group;
   });
@@ -91,14 +116,28 @@ export async function assertMember(userId: string, groupId: string): Promise<voi
   if (!membership) throw new ServiceError("not_found", "Group not found.");
 }
 
-/** True when the person is a member of the group. Used to check "paid by" (SPEC.md rule 4). */
+/** True when the person is a current member of the group (not left). Used to check "paid by" (SPEC.md rule 4). */
 export async function isMember(userId: string, groupId: string): Promise<boolean> {
   if (!UUID.test(userId)) return false;
   const [row] = await db
     .select()
     .from(groupMembers)
     .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
-  return Boolean(row);
+  return Boolean(row) && row.leftOn === null;
+}
+
+/**
+ * Stops unless the user is still in the group (rule 2e). Someone who left or was removed can still
+ * read the group, agree their periods and settle payments (assertMember), but not add receipts or
+ * change categories, rules or items: those call this instead.
+ */
+export async function assertCurrentMember(userId: string, groupId: string): Promise<void> {
+  await assertMember(userId, groupId);
+  const [row] = await db
+    .select({ leftOn: groupMembers.leftOn })
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+  if (row?.leftOn) throw new ServiceError("forbidden", "You left this group. You can still agree and settle what you owe, but not add or change anything.");
 }
 
 /**
@@ -107,7 +146,8 @@ export async function isMember(userId: string, groupId: string): Promise<boolean
  *
  * A non member gets "not found" rather than "not allowed", so the app does not reveal that
  * a group exists (architecture rule 4). Every screen inside a group starts by calling this.
- * Members are listed in the order they joined, with name and Google email.
+ * Members are listed in the order they joined, with name, Google email and membership dates,
+ * including people who left (rule 2e); `me` is the reader's own membership.
  */
 export async function getGroupForMember(userId: string, groupId: string) {
   // Membership check first: nothing about the group is read until this passes.
@@ -119,7 +159,14 @@ export async function getGroupForMember(userId: string, groupId: string) {
   const members = await db
     // The email is shown to other members on Invite people so they can tell which Google account
     // joined (SPEC.md rule 2a, decided 10 Nov 2026).
-    .select({ id: users.id, name: users.displayName, email: users.email })
+    .select({
+      id: users.id,
+      name: users.displayName,
+      email: users.email,
+      joinedOn: groupMembers.joinedOn,
+      leftOn: groupMembers.leftOn,
+      removedBy: groupMembers.removedBy,
+    })
     .from(groupMembers)
     .innerJoin(users, eq(users.id, groupMembers.userId))
     .where(eq(groupMembers.groupId, groupId))
@@ -129,7 +176,8 @@ export async function getGroupForMember(userId: string, groupId: string) {
     .select()
     .from(ledgers)
     .where(and(eq(ledgers.groupId, groupId), eq(ledgers.status, "open")));
-  return { group, members, openLedger: openLedger ?? null };
+  const me = members.find((m) => m.id === userId);
+  return { group, members, openLedger: openLedger ?? null, me: { id: userId, leftOn: me?.leftOn ?? null } };
 }
 
 /**
@@ -144,7 +192,7 @@ export async function getInvite(token: string) {
     .select({ id: users.id, name: users.displayName })
     .from(groupMembers)
     .innerJoin(users, eq(users.id, groupMembers.userId))
-    .where(eq(groupMembers.groupId, group.id))
+    .where(and(eq(groupMembers.groupId, group.id), isNull(groupMembers.leftOn)))
     .orderBy(asc(groupMembers.joinedAt));
   return {
     group: { id: group.id, name: group.name, closeRule: group.closeRule, closeDay: group.closeDay, currency: group.currency },
@@ -153,19 +201,58 @@ export async function getInvite(token: string) {
 }
 
 /**
- * Adds the signed in user to the group behind an invite link (SPEC.md rule 2, story US1).
- * Tapping Join twice, or opening the link again later, changes nothing and gives no error.
+ * Adds the signed in user to the group behind an invite link (SPEC.md rule 2, story US1), from
+ * the device's today (rule 2d). Tapping Join twice, or opening the link again later, changes
+ * nothing and gives no error. Someone who left and comes back rejoins from today; known limit:
+ * the first stay's dates are replaced, so their share of items from before they left is recounted
+ * in periods not yet agreed (rule 2e).
  */
 export async function joinByToken(userId: string, token: string) {
   const { group } = await getInvite(token);
-  await db.insert(groupMembers).values({ groupId: group.id, userId }).onConflictDoNothing();
+  const today = await requestToday();
+  const [existing] = await db
+    .select()
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, userId)));
+  if (!existing) {
+    await db.insert(groupMembers).values({ groupId: group.id, userId, joinedOn: today }).onConflictDoNothing();
+  } else if (existing.leftOn) {
+    await db
+      .update(groupMembers)
+      .set({ joinedOn: today, leftOn: null, removedBy: null })
+      .where(and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, userId)));
+  }
   return group;
 }
 
 /**
+ * Takes someone out of a group from today (rules 2e and 3, decided 10 Nov 2026): the person
+ * themselves (leaving) or any other current member (removing); there is no admin. Nothing is
+ * deleted: they stay in splits for everything bought before today, still agree the periods they
+ * were part of, and still pay or get paid. From today they are in no new splits, and rules that
+ * name them need redoing for new items. Who removed whom is kept and shown to everyone.
+ */
+export async function removeMember(actorId: string, groupId: string, targetId: string) {
+  await assertCurrentMember(actorId, groupId);
+  if (!UUID.test(targetId)) throw new ServiceError("not_found", "Member not found.");
+  const [target] = await db
+    .select()
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, targetId)));
+  if (!target || target.leftOn) throw new ServiceError("not_found", "Member not found.");
+  const today = await requestToday();
+  await db
+    .update(groupMembers)
+    .set({ leftOn: today, removedBy: actorId === targetId ? null : actorId })
+    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, targetId), isNull(groupMembers.leftOn)));
+  return { userId: targetId, leftOn: today, removed: actorId !== targetId };
+}
+
+/**
  * Everything the Your groups screen needs (SPEC.md rule 3b, added 10 Nov 2026): each group the
- * user belongs to, oldest joined first, with its members' first names. A person can belong to
- * several groups, for example flatmates and family; this is where they choose one.
+ * user belongs to, oldest joined first, with its current members' first names, and for a group
+ * they left, the day they left (shown as "settle up" until it is settled, rule 2e). A person can
+ * belong to several groups, for example flatmates and family; this is where they choose one.
  */
 export async function myGroupsOverview(userId: string) {
   const mine = await listMyGroups(userId);
@@ -174,7 +261,7 @@ export async function myGroupsOverview(userId: string) {
     .select({ groupId: groupMembers.groupId, userId: users.id, name: users.displayName })
     .from(groupMembers)
     .innerJoin(users, eq(users.id, groupMembers.userId))
-    .where(inArray(groupMembers.groupId, mine.map((g) => g.id)))
+    .where(and(inArray(groupMembers.groupId, mine.map((g) => g.id)), isNull(groupMembers.leftOn)))
     .orderBy(asc(groupMembers.joinedAt));
   return mine.map((g) => ({
     ...g,

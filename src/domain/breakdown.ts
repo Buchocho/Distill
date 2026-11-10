@@ -25,6 +25,8 @@ export interface BreakdownItem {
   date: string;
   storeName: string | null;
   rule: Rule | null;
+  /** Who was in the group on the day it was bought (rule 2d); "Split equally" is between them. */
+  sharers?: readonly string[];
 }
 
 /** One purchase inside a category card. */
@@ -48,7 +50,7 @@ export interface CategoryLine {
 
 /** What a member's share of one item is, in cents, under the item's rule. Same arithmetic as the balance. */
 function shareOf(item: BreakdownItem & { rule: Rule }, personId: string, memberIds: readonly string[]): number {
-  const weights = weightsFor(item.rule, item.payerId, memberIds);
+  const weights = weightsFor(item.rule, item.payerId, item.sharers ?? memberIds);
   const parts = splitCents(item.priceCents, weights.map((w) => w.bp));
   const i = weights.findIndex((w) => w.userId === personId);
   return i === -1 ? 0 : parts[i];
@@ -123,7 +125,7 @@ export function computeBreakdown(
       totalCents: list.reduce((n, i) => n + i.priceCents, 0),
       timesBought: list.length,
       // A rule is the same for every item of a category, so the first item's rule describes them all.
-      splitText: splitText(list[0].rule, list.map((i) => i.payerId), personId, viewerId, memberIds, nameOf),
+      splitText: splitText(list[0].rule, list.map((i) => i.payerId), personId, viewerId, list[0].sharers ?? memberIds, nameOf),
       purchases: list
         .map((i) => ({ date: i.date, storeName: i.storeName, payerId: i.payerId, priceCents: i.priceCents }))
         .sort((a, b) => a.date.localeCompare(b.date)),

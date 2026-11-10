@@ -82,6 +82,14 @@ export const groupMembers = pgTable(
     groupId: uuid("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull().references(() => users.id),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+    // Membership has dates (SPEC.md rules 2d and 2e): "split equally" covers everyone who was a
+    // member on the purchase day. Joined and left are the device's dates (rule 2c).
+    joinedOn: date("joined_on").notNull().default(sql`current_date`),
+    // The day they left or were removed; null while still in the group. The row is kept, so their
+    // receipts, agreements and payments stay, and they can still settle what they owe.
+    leftOn: date("left_on"),
+    // Who removed them, when someone else did; null when they left themselves.
+    removedBy: uuid("removed_by").references(() => users.id),
   },
   (t) => [primaryKey({ columns: [t.groupId, t.userId] })],
 );

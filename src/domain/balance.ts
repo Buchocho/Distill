@@ -22,6 +22,8 @@ export interface BalanceItem {
   payerId: string;
   categoryId: string | null;
   rule: Rule | null;
+  /** Who was in the group on the day the item was bought (rule 2d). "Split equally" splits between them; without it, between memberIds. */
+  sharers?: readonly string[];
 }
 
 /** One line of the balance: from owes to this many cents (always more than zero). */
@@ -59,7 +61,7 @@ export function computeBalance(items: readonly BalanceItem[], memberIds: readonl
       continue;
     }
     countedCount += 1;
-    const weights = weightsFor(item.rule, item.payerId, memberIds);
+    const weights = weightsFor(item.rule, item.payerId, item.sharers ?? memberIds);
     const parts = splitCents(item.priceCents, weights.map((w) => w.bp));
     weights.forEach((w, i) => {
       if (w.userId !== item.payerId && parts[i] !== 0) add(w.userId, item.payerId, parts[i]);

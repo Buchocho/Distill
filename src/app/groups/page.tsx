@@ -4,6 +4,7 @@
  * someone in two or more groups lands here and picks one; someone in one group goes straight to
  * its Home. Also opened by tapping the group name on Home, to switch. Create a group is here;
  * joining another group is through its invite link. Shows the signed in account, with Sign out.
+ * A group the person left stays listed, marked Settle up, until what they owe is settled (rule 2e).
  */
 
 import Link from "next/link";
@@ -12,6 +13,7 @@ import { Icon } from "@/components/Icon";
 import { SignOutButton } from "@/components/SignOutButton";
 import { requireUser } from "@/server/session";
 import { myGroupsOverview } from "@/server/services/groups";
+import { longDate } from "@/domain/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +35,9 @@ export default async function YourGroups() {
               <Link href={`/groups/${g.id}`} className="flex min-h-[72px] items-center gap-3 rounded-2xl bg-dark-card px-4 py-3 text-paper no-underline">
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate text-lg font-extrabold">{g.name}</span>
-                  <span className="truncate text-[13px] text-sand">{g.members.join(", ")}</span>
+                  <span className="truncate text-[13px] text-sand">{g.leftOn ? `You left on ${longDate(g.leftOn)}` : g.members.join(", ")}</span>
                 </span>
+                {g.leftOn && <span className="inline-flex h-[26px] shrink-0 items-center rounded-full bg-orange px-2.5 text-xs font-bold text-ink">Settle up</span>}
                 <span className="text-orange"><Icon name="arrow" size={20} strokeWidth={2.5} /></span>
               </Link>
             </li>

@@ -13,7 +13,7 @@ import { db } from "@/server/db/client";
 import { receipts } from "@/server/db/schema";
 import { computeBalance, netFor } from "@/domain/balance";
 import { getGroupForMember } from "./groups";
-import { openPeriodItems, rulesForGroup } from "./categories";
+import { openPeriodItems } from "./categories";
 
 /**
  * The open period's balance: netted lines with names, the user's own position (positive: owed,
@@ -23,10 +23,10 @@ export async function getOpenBalance(userId: string, groupId: string) {
   const { group, members, openLedger } = await getGroupForMember(userId, groupId);
   const memberIds = members.map((m) => m.id);
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? "Someone";
-  const rules = await rulesForGroup(groupId);
+  // Each item is split between who was in the group on its day, under the rule for that day (rules 2d, 2e).
   const openItems = await openPeriodItems(groupId);
   const result = computeBalance(
-    openItems.map((i) => ({ priceCents: i.priceCents, payerId: i.payerId, categoryId: i.categoryId, rule: i.categoryId ? rules.get(i.categoryId) ?? null : null })),
+    openItems.map((i) => ({ priceCents: i.priceCents, payerId: i.payerId, categoryId: i.categoryId, rule: i.rule, sharers: i.sharers })),
     memberIds,
   );
   const [{ receiptCount }] = openLedger

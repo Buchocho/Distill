@@ -6,6 +6,7 @@
  */
 
 import Link from "next/link";
+import { describeRule } from "@/domain/rules";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { SubScreen } from "@/components/SubScreen";
@@ -51,7 +52,14 @@ export default async function RuleScreen({ params, searchParams }: {
           {last.summary} by {last.by.split(" ")[0]}, {longDate(last.changedAt.toISOString().slice(0, 10))}
         </Link>
       )}
-      <RuleForm returnTo={back} categoryId={data.category.id} categoryName={data.category.name} rule={data.rule} members={data.members} me={user.id} />
+      {data.canEdit ? (
+        <RuleForm returnTo={back} categoryId={data.category.id} categoryName={data.category.name} rule={data.rule} members={data.members} me={user.id} />
+      ) : (
+        <p className="rounded-2xl bg-white p-4 text-ink">
+          {describeRule(data.rule, (id) => data.allMembers.find((m) => m.id === id)?.name.split(" ")[0] ?? "Someone")}.
+          <span className="mt-1 block text-sm text-grey-600">You left this group, so you cannot change rules.</span>
+        </p>
+      )}
     </SubScreen>
   );
 }

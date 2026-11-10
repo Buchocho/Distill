@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function Sort({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const user = await requireUser(`/groups/${groupId}/categories/sort`);
-  const { group } = await groupOr404(user.id, groupId);
+  const { group, me } = await groupOr404(user.id, groupId);
   const { unsorted, noRule, categories } = await listToSort(user.id, groupId);
 
   // The return draws categories needing a rule, then unsorted items, or "all sorted".
@@ -63,7 +63,7 @@ export default async function Sort({ params }: { params: Promise<{ groupId: stri
                   <span className="font-extrabold tabular-nums">{formatMoney(i.priceCents, group.currency)}</span>
                 </div>
                 <span className="text-[13px] text-grey-600">{i.storeName ?? "Receipt"}</span>
-                <ItemCategoryPicker groupId={groupId} itemId={i.id} itemName={i.name} categoryId={null} categories={categories} tone="light" />
+                {me.leftOn === null && <ItemCategoryPicker groupId={groupId} itemId={i.id} itemName={i.name} categoryId={null} categories={categories} tone="light" />}
               </li>
             ))}
           </ul>

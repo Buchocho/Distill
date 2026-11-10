@@ -39,6 +39,9 @@ One row per signed-in person, created on first Google sign in. The id is the Sup
 | group_id | uuid | PK part, FK groups.id |
 | user_id | uuid | PK part, FK users.id |
 | joined_at | timestamptz | |
+| joined_on | date | the day they joined, by the device's date; they share items bought from then on (migration 0013) |
+| left_on | date | the day they left or were removed; null while in the group |
+| removed_by | uuid | FK users.id; who removed them, or null when they left themselves |
 
 ### ledgers
 

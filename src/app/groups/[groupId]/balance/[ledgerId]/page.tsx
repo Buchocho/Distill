@@ -102,8 +102,8 @@ export default async function ClosePeriod({ params, searchParams }: {
                   </div>
                   <span className="text-[13px] text-grey-600">{i.storeName ?? "Receipt"}</span>
                   <div className="flex flex-wrap items-start gap-2">
-                    <ItemCategoryPicker groupId={groupId} itemId={i.id} itemName={i.name} categoryId={null} categories={p.categories} tone="light" />
-                    {i.payerId === user.id && <RemoveItem itemId={i.id} itemName={i.name} />}
+                    {p.canEdit && <ItemCategoryPicker groupId={groupId} itemId={i.id} itemName={i.name} categoryId={null} categories={p.categories} tone="light" />}
+                    {p.canEdit && i.payerId === user.id && <RemoveItem itemId={i.id} itemName={i.name} />}
                   </div>
                 </li>
               ))}
@@ -179,7 +179,7 @@ export default async function ClosePeriod({ params, searchParams }: {
       </section>
       )}
 
-      {p.stage === "closed" && <AgreeButton ledgerId={p.ledger.id} blockedBy={p.agreeBlockedBy} agreed={Boolean(me?.agreed)} />}
+      {p.stage === "closed" && p.inPeriod && <AgreeButton ledgerId={p.ledger.id} blockedBy={p.agreeBlockedBy} agreed={Boolean(me?.agreed)} />}
       {(p.stage === "agreed" || p.stage === "settled") && (
         <Link href={`/groups/${groupId}/balance/payments`} className="inline-flex min-h-11 self-start items-center px-1 text-[15px] font-bold text-ink underline underline-offset-2">
           All payments and yearly totals

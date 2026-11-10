@@ -48,6 +48,8 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
   const payer = data.members.find((m) => m.id === receipt.paidBy)?.name.split(" ")[0] ?? "";
   // Only the person who scanned a receipt reads, reviews, saves or deletes it (SPEC.md rule 4).
   const mine = receipt.createdBy === user.id;
+  // Someone who left can see receipts but not change categories (rule 2e).
+  const current = data.members.find((m) => m.id === user.id)?.leftOn === null;
 
   // The return draws the back link and title, then the part that matches the receipt's state.
   return (
@@ -93,7 +95,7 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
               {data.items.map((item) => {
                 const changes = data.history.filter((h) => h.itemId === item.id);
                 // Open period: any item can move. Closed, not agreed: only unsorted items (rule 20).
-                const canChange = !item.deletedAt && (data.periodStage === "open" || (data.periodStage === "closed" && item.categoryId === null));
+                const canChange = current && !item.deletedAt && (data.periodStage === "open" || (data.periodStage === "closed" && item.categoryId === null));
                 const categoryName = data.categories.find((c) => c.id === item.categoryId)?.name ?? "Unsorted";
                 return (
                   <li key={item.id} className="flex flex-col gap-2 border-b border-dark-line py-3 last:border-0">

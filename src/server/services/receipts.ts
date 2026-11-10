@@ -27,7 +27,7 @@ import { categories, categoryChanges, groups, items, ledgers, receiptPhotos, rec
 import { categoryKey, findDuplicate, matchCategory, parseReading, type ReviewItem, shownStatus, validateReview } from "@/domain/receipts";
 import { readReceiptPhotos } from "@/server/integrations/gemini";
 import { createUploadLink, deletePhotos, downloadPhoto, photoPath, viewLink } from "@/server/integrations/storage";
-import { assertMember, getGroupForMember, UUID } from "./groups";
+import { assertCurrentMember, assertMember, getGroupForMember, UUID } from "./groups";
 import { itemHistory } from "./categories";
 import { ensurePeriods, requestToday } from "./periodClock";
 import { periodStage } from "@/domain/periods";
@@ -99,7 +99,7 @@ export async function listReceipts(userId: string, groupId: string) {
  * (architecture rule 6).
  */
 export async function startReceipt(userId: string, groupId: string) {
-  await assertMember(userId, groupId);
+  await assertCurrentMember(userId, groupId);
   // A receipt goes into the period open now, so close an ended one first (rules 5 and 19).
   await ensurePeriods(groupId, await requestToday());
   const paidBy = userId;
@@ -134,6 +134,8 @@ export async function startReceipt(userId: string, groupId: string) {
 export async function readReceipt(userId: string, receiptId: string, localToday: string): Promise<{ status: "ready" | "failed" }> {
   const receipt = await receiptForMember(userId, receiptId);
   assertOwnReceipt(receipt, userId);
+  // Someone who left cannot add receipts (rule 2e).
+  await assertCurrentMember(userId, receipt.groupId);
   if (receipt.status === "saved") throw new ServiceError("invalid", "This receipt is already saved.");
   // The start time lets a reading cut off by the server time limit show as failed later (rule 10).
   await db.update(receipts).set({ status: "reading", readingStartedAt: new Date() }).where(eq(receipts.id, receiptId));
@@ -270,6 +272,8 @@ export async function photoLink(userId: string, receiptId: string, position: num
 export async function deleteReceipt(userId: string, receiptId: string): Promise<void> {
   const receipt = await receiptForMember(userId, receiptId);
   assertOwnReceipt(receipt, userId);
+  // Someone who left cannot add receipts (rule 2e).
+  await assertCurrentMember(userId, receipt.groupId);
   if (receipt.status === "saved") throw new ServiceError("invalid", "A saved receipt cannot be deleted.");
   const photos = await db.select().from(receiptPhotos).where(eq(receiptPhotos.receiptId, receiptId));
   // Photos and items are removed with the receipt (cascade in the database).
@@ -298,6 +302,8 @@ export interface SaveReceiptInput {
 export async function saveReceipt(userId: string, receiptId: string, input: SaveReceiptInput) {
   const receipt = await receiptForMember(userId, receiptId);
   assertOwnReceipt(receipt, userId);
+  // Someone who left cannot add receipts (rule 2e).
+  await assertCurrentMember(userId, receipt.groupId);
   if (receipt.status !== "ready") throw new ServiceError("invalid", "This receipt cannot be saved now.");
   const errors = validateReview(input);
   if (input.totalCents !== null && !Number.isInteger(input.totalCents)) errors.totalCents = "Check the total.";

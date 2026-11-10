@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 export default async function Balance({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const user = await requireUser(`/groups/${groupId}/balance`);
-  await groupOr404(user.id, groupId);
+  const { group, me } = await groupOr404(user.id, groupId);
   const b = await getOpenBalance(user.id, groupId);
   const closed = await listClosedPeriods(user.id, groupId);
   const toConfirm = await countToConfirm(user.id, groupId);
@@ -48,6 +48,11 @@ export default async function Balance({ params }: { params: Promise<{ groupId: s
   // The return draws the big number, the period line, the debts, and the left out card.
   return (
     <TabScreen groupId={groupId} tab="balance" label={month ? `BALANCE · ${month}` : "BALANCE"} title={title}>
+      {me.leftOn && (
+        <p className="rounded-2xl bg-red-tint px-4 py-3 text-sm font-bold text-red">
+          You left {group.name} on {longDate(me.leftOn)}. Agree and settle what is left, then this group leaves your list.
+        </p>
+      )}
       <div className="flex flex-col gap-1.5 px-1">
         <span className="text-5xl font-extrabold leading-none tracking-tight tabular-nums">{formatMoney(Math.abs(b.myNet), b.currency)}</span>
         {b.openLedger && (

@@ -1,7 +1,9 @@
 /**
  * Invite screen. Route: /groups/<id>/invite. Story US1.
  * Shows the group's invite link with Share and Copy, and the member list with each member's
- * Google email under their name, so the group can tell which account joined (SPEC.md rule 2a). Opened right after a
+ * Google email under their name, so the group can tell which account joined (SPEC.md rule 2a).
+ * Remove next to each other member and Leave at the bottom (rule 2e, approved design Members);
+ * people who left are listed last in grey with when, and who removed them. Opened right after a
  * group is created (title "Group created") and from the initial on Home (title "Invite people").
  * Also where a person changes the name they are shown as (DisplayNameForm, SPEC.md rule 1) and
  * where the group changes when accounts close (CloseRuleForm, rule 18), and Sign out at the bottom
@@ -18,6 +20,7 @@ import { CopyLink } from "./CopyLink";
 import { DisplayNameForm } from "./DisplayNameForm";
 import { CloseRuleForm } from "./CloseRuleForm";
 import { SignOutButton } from "@/components/SignOutButton";
+import { LeaveGroup, RemoveMember } from "./MemberActions";
 import { longDate } from "@/domain/dates";
 
 export default async function Invite({ params, searchParams }: {
@@ -27,7 +30,16 @@ export default async function Invite({ params, searchParams }: {
   const { groupId } = await params;
   const { new: isNew } = await searchParams;
   const user = await requireUser(`/groups/${groupId}/invite`);
-  const { group, members, openLedger } = await groupOr404(user.id, groupId);
+  const { group, members, openLedger, me } = await groupOr404(user.id, groupId);
+  const current = me.leftOn === null;
+  const first = (name: string) => name.split(" ")[0];
+  // Current members first, in the order they joined, then people who left (rule 2e).
+  const listed = [...members.filter((m) => m.leftOn === null), ...members.filter((m) => m.leftOn !== null)];
+  /** "Left on 2 Nov" or "Removed by Izu on 2 Nov", for someone no longer in the group. */
+  const leftText = (m: (typeof members)[number]) =>
+    m.removedBy
+      ? `Removed by ${m.removedBy === user.id ? "you" : first(members.find((x) => x.id === m.removedBy)?.name ?? "someone")} on ${longDate(m.leftOn ?? "")}`
+      : `Left on ${longDate(m.leftOn ?? "")}`;
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
   return (
@@ -42,14 +54,18 @@ export default async function Invite({ params, searchParams }: {
         <div className="flex flex-col gap-2">
           <h2 className="text-sm font-bold">Members</h2>
           <ul className="rounded-2xl bg-white px-4">
-            {members.map((m, i) => (
+            {listed.map((m, i) => (
               <li key={m.id} className={`flex min-h-14 items-center gap-3 ${i ? "border-t border-grey-200" : ""}`}>
-                <span className="grid size-9 place-items-center rounded-full bg-ink text-sm font-bold text-paper">{m.name[0]}</span>
+                <span className={`grid size-9 shrink-0 place-items-center rounded-full text-sm font-bold ${m.leftOn ? "bg-grey-200 text-grey-600" : "bg-ink text-paper"}`}>{m.name[0]}</span>
                 <span className="flex min-w-0 flex-1 flex-col py-2">
-                  <span className="font-semibold">{m.name}</span>
+                  <span className={`font-semibold ${m.leftOn ? "text-grey-600" : ""}`}>{m.name}</span>
                   <span className="truncate text-[13px] text-grey-600">{m.email}</span>
+                  {m.leftOn && <span className="text-[13px] text-grey-600">{leftText(m)}</span>}
                 </span>
                 {m.id === user.id && <span className="text-[13px] text-grey-600">You</span>}
+                {m.id !== user.id && m.leftOn === null && current && (
+                  <RemoveMember groupId={groupId} userId={m.id} name={first(m.name)} groupName={group.name} />
+                )}
               </li>
             ))}
           </ul>
@@ -60,6 +76,7 @@ export default async function Invite({ params, searchParams }: {
           changedBy={group.closeRuleChangedBy ? (members.find((m) => m.id === group.closeRuleChangedBy)?.name.split(" ")[0] ?? null) : null}
           changedOn={group.closeRuleChangedAt ? longDate(group.closeRuleChangedAt.toISOString().slice(0, 10)) : null} />
         <Link href={`/groups/${groupId}`} className="mt-auto flex min-h-13 items-center justify-center rounded-xl border-[1.5px] border-ink bg-white font-extrabold text-ink no-underline">Go to Home</Link>
+        {current && <LeaveGroup groupId={groupId} userId={user.id} groupName={group.name} />}
         <SignOutButton email={user.email} />
       </div>
     </main>
