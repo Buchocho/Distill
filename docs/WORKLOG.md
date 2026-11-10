@@ -320,3 +320,13 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Built: `readings` table (migration 0017, RLS on; rows kept when a receipt is deleted); `readingBlockedBy` (20 a day by the device's date, Retry included; one at a time, a double tap included); over a limit `readReceipt` refuses with 429 before calling Gemini; a Gemini 429 (quota or spend cap) is shown as "Receipt reading is busy right now. Try again in a minute." The reading screen shows the reason instead of blaming the photo. Rule 10a.
 - Also gave him the steps to set a monthly spend cap on the Gemini project in AI Studio and a budget alert in Google Cloud Billing; only he can set those.
 - Verified: type check, lint, unit tests (new: the limits), end to end tests, build.
+
+## 2026-11-10: SPEC.md and the registers brought up to date
+
+- Goal: make SPEC.md carry every decision from 6 to 10 Nov, and check BUSINESS_RULES.md and CODE_MAP.md against SPEC.md and the code.
+- Prompt: "Please update spec MD with the decision made on 6th and 7th, even 8th and 9th today. 10th, add all of them."
+- Found: the copy of the project on Maduabuchi's computer (`distill-app`) stopped on 25 Oct and has no `src` or registers; the repository on GitHub is the current one, and BUSINESS_RULES.md and CODE_MAP.md exist there since 5 Nov.
+- SPEC.md: status line updated. Contradictions fixed: rule 6 still made tax its own item (replaced by 6b); rule 11 split Everyone equal by current members (now by purchase day, 2d); rule 13a said closed periods never change (rule 22 lets a closed period not yet agreed follow the current rules); rule 17a said there is no past periods list (23a added one); screen 2 still had "paid by" (rule 4). "Invite people" renamed "Group" in rules 1a, 2a, 18 and the screens. Screens table now lists the Group screen, rule editor, Needs sorting, period screen, Privacy and Terms. Build order has a status column. Section 7 lists every change from the approved specification with its rule and reason. Roadmap: moving to a stronger reading model when a reading fails.
+- BUSINESS_RULES.md: stale "from step 2 / step 5" statuses on 2b, 2c, 5, 13a, 17a, A3, A6, A7 corrected; rule 6 row no longer says tax lines are items; rows put in rule order; Points to watch lists the accepted weaknesses from 6 to 10 Nov.
+- CODE_MAP.md: table count 14, stale "planned, not yet created" line removed, three test files and four functions added.
+- Verified: every rule number in SPEC.md has a row in BUSINESS_RULES.md; every file in `src` and `tests` and every exported function in `src/domain` and `src/server/services` is named in CODE_MAP.md. No code changed.

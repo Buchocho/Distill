@@ -2,8 +2,8 @@
 
 Author: Maduabuchi Ogugua Dibiaezue
 Course: Information Systems Architecture, Assignment 2 (MVP), due 15 Nov 2026
-Source: the approved Assignment 1 specification (Distill, 14 slides), plus one change listed in section 7.
-Status: draft, 25 Oct 2026.
+Source: the approved Assignment 1 specification (Distill, 14 slides), plus the changes listed in section 7.
+Status: living document. First written 25 Oct 2026; last updated 10 Nov 2026. Rules added or changed after the approved specification carry the date they were decided.
 
 ## 1. Product in one paragraph
 
@@ -37,10 +37,10 @@ Term: a period in the app is stored as a ledger in the database.
 
 **Groups and members**
 1. Signing in uses a Google account. The Google name is shown at first; a user can change the name they are shown as (1 to 30 characters), once for all their groups, and signing in again does not overwrite it.
-1a. A member can sign out on the Invite people screen, which also holds their name in Distill (added 10 Nov 2026). Signing out ends the session on that device only; nothing in the group changes. Signing in always shows Google's account chooser, so a person can sign out and straight back in with another Google account.
+1a. A member can sign out on the Group screen (called Invite people until 10 Nov 2026), which also holds their name in Distill, and on Start and Your groups (added 10 Nov 2026). Signing out ends the session on that device only; nothing in the group changes. Signing in always shows Google's account chooser, so a person can sign out and straight back in with another Google account.
 1b. Privacy and Terms pages are public (no sign in) and linked from Sign in (added 10 Nov 2026, build step 7). They are needed to take Google sign in out of testing mode. Contact: the project's FEUP address.
 2. The group creator is a member. Anyone with the invite link who signs in becomes a member.
-2a. Members see each other's name and Google email on Invite people, so they can tell which account joined (decided 10 Nov 2026). The Start screen shows which account is signed in, with Sign out.
+2a. Members see each other's name and Google email on the Group screen, so they can tell which account joined (decided 10 Nov 2026). The Start screen shows which account is signed in, with Sign out.
 2d. Membership has dates (decided 10 Nov 2026). "Split equally" splits an item between everyone who was a member on the day it was bought (the printed date, or the day it was saved; never before the period started). Someone who joins mid-period does not pay for earlier receipts. A period's members are everyone who was in the group on at least one of its days; they agree it.
 2e. Any member can leave, or remove another member, at any time, from the Group screen (called Invite people until 10 Nov 2026); there is no admin and no vote. From that day they are in no new splits. Nothing is deleted: they still owe, or are owed, their share of what was bought before, still agree the periods they were part of, and still record and confirm payments. They can see the group's receipts, categories and breakdowns, but not add receipts or change categories, rules or items. Rules naming them (One person, Custom) need redoing for items bought after they left. Everyone sees who left or was removed, by whom and when. Someone who left with nothing in a period (paid nothing, shares nothing) is not part of it: they do not appear in its breakdown or agreement, and do not have to agree it. The group stays on their list, marked Settle up, and open to them, only while a period not yet settled involves them; with nothing to settle it drops off at once. People who left do not see the invite link. Someone who left can rejoin with the invite link, from that day. Accepted weaknesses: a leaver who never agrees blocks their last period (a bad actor is outside what Distill can resolve); rules are not dated, so changing a rule after someone left also changes earlier items in the same open period.
 2b. The group chooses a currency when it is created (default euro). It is display only: amounts are shown in that currency and nothing is converted. Only currencies with two decimal places are offered, so money stays in whole cents. The currency cannot be changed after the group is created.
@@ -52,7 +52,7 @@ Term: a period in the app is stored as a ledger in the database.
 **Receipts**
 4. A member adds only their own receipts: the payer is always the person who scans it, and only they can review, save or delete it before it is saved. Someone holding another member's receipt sends them a photo to upload. (Changed 9 Nov 2026 from "any member chooses who paid", so nobody can record a purchase as someone else's.)
 5. A receipt belongs to the period that is open when it is added, whatever date is printed on it.
-6. The reading step returns store, date, printed total, receipt number, and items with name, price and discount. Dates are read using the device's date to settle the order (some shops print year first, 26/10/18 for 18 Oct 2026); the review screen asks to check a date in the future or more than 60 days ago. An item's price is what was paid for it after its own discount, however the shop prints it; the discount is kept for information only and is never summed or split. A discount on the whole receipt that belongs to no item (a voucher) stays its own line with a negative price. Tax printed as a separate line (for example US or Canadian sales tax) is an item, categorised and split like any other, so the items still sum to the printed total.
+6. The reading step returns store, date, printed total, receipt number, and items with name, price and discount. Dates are read using the device's date to settle the order (some shops print year first, 26/10/18 for 18 Oct 2026); the review screen asks to check a date in the future or more than 60 days ago. An item's price is what was paid for it after its own discount, however the shop prints it; the discount is kept for information only and is never summed or split. A discount on the whole receipt that belongs to no item (a voucher) stays its own line with a negative price. Tax printed as a separate line is never an item of its own: tax already inside the prices follows rule 6a, tax added on top follows rule 6b. (Decided 6 Nov 2026 that tax was its own item; replaced by rule 6b on 10 Nov 2026.)
 6a. Tax is an item only when it is added on top of the item prices. When the item prices already include it (the items alone add up to the payable total, with the tax printed only to show how much of it was tax), the tax is not an item: it is shown on the review screen as "already in these prices" and never added again. The receipt's own sums decide; when a price is missing or misread, the reading's own answer does (added 10 Nov 2026, found by a beta tester on a Nigerian receipt).
 6b. Tax added on top of the item prices is spread over the items in proportion to their prices when the receipt is saved, so each item's tax follows that item's sharing rule, the same as tax inside the prices (decided 10 Nov 2026, replacing tax as a separate item). Rounding uses the largest remainder method, so the total does not change; a voucher carries no tax. Each saved item shows "Includes x tax" and the receipt says how much tax was spread.
 7. Each item is given a category from the group's list. Categories are at the level of the product type (Cola, Orange juice, Apple juice, Milk, Oat milk), never a shop aisle (Soft drinks, Dairy) and never a brand or pack size, because the sharing rule is set per category and products one person buys only for themselves need their own category. If none fits, the reading step may propose a new category name. A proposed category is created only when the receipt is saved; saving counts as confirming it. After that it is reused for later receipts. If the reading step cannot choose, the item is unsorted.
@@ -66,10 +66,10 @@ Term: a period in the app is stored as a ledger in the database.
 10a. Readings are limited per person (decided 10 Nov 2026): 20 a day by the device's date, Retry included, and one at a time. Over a limit the screen says why and nothing is sent to Gemini. When Gemini's own quota or spend cap is reached, the screen says reading is busy and to try again in a minute. Deleting receipts does not give more readings.
 
 **Sharing**
-11. A category's rule is one of: Everyone equal (split between all current members); Whoever paid (the receipt's payer carries the item, so it moves no money, for example each person's own chocolate bars); One person (always the same member); Custom (chosen members and percentages totalling exactly 100%).
+11. A category's rule is one of: Everyone equal (split between everyone who was a member on the day the item was bought, rule 2d); Whoever paid (the receipt's payer carries the item, so it moves no money, for example each person's own chocolate bars); One person (always the same member); Custom (chosen members and percentages totalling exactly 100%).
 12. A category with no rule is not split. Its items are treated like unsorted items: left out of the balance and flagged as needing a rule. One "needs sorting" flag on the Categories tab and a line on Home show how many items are unsorted or without a rule, whenever there is at least one; any member can set the rule.
 13. Any member can change a saved item's category while its period is open. After saving, the item's name and price cannot change. An item always follows its category's rule; there are no per item splits.
-13a. A rule change applies to every item in that category in the open period, including items already added. Closed periods are not changed.
+13a. A rule change applies to every item in that category in the open period, including items already added. It also moves a closed period that not everyone has agreed yet (rule 22). Periods everyone has agreed are frozen and do not change (rule 22a).
 14. Every change to an item is logged with who made it and when, and shown on the item (US4).
 14a. Any member can create a category or change its rule. Every creation and rule change is logged with who made it and when. All members can see this history from the Categories screen. (Notifications about these changes are for a later version.)
 15. Shares are calculated in cents. Rounding uses the largest remainder method, so the shares of an item always add up to its price exactly.
@@ -77,10 +77,10 @@ Term: a period in the app is stored as a ledger in the database.
 **Balance**
 16. For each sorted item, every sharer other than the payer owes the payer their share. Debts between two people are netted, giving at most one line per pair: "Rui owes Ana 18,40".
 17. Unsorted items, and items in categories without a rule, are not in the balance. The balance screen shows how many there are.
-17a. The Balance tab opens on the open period. A closed period that still needs agreement is shown as one card linking to it. There is no list of all past periods in this version.
+17a. The Balance tab opens on the open period. A closed period that still needs agreement is shown as one card linking to it. Below it, every past period is listed with the reader's amount and status (rule 23a; added 10 Nov 2026, replacing the Assignment 1 decision to leave the list out of version 1).
 
 **Periods and closing**
-18. The group chooses the close rule: last day of the month, a day of the month (1 to 28), or a day of the week. Any member can change it on the members screen. Decided 10 Nov 2026: the change applies now; the open period ends on the new rule's first close date from today (today counts, never a date in the past), and later periods follow the rule. The screen shows the new end date before saving, and who last changed the setting and when.
+18. The group chooses the close rule: last day of the month, a day of the month (1 to 28), or a day of the week. Any member can change it on the Group screen. Decided 10 Nov 2026: the change applies now; the open period ends on the new rule's first close date from today (today counts, never a date in the past), and later periods follow the rule. The screen shows the new end date before saving, and who last changed the setting and when.
 19. A period runs from its start date to its end date inclusive. After the end date passes, it closes and the next period opens the following day (US6). Closing is checked whenever group data is loaded, using the device's date (rule 2c). Periods in which nobody used the app are skipped.
 19a. A period is named from its dates (decided 10 Nov 2026): a period that is exactly one calendar month by the month ("October"), any other period by its range ("4–10 Nov", "11 Oct – 10 Nov"), with the year when it is not the current year. The name is used everywhere a period is shown.
 20. A closed period takes no new receipts and no edits, with two exceptions: its unsorted items can be given a category (any member) or removed (only the person who paid for that receipt; logged), and rules can be set for categories that have none (US7).
@@ -104,17 +104,22 @@ All screens are designed at phone width first. Bottom tab bar on every screen in
 | 0 | Sign in with Google | /login | US1 |
 | 0a | Start: create a group or join one (first sign in, no group yet) | /start | US1 |
 | 0d | Your groups: every group the user is in, Create a group, signed in account and Sign out | /groups | US1 |
-| 0e | Leave group and Remove member: confirmation panels on Invite people | /groups/[id]/invite | US1 |
+| 0f | Group (called Invite people until 10 Nov 2026): members with name and Google email, invite link (hidden from people who left), your name in Distill, when accounts close, Leave and Remove, Sign out | /groups/[id]/invite | US1, US6 |
+| 0e | Leave group and Remove member: confirmation panels on the Group screen | /groups/[id]/invite | US1 |
 | 0b | Join a group from an invite link | /join/[token] | US1 |
 | 0c | Home: landing page outside the tabs, three sections stacked dark to light: Receipts (scan), Categories (what needs a rule), Balance (the most pressing thing waiting in Balance: confirm a payment from someone, a declined payment, a closed period to agree, a payment to record; only otherwise when the open period closes; no amounts, decided 10 Nov 2026). Each shows a live one line status and opens its tab. Drawn stick figures with motion, no photos | /groups/[id] | US1 to US9 |
 | 1 | New group: name, members by invite link, close rule, currency | /groups/new | US1, US6 |
-| 2 | Receipts: take a photo, choose a file, paid by, recent receipts with status | /groups/[id]/receipts | US2 |
+| 2 | Receipts: take a photo, choose a file (the person scanning is the payer, rule 4), recent receipts with status | /groups/[id]/receipts | US2 |
 | 2a | Receipt photos: one or more sections, reorder, retake | /groups/[id]/receipts/capture | US2 |
 | 3 | Review receipt: header, items with price, category and who shares, sum check, save | /groups/[id]/receipts/[receiptId] | US2, US4, US5 |
-| 4 | Categories and sharing rules, rule editor | /groups/[id]/categories | US3 |
+| 4 | Categories and sharing rules, needs sorting flag, Add category | /groups/[id]/categories | US3 |
+| 4a | Sharing rule editor for one category | /groups/[id]/categories/[categoryId] | US3 |
+| 4b | Needs sorting: unsorted items and categories without a rule | /groups/[id]/categories/sort | US5, US7 |
 | 4c | Category history: who created or changed which rule, and when | /groups/[id]/categories/history | US3 |
-| 5 | Balance: open period balance; closed periods with unsorted items, balance and agree | /groups/[id]/balance | US6, US7, US8 |
-| 6 | Payments: waiting for you (confirm, decline), history, yearly total. Recording is on the agreed period screen | /groups/[id]/balance/payments, /groups/[id]/balance/[ledgerId] | US9 |
+| 5 | Balance: open period balance; card for a closed period to agree; past periods list | /groups/[id]/balance | US6, US7, US8 |
+| 5a | Period: breakdown by category per person, leftovers to sort, amounts, Agree, and once agreed, payments per line | /groups/[id]/balance/[ledgerId] | US7, US8, US9 |
+| 6 | Payments: waiting for you (confirm, decline), history, yearly total. Recording is on the agreed period screen (5a) | /groups/[id]/balance/payments | US9 |
+| 7 | Privacy and Terms, public (rule 1b) | /privacy, /terms | none |
 
 Every form shows validation errors next to the field. Every screen has a loading state and an error state with a retry.
 
@@ -122,23 +127,41 @@ Every form shows validation errors next to the field. Every screen has a loading
 
 Each step works end to end, with tests, before the next starts. A step is done only when Maduabuchi has approved its screens against the approved design and the Assignment 1 wireframes, and the LLM design check (hierarchy, contrast, spacing, consistency, accessibility, phone fit) has been run on them.
 
-| Step | Content | Target date |
-|---|---|---|
-| 0 | Repo, Supabase project, migrations for all tables, Google sign in set up, keep alive job, empty app deployed to Vercel | 27 Oct |
-| 0b | UI design: approved 3 Nov. Design canvas "Distill screens", page v2 (colour journeys: Receipts dark, Categories orange, Balance white) is the reference | 3 Nov |
-| 1 | US1: sign in, create group, invite link, join | 29 Oct |
-| 2 | US2 and US5 with one photo: capture, reading, review, save, unsorted items | 1 Nov |
-| 3 | US3 and US4: categories, rules, item changes and change log; open period balance | 3 Nov |
-| 4 | Multi photo receipts (section 7). Moved after steps 5 to 7 on 10 Nov; built only if time is left | 4 Nov |
-| 5 | US6, US7, US8: close rule, closing, sorting leftovers, agree | 6 Nov |
-| 6 | US9: payments | 8 Nov |
-| 7 | Remaining tests, UX review by the LLM against the Assignment 1 mockups, manual check of every screen, privacy page and Google sign in published (out of testing mode), data tables PDF, screenshots, demo script and rehearsal | 9 to 15 Nov |
+| Step | Content | Target date | Status on 10 Nov 2026 |
+|---|---|---|---|
+| 0 | Repo, Supabase project, migrations for all tables, Google sign in set up, keep alive job, empty app deployed to Vercel | 27 Oct | Done 1 Nov |
+| 0b | UI design: approved 3 Nov. Design canvas "Distill screens", page v2 (colour journeys: Receipts dark, Categories orange, Balance white) is the reference | 3 Nov | Approved 3 Nov |
+| 1 | US1: sign in, create group, invite link, join | 29 Oct | Passed 7 Nov; joining from a second account checked 9 Nov |
+| 2 | US2 and US5 with one photo: capture, reading, review, save, unsorted items | 1 Nov | Passed 9 Nov |
+| 3 | US3 and US4: categories, rules, item changes and change log; open period balance | 3 Nov | Passed 10 Nov |
+| 4 | Multi photo receipts (section 7). Moved after steps 5 to 7 on 10 Nov; built only if time is left | 4 Nov | Not built; dropping it was proposed on 10 Nov, not decided |
+| 5 | US6, US7, US8: close rule, closing, sorting leftovers, agree | 6 Nov | Built 10 Nov; tested by hand with step 6, no separate pass recorded |
+| 6 | US9: payments | 8 Nov | Passed 10 Nov |
+| 7 | Remaining tests, UX review by the LLM against the Assignment 1 mockups, manual check of every screen, privacy page and Google sign in published (out of testing mode), data tables PDF, screenshots, demo script and rehearsal | 9 to 15 Nov | In progress. Done: Privacy and Terms, stuck readings, reading limits. Left: Google sign in out of testing mode, demo data, signed in tests, design review, screen check, data tables PDF, screenshots, demo script and rehearsal |
 
 ## 7. Change from the approved specification
 
 Multi photo receipts: a receipt can be made of one or more photos taken in sections, read together as one receipt. Reason: a long receipt in one photo is too small to read. It extends US2 and does not add a screen to the tab bar. Full detail in `docs/features/multi-photo-receipt.md`.
 
 Category rules (agreed 2 Nov 2026): the approved specification split a category with no rule evenly between everyone. Now a category with no rule is not split; its items count as unsorted until someone sets a rule, and the period cannot be agreed until every category used in it has one. Reason: an even split hides the missing decision, and the period should not settle on a guess. Category creation and rule changes are also logged and visible to every member.
+
+Other changes, 6 to 10 Nov 2026 (each is in section 4 with its date):
+
+| Change | Rules | Reason |
+|---|---|---|
+| A group has a currency, chosen once, display only | 2b | The app will be used outside Europe (US, Canada, Nigeria) |
+| Dates follow the device's local date | 2c | Keeps late night receipts in the right period without storing time zones |
+| The person scanning is always the payer | 4 | Nobody can record a purchase as someone else's |
+| New rule kind "Whoever paid" | 11 | Each person pays for their own items without a rule per person |
+| Item discounts are information only; tax inside prices is not added again; tax on top is spread over the items | 6, 6a, 6b | The split stays the same however the shop prints the receipt |
+| The reading never makes up a number | 8a | A faded receipt produced an invented price |
+| Duplicate receipts blocked or warned | 9c | Moved from "should have" into this MVP after a receipt was saved twice |
+| Limit of 20 readings a day per person | 10a | Protects the Gemini quota and bill |
+| Several groups per user; leaving and removing members; splits by purchase day | 2d, 2e, 3b | People live in more than one sharing group and groups change |
+| Past periods listed, with a breakdown by category before agreeing | 17a, 23a | A member could not see where an amount came from |
+| Two stage settling: frozen when all agree, settled when all paid | 22a | Agreed amounts must not move when rules change later |
+| Changing the close date applies now; periods named by their dates | 18, 19a | A group could not close the current period early; weekly periods share a month |
+| Sign out, account chooser, Privacy and Terms | 1a, 1b | Needed for real use with more than one Google account and for Google sign in out of testing mode |
 
 ## 8. Demo data
 
@@ -150,6 +173,7 @@ Group "Rua das Flores 12" with members Ana, Rui and Sam. A seed script loads cat
 - Notifications when a category is created or its rule changes.
 - Whole-receipt discounts (vouchers, coupons on the total) spread across the items or shared by rule. Until then they are a negative line (rule 6).
 - Rename or merge categories, spending by category, close date reminder, export of the payment record.
+- Reading: start with a cheaper model and move to a more capable one when a reading fails. For now one model (`gemini-3.5-flash-lite`, ARCHITECTURE.md).
 
 ## 9. Open questions
 
