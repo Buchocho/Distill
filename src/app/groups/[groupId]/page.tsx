@@ -1,5 +1,6 @@
 /**
  * Screen 0c, Home. Route: /groups/<id>. The landing page of a group, outside the tabs.
+ * The group name at the top opens Your groups, to switch group or create another (rule 3b).
  * Three stacked sections, dark to light, each opening its tab: Receipts, Categories, Balance
  * (approved design, canvas "Distill screens" page v2). No amounts are shown on Home by design.
  * The status lines are live: Receipts says what is waiting (SPEC.md rule 9); Categories says how
@@ -52,7 +53,10 @@ export default async function Home({ params }: { params: Promise<{ groupId: stri
       <header className="flex items-center gap-3 px-5 pb-2 pt-5">
         <div className="flex flex-1 flex-col gap-0.5">
           <DistillMark tone="dark" />
-          <span className="text-[13px] text-sand">{group.name}{month ? ` · ${month}` : ""}</span>
+          <Link href="/groups" aria-label={`${group.name}. Switch group`} className="-my-2 inline-flex min-h-11 items-center gap-1 self-start text-[13px] text-sand no-underline">
+            {group.name}{month ? ` · ${month}` : ""}
+            <Icon name="chevron" size={14} strokeWidth={2.5} />
+          </Link>
         </div>
         <Link href={`/groups/${groupId}/invite`} aria-label="Group members and invite link"
           className="grid size-10 place-items-center rounded-full bg-paper text-[15px] font-extrabold text-ink no-underline">

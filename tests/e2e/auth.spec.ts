@@ -30,3 +30,8 @@ test("Privacy and Terms open from Sign in without signing in (rule 1b)", async (
   await page.goto("/terms");
   await expect(page.getByRole("heading", { name: "No money moves in Distill" })).toBeVisible();
 });
+
+test("signed out visitors to Your groups are sent to sign in (rule 3b)", async ({ page }) => {
+  await page.goto("/groups");
+  await expect(page).toHaveURL(/\/login\?next=%2Fgroups$/);
+});

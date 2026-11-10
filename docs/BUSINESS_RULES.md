@@ -1,7 +1,7 @@
 # Distill: business rules register
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 10 Nov 2026, build step 6 (payments).
+Last updated: 10 Nov 2026, build step 7 (several groups, sign out, privacy).
 
 Each business rule in SPEC.md section 4, whether it is built, and the files that enforce it. Rule numbers are the SPEC.md numbers, so a code comment that says "SPEC.md rule 15" points to the same row here.
 
@@ -24,6 +24,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 2c | Dates follow the device's local date | Built for group creation (first period). Receipts send it from step 2; closing uses it from step 5. | `src/domain/groups.ts` (`isValidLocalDate`), `src/app/actions.ts`, `src/app/api/v1/groups/route.ts`, `src/app/groups/new/NewGroupForm.tsx` |
 | 3 | Every member has the same rights, no admin | Built (by design: there is no role to check) | `group_members` table in `src/server/db/schema.ts` |
 | 3a | No group after sign in goes to Start; otherwise Home | Built | `src/app/page.tsx`, `src/app/start/page.tsx` |
+| 3b | Several groups per user: one group opens straight away, two or more are listed on Your groups; the group name on Home switches | Built | `src/app/page.tsx`, `src/app/groups/page.tsx`, `myGroupsOverview` in `src/server/services/groups.ts`, Home header |
 
 ## Receipts (build steps 2 and 4)
 

@@ -77,7 +77,7 @@ Where to look when something needs changing:
 
 | File | What it holds | Main functions |
 |---|---|---|
-| `services/groups.ts` | Groups, members, invites | `listMyGroups`, `createGroup` (group with its currency, first member and first period starting on the device's date, in one step), `getGroupForMember` (members only), `assertMember` and `isMember` (the membership check every service uses), `getInvite`, `joinByToken`. |
+| `services/groups.ts` | Groups, members, invites `myGroupsOverview` lists the user's groups with members for Your groups. | `listMyGroups`, `createGroup` (group with its currency, first member and first period starting on the device's date, in one step), `getGroupForMember` (members only), `assertMember` and `isMember` (the membership check every service uses), `getInvite`, `joinByToken`. |
 | `services/receipts.ts` | Receipts, photos and items | `listReceipts`, `startReceipt` (receipt in the open period plus a one time upload link), `readReceipt` (Gemini reading, or status failed for Retry), `getReceipt` (everything the review screen needs), `photoLink` (a fresh photo link on each tap), `saveReceipt` (creates proposed categories, saves items, locks the receipt), `deleteReceipt` (unsaved only, with its photos). |
 | `integrations/gemini.ts` | Receipt reading | `readReceiptPhotos` sends photos and the group's category names to the model in `GEMINI_MODEL`, returns its JSON answer unchecked. |
 | `integrations/storage.ts` | Photo storage | `createUploadLink`, `downloadPhoto`, `viewLink` (10 minutes), `deletePhotos`, `photoPath`. Uses the service key, server only. |
@@ -115,11 +115,12 @@ Screen numbers match SPEC.md section 5.
 
 | Route | File | Screen | Status |
 |---|---|---|---|
-| `/` | `page.tsx` | No screen. Sends the user to Sign in, Start or Home. | Built |
+| `/` | `page.tsx` | No screen. Sends the user to Sign in, Start, the Home of their only group, or Your groups. | Built |
 | `/login` | `login/page.tsx`, `login/SignInButton.tsx` | 0, Sign in with Google | Built |
 | `/privacy` | `privacy/page.tsx` | Privacy, public | Built |
 | `/terms` | `terms/page.tsx` | Terms, public | Built |
 | `/start` | `start/page.tsx` | 0a, Start: create a group or use an invite link; signed in account and Sign out | Built |
+| `/groups` | `groups/page.tsx` | 0d, Your groups: choose or switch group, Create a group, Sign out | Built |
 | `/join/<code>` | `join/[token]/page.tsx` | 0b, Join a group | Built |
 | `/groups/new` | `groups/new/page.tsx`, `groups/new/NewGroupForm.tsx` | 1, New group | Built |
 | `/groups/<id>` | `groups/[groupId]/page.tsx` | 0c, Home | Built. All three status lines are live; Balance shows what is waiting before the close date |

@@ -45,6 +45,7 @@ Term: a period in the app is stored as a ledger in the database.
 2c. Dates follow the local date of the device doing the action (for example creating a group or scanning a receipt), not the server's date. No time zone is stored.
 3. Every member has the same rights. There is no admin.
 3a. After sign in, a user with no group sees a short choice: create a group or join one with a link. A user with a group goes straight to Home.
+3b. A user can belong to several groups (decided 10 Nov 2026). After sign in, a user in one group goes straight to its Home; a user in two or more sees Your groups and picks one. Tapping the group name on Home opens Your groups, to switch group or create another. Joining another group is through its invite link.
 
 **Receipts**
 4. A member adds only their own receipts: the payer is always the person who scans it, and only they can review, save or delete it before it is saved. Someone holding another member's receipt sends them a photo to upload. (Changed 9 Nov 2026 from "any member chooses who paid", so nobody can record a purchase as someone else's.)
@@ -96,6 +97,7 @@ All screens are designed at phone width first. Bottom tab bar on every screen in
 |---|---|---|---|
 | 0 | Sign in with Google | /login | US1 |
 | 0a | Start: create a group or join one (first sign in, no group yet) | /start | US1 |
+| 0d | Your groups: every group the user is in, Create a group, signed in account and Sign out | /groups | US1 |
 | 0b | Join a group from an invite link | /join/[token] | US1 |
 | 0c | Home: landing page outside the tabs, three sections stacked dark to light: Receipts (scan), Categories (what needs a rule), Balance (the most pressing thing waiting in Balance: confirm a payment from someone, a declined payment, a closed period to agree, a payment to record; only otherwise when the open period closes; no amounts, decided 10 Nov 2026). Each shows a live one line status and opens its tab. Drawn stick figures with motion, no photos | /groups/[id] | US1 to US9 |
 | 1 | New group: name, members by invite link, close rule, currency | /groups/new | US1, US6 |

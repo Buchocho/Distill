@@ -16,7 +16,7 @@
 
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/server/db/client";
 import { groupMembers, groups, ledgers, users } from "@/server/db/schema";
 import { type NewGroupInput, validateNewGroup } from "@/domain/groups";
@@ -30,8 +30,8 @@ export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 const newInviteToken = () => randomBytes(18).toString("base64url");
 
 /**
- * The groups a user belongs to, oldest joined first.
- * The first one is where the app sends the user after sign in (see src/app/page.tsx).
+ * The groups a user belongs to, oldest joined first. After sign in, one group opens straight
+ * away and two or more are listed on Your groups to choose from (see src/app/page.tsx, rule 3b).
  */
 export async function listMyGroups(userId: string) {
   return db
@@ -160,4 +160,24 @@ export async function joinByToken(userId: string, token: string) {
   const { group } = await getInvite(token);
   await db.insert(groupMembers).values({ groupId: group.id, userId }).onConflictDoNothing();
   return group;
+}
+
+/**
+ * Everything the Your groups screen needs (SPEC.md rule 3b, added 10 Nov 2026): each group the
+ * user belongs to, oldest joined first, with its members' first names. A person can belong to
+ * several groups, for example flatmates and family; this is where they choose one.
+ */
+export async function myGroupsOverview(userId: string) {
+  const mine = await listMyGroups(userId);
+  if (mine.length === 0) return [];
+  const rows = await db
+    .select({ groupId: groupMembers.groupId, userId: users.id, name: users.displayName })
+    .from(groupMembers)
+    .innerJoin(users, eq(users.id, groupMembers.userId))
+    .where(inArray(groupMembers.groupId, mine.map((g) => g.id)))
+    .orderBy(asc(groupMembers.joinedAt));
+  return mine.map((g) => ({
+    ...g,
+    members: rows.filter((r) => r.groupId === g.id).map((r) => (r.userId === userId ? "You" : r.name.split(" ")[0])),
+  }));
 }

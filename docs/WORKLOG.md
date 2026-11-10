@@ -252,3 +252,10 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 
 - Found by Maduabuchi on Izu's account: the breakdown's person switch read "Butch, You". It now starts with the reader ("You"), then the others in the order they joined. The statement shown first was already the reader's.
 - Verified: type check, lint, unit tests, build.
+
+## 2026-11-10: several groups per user
+
+- Found by Maduabuchi: "A user can only join one group." The database already allowed several groups and an invite link adds a second one, but after sign in the app always opened the first group joined, and no screen listed groups or allowed creating another. SPEC rule 1 already assumed several groups ("once for all their groups").
+- Decided: build now. "Once you sign in you should see your groups and then we can select." My adjustment, to check with him: a person in only one group goes straight to its Home, since a list of one is an extra tap on every visit; two or more see the list.
+- Built: Your groups screen at /groups (each group with its members' first names, Create a group, how to join another, signed in account and Sign out); `/` sends to Start, the only group's Home, or Your groups; the group name on Home opens Your groups. Rule 3b and screen 0d added. No mockup first: he asked for the build at once; it follows the dark Start screen.
+- Verified: type check, lint, unit tests, end to end tests (new: Your groups needs sign in), build.
