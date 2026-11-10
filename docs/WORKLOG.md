@@ -286,3 +286,9 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Found by Maduabuchi on his phone: the switch-group arrow sat far from the group name, small and grey next to the B, so it read as broken; and Back from New group opened the first group's Home instead of Your groups.
 - Built, design Home header (arrow in the name's colour and weight, approved after he asked for it to match): the group name is large and bold with the arrow right after its last word, the whole name opens Your groups, the period ("Period 3–15 Nov") is on its own line underneath; B unchanged. Back on New group goes to Your groups when already in a group, otherwise to Start.
 - Verified: type check, lint, unit tests, end to end tests, build.
+
+## 2026-11-10: removed member with nothing in the period still listed
+
+- Found by Maduabuchi: after removing a member (the wrong account), they still showed on the period screen (breakdown switch and the agreement list) with nothing paid and no share. Cause: a period's people were everyone who was a member on any of its days, so someone who joined and was removed still counted, and would have had to agree.
+- Changed: `periodPeople` keeps current members and only those leavers the period involves (paid for or share an item). Used for the breakdown switch, who has agreed, who must agree, and Past periods. If removing someone leaves everyone else already agreed, the period is frozen as agreed the next time it is opened or listed (`freezeIfAllAgreed`). SPEC 2e updated.
+- Verified: type check, lint, unit tests (new: removed with nothing drops out, leaver sharing an item stays), end to end tests, build.

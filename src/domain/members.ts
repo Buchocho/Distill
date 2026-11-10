@@ -77,3 +77,21 @@ export function withMembership<T extends { categoryId: string | null; purchaseDa
     return { ...item, sharers, rule: ruleForDay(ruleOf(item.categoryId), sharers) };
   });
 }
+
+/**
+ * Who a period belongs to, for agreeing it and for its breakdown (rules 21, 2d, 2e). Current
+ * members of the period always count. Someone who has left counts only if the period involves
+ * them: they paid for an item in it or share one. A person removed with nothing in the period
+ * (for example a wrong account that joined and was removed the same day) does not appear and does
+ * not have to agree (found by Maduabuchi, 10 Nov 2026).
+ */
+export function periodPeople(
+  memberships: readonly Membership[],
+  startsOn: string,
+  endsOn: string,
+  items: readonly { payerId: string; sharers?: readonly string[] }[],
+): string[] {
+  const involved = new Set(items.flatMap((i) => [i.payerId, ...(i.sharers ?? [])]));
+  const current = new Set(memberships.filter(isCurrent).map((m) => m.userId));
+  return periodMembers(memberships, startsOn, endsOn).filter((id) => current.has(id) || involved.has(id));
+}

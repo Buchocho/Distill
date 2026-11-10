@@ -2,7 +2,7 @@
 // (rules 2d and 2e): joiners do not pay for earlier receipts, leavers keep their earlier share.
 
 import { describe, expect, it } from "vitest";
-import { itemDay, membersOn, periodMembers, ruleForDay, withMembership, type Membership } from "@/domain/members";
+import { itemDay, membersOn, periodMembers, periodPeople, ruleForDay, withMembership, type Membership } from "@/domain/members";
 import { computeBalance } from "@/domain/balance";
 
 const ms: Membership[] = [
@@ -77,5 +77,15 @@ describe("withMembership", () => {
     expect(out[1].sharers).toEqual(["ana", "sam"]);
     expect(out[1].rule).toBeNull();
     expect(out[2].sharers).toEqual(["ana", "sam"]);
+  });
+});
+
+describe("periodPeople", () => {
+  it("drops someone removed with nothing in the period, keeps a leaver who shares an item", () => {
+    const withWrong: Membership[] = [...ms, { userId: "wrong", joinedOn: "2026-11-10", leftOn: "2026-11-10" }];
+    const items = [{ payerId: "ana", sharers: ["ana", "rui"] }];
+    expect(periodPeople(withWrong, "2026-11-01", "2026-11-30", items)).toEqual(["ana", "rui", "sam"]);
+    // Rui left and shares nothing: he drops out too.
+    expect(periodPeople(ms, "2026-11-01", "2026-11-30", [{ payerId: "ana", sharers: ["ana"] }])).toEqual(["ana", "sam"]);
   });
 });

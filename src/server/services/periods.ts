@@ -21,7 +21,7 @@ import type { Rule } from "@/domain/rules";
 import { type CloseSetting, endAfterRuleChange, validateCloseSetting } from "@/domain/ledgers";
 import { requestToday } from "./periodClock";
 import { assertMember, getGroupForMember, membershipsOf, UUID } from "./groups";
-import { periodMembers, withMembership, type Membership } from "@/domain/members";
+import { periodMembers, periodPeople, withMembership, type Membership } from "@/domain/members";
 import { ledgerItems, rulesForGroup } from "./categories";
 import { ServiceError } from "./errors";
 
@@ -58,6 +58,8 @@ async function periodBalance(ledger: typeof ledgers.$inferSelect, memberships: M
   const noRuleCategories = [...new Set(periodItems.filter((i) => i.categoryId && i.rule === null).map((i) => i.categoryId as string))];
   return {
     lines,
+    // Who agrees the period and has a statement: current members, and leavers it involves (rule 2e).
+    people: periodPeople(memberships, ledger.startsOn, ledger.endsOn, periodItems),
     items: periodItems,
     unsorted: periodItems.filter((i) => i.categoryId === null),
     noRuleCount: live.noRuleCount,
@@ -84,15 +86,22 @@ export async function listClosedPeriods(userId: string, groupId: string) {
     .limit(24);
   const result = [];
   for (const l of closed) {
-    const inPeriod = periodMembers(memberships, l.startsOn, l.endsOn);
+    if (!periodMembers(memberships, l.startsOn, l.endsOn).includes(userId)) continue;
+    const balance = await periodBalance(l, memberships);
+    const inPeriod = balance.people;
     if (!inPeriod.includes(userId)) continue;
+    // Removing someone may have left everyone else already agreed: freeze it now (rule 2e).
+    if (periodStage(l) === "closed" && (await freezeIfAllAgreed(l, balance))) {
+      const [fresh] = await db.select().from(ledgers).where(eq(ledgers.id, l.id));
+      Object.assign(l, fresh);
+    }
     const agreed = await db.select({ userId: agreements.userId }).from(agreements).where(eq(agreements.ledgerId, l.id));
     result.push({
       id: l.id,
       startsOn: l.startsOn,
       endsOn: l.endsOn,
       stage: periodStage(l),
-      myNet: netFor(userId, (await periodBalance(l, memberships)).lines),
+      myNet: netFor(userId, balance.lines),
       iAgreed: agreed.some((a) => a.userId === userId),
       agreedCount: agreed.filter((a) => inPeriod.includes(a.userId)).length,
       memberCount: inPeriod.length,
@@ -114,8 +123,12 @@ export async function getPeriod(userId: string, ledgerId: string) {
   const stage = periodStage(ledger);
   const memberships = await membershipsOf(ledger.groupId);
   const balance = await periodBalance(ledger, memberships);
-  // The people in this period: they agree it, and the breakdown can show their statements (rule 2d).
-  const inPeriod = periodMembers(memberships, ledger.startsOn, ledger.endsOn);
+  if (stage === "closed" && (await freezeIfAllAgreed(ledger, balance))) {
+    // Everyone left in the period had already agreed: show it as agreed straight away.
+    return getPeriod(userId, ledgerId);
+  }
+  // The people in this period: they agree it, and the breakdown can show their statements (rules 2d, 2e).
+  const inPeriod = balance.people;
   const agreed = await db.select({ userId: agreements.userId }).from(agreements).where(eq(agreements.ledgerId, ledger.id));
   const cats = await db.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.groupId, ledger.groupId)).orderBy(asc(categories.name));
   return {
@@ -158,24 +171,33 @@ export async function agree(userId: string, ledgerId: string) {
   if (stage !== "closed") return { stage };
   const memberships = await membershipsOf(ledger.groupId);
   // Everyone who was in the group during the period agrees it, leavers included (rules 21, 2e).
-  const memberIds = periodMembers(memberships, ledger.startsOn, ledger.endsOn);
-  if (!memberIds.includes(userId)) throw new ServiceError("forbidden", "You were not in the group during this period.");
   const balance = await periodBalance(ledger, memberships);
+  const memberIds = balance.people;
+  if (!memberIds.includes(userId)) throw new ServiceError("forbidden", "You were not in the group during this period.");
   const blocked = agreeBlockedBy(balance.unsorted.length, balance.noRuleCount);
   if (blocked) throw new ServiceError("invalid", blocked);
   await db.insert(agreements).values({ ledgerId, userId }).onConflictDoNothing();
-  const agreed = await db.select({ userId: agreements.userId }).from(agreements).where(eq(agreements.ledgerId, ledgerId));
-  if (memberIds.every((id) => agreed.some((a) => a.userId === id))) {
-    // Everyone agreed: freeze the amounts and the rules behind them, so the breakdown keeps matching.
-    // Only if not frozen already by another request.
-    await db
-      .update(ledgers)
-      // Nothing owed at all: there is nothing to pay, so the period is settled at once (stage 2).
-      .set({ agreedAt: new Date(), frozenLines: balance.lines, frozenRules: balance.rulesUsed, settledAt: balance.lines.length === 0 ? new Date() : null })
-      .where(and(eq(ledgers.id, ledgerId), isNull(ledgers.agreedAt)));
-    return { stage: "agreed" as const };
-  }
-  return { stage: "closed" as const };
+  return { stage: (await freezeIfAllAgreed(ledger, balance)) ? ("agreed" as const) : ("closed" as const) };
+}
+
+/**
+ * Freezes a closed period once everyone who belongs to it has agreed (rule 22a, stage 1). Also
+ * run when the period is opened or listed, because removing someone who had nothing in the period
+ * can leave everyone else already agreed (rule 2e). Returns true when the period is now agreed.
+ */
+async function freezeIfAllAgreed(ledger: typeof ledgers.$inferSelect, balance: Awaited<ReturnType<typeof periodBalance>>): Promise<boolean> {
+  if (periodStage(ledger) !== "closed") return periodStage(ledger) !== "open";
+  if (agreeBlockedBy(balance.unsorted.length, balance.noRuleCount)) return false;
+  const agreed = await db.select({ userId: agreements.userId }).from(agreements).where(eq(agreements.ledgerId, ledger.id));
+  if (balance.people.length === 0 || !balance.people.every((id) => agreed.some((a) => a.userId === id))) return false;
+  // Everyone agreed: freeze the amounts and the rules behind them, so the breakdown keeps matching.
+  // Only if not frozen already by another request.
+  await db
+    .update(ledgers)
+    // Nothing owed at all: there is nothing to pay, so the period is settled at once (stage 2).
+    .set({ agreedAt: new Date(), frozenLines: balance.lines, frozenRules: balance.rulesUsed, settledAt: balance.lines.length === 0 ? new Date() : null })
+    .where(and(eq(ledgers.id, ledger.id), isNull(ledgers.agreedAt)));
+  return true;
 }
 
 /**
