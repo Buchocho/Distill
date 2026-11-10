@@ -11,7 +11,8 @@
  * (architecture rule 7). Tests never call this; they use the sample answers in tests/fixtures.
  *
  * Business rules: SPEC.md rules 6 (what is read; an item's discount is attached to it and its
- * price is what was paid; tax lines are items) and 7 (category at product type level, from the
+ * price is what was paid; tax lines are items), 8a (never make up a number: unsure values are
+ * flagged and unreadable prices left empty, added 10 Nov 2026) and 7 (category at product type level, from the
  * group's list or a proposed new one).
  */
 
@@ -24,18 +25,21 @@ const RESPONSE_SCHEMA = {
     store: { type: "STRING", nullable: true },
     receipt_number: { type: "STRING", nullable: true, description: "The receipt's own document or transaction number as printed" },
     date: { type: "STRING", nullable: true, description: "Purchase date as YYYY-MM-DD" },
+    date_unclear: { type: "BOOLEAN", description: "True if any part of the date was faded, cut off or guessed" },
     total: { type: "STRING", nullable: true, description: "Final total paid, digits with a point, e.g. 12.90" },
+    total_unclear: { type: "BOOLEAN", description: "True if any digit of the total was faded, cut off or guessed" },
     items: {
       type: "ARRAY",
       items: {
         type: "OBJECT",
         properties: {
           name: { type: "STRING" },
-          price: { type: "STRING", description: "Price paid for this item after its own discount, digits with a point" },
+          price: { type: "STRING", nullable: true, description: "Price paid for this item after its own discount, digits with a point; null if it cannot be read" },
+          price_unclear: { type: "BOOLEAN", description: "True if any digit of this price was faded, cut off or guessed" },
           discount: { type: "STRING", nullable: true, description: "Discount on this item, digits with a point, or null" },
           category: { type: "STRING", nullable: true },
         },
-        required: ["name", "price"],
+        required: ["name"],
       },
     },
   },
@@ -86,6 +90,14 @@ function instructions(categoryNames: readonly string[], today: string): string {
     "If none is, propose a new category in English at the level above.",
     "If you cannot tell what an item is, set its category to null.",
     "If something cannot be read, set it to null rather than guessing.",
+    "",
+    "Never make up a number. Faded, smudged, folded or cut off digits are common on these receipts.",
+    "For every price, the total and the date, say whether you are sure of every digit:",
+    "- If you can read it but any digit is faded, cut off or uncertain, give your best reading",
+    "  and set price_unclear (or total_unclear, date_unclear) to true.",
+    "- If you cannot read a price at all, set price to null and price_unclear to true.",
+    "  Do not fill it in from other numbers on the receipt; the person will check it.",
+    "Still list the item by its name, even when its price is missing.",
     "",
     "The group's categories:",
     list,

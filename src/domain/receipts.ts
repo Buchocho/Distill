@@ -33,10 +33,16 @@ export const MAX_ITEMS = 300;
  */
 export interface ReadItem {
   name: string;
+  /** 0 when the price could not be read (flag "missing"). */
   priceCents: number;
   discountCents: number | null;
   category: string | null;
+  /** How sure the reading was of the price (rule 8a): null clear, "unclear", or "missing". */
+  flag: ReadingFlag;
 }
+
+/** How sure a reading was of a price (SPEC.md rule 8a, added 10 Nov 2026). */
+export type ReadingFlag = "unclear" | "missing" | null;
 
 /** What the reading step returns (SPEC.md rule 6). Any field it could not read is null. */
 export interface Reading {
@@ -45,6 +51,9 @@ export interface Reading {
   purchaseDate: string | null;
   totalCents: number | null;
   items: ReadItem[];
+  /** The reading was unsure of the printed total or the date (rule 8a). */
+  totalUnclear: boolean;
+  dateUnclear: boolean;
 }
 
 /** Text from the reading, trimmed and cut to a length, or null when empty or not text. */
@@ -71,8 +80,10 @@ export function isIsoDate(value: string): boolean {
 /**
  * Checks Gemini's answer and turns it into a Reading (SPEC.md rule 6).
  *
- * Lenient on single lines, strict on the whole: a line without a name or a readable price is
- * dropped, because one bad line should not lose the receipt. An answer with no usable lines at
+ * Lenient on single lines, strict on the whole: a line without a name is dropped, because one bad
+ * line should not lose the receipt. A named line whose price could not be read is kept with an
+ * empty price, flagged "missing", for the person to fill in; a price the reading was unsure of is
+ * flagged "unclear" (rule 8a, so no number is ever made up). An answer with no usable lines at
  * all throws, and the receipt is then marked "failed" so the user can retry (rule 10).
  * A date that is not a real date is dropped rather than guessed.
  */
@@ -85,14 +96,16 @@ export function parseReading(raw: unknown): Reading {
     if (typeof entry !== "object" || entry === null) continue;
     const e = entry as Record<string, unknown>;
     const name = cleanText(e.name, ITEM_NAME_MAX);
+    if (!name) continue;
     const priceCents = cleanAmount(e.price);
-    if (!name || priceCents === null) continue;
+    const flag: ReadingFlag = priceCents === null ? "missing" : e.price_unclear === true ? "unclear" : null;
     // A discount is stored as a positive amount whichever way it was written; zero means none.
     const discount = cleanAmount(e.discount);
     const discountCents = discount === null || discount === 0 ? null : Math.abs(discount);
-    items.push({ name, priceCents, discountCents, category: cleanText(e.category, CATEGORY_NAME_MAX) });
+    items.push({ name, priceCents: priceCents ?? 0, discountCents, category: cleanText(e.category, CATEGORY_NAME_MAX), flag });
   }
-  if (items.length === 0) throw new Error("Reading has no items");
+  // No line with a readable price at all: the reading is no use, so the receipt can be retried.
+  if (items.every((i) => i.flag === "missing")) throw new Error("Reading has no items");
   const date = cleanText(r.date, 10);
   return {
     storeName: cleanText(r.store, 60),
@@ -100,7 +113,32 @@ export function parseReading(raw: unknown): Reading {
     purchaseDate: date && isIsoDate(date) ? date : null,
     totalCents: cleanAmount(r.total),
     items,
+    totalUnclear: r.total_unclear === true,
+    dateUnclear: r.date_unclear === true,
   };
+}
+
+/**
+ * A suggested price for the one doubtful line (SPEC.md rule 8a): when exactly one price is
+ * missing, or none is missing and exactly one is unclear, and the printed total is known, the
+ * receipt's own numbers give it: the total minus every other price. Only offered when the result is
+ * above zero. It is a suggestion the person can use, never filled in on its own.
+ * prices: each line's price in cents, null when empty or not readable.
+ */
+export function suggestPrice(
+  prices: readonly (number | null)[],
+  flags: readonly ReadingFlag[],
+  totalCents: number | null,
+): { index: number; cents: number } | null {
+  if (totalCents === null) return null;
+  // Empty now counts as missing; a line that was missing but has since been typed in counts as unclear.
+  const missing = prices.map((p, i) => (p === null ? i : -1)).filter((i) => i >= 0);
+  const unclear = flags.map((f, i) => (f !== null && prices[i] !== null ? i : -1)).filter((i) => i >= 0);
+  const index = missing.length === 1 ? missing[0] : missing.length === 0 && unclear.length === 1 ? unclear[0] : -1;
+  if (index < 0) return null;
+  const others = prices.reduce<number>((n, p, i) => (i === index ? n : n + (p ?? 0)), 0);
+  const cents = totalCents - others;
+  return cents > 0 && cents !== prices[index] ? { index, cents } : null;
 }
 
 /**

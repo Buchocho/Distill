@@ -39,7 +39,7 @@ export default async function Receipts({ params }: { params: Promise<{ groupId: 
   // The return draws the scan panel, then the recent receipts, or an empty state when there are none.
   return (
     <TabScreen groupId={groupId} tab="receipts" label="RECEIPTS" title={group.name}
-      action={<Link href={`/groups/${groupId}/invite`} className="mt-1 min-h-11 rounded-full px-3 py-2.5 text-sm font-bold text-orange">Invite</Link>}>
+      action={<Link href={`/groups/${groupId}/invite`} className="mt-1 min-h-11 rounded-full px-3 py-2.5 text-sm font-bold text-orange">Group</Link>}>
       {me.leftOn === null ? (
         <ScanPanel groupId={groupId} />
       ) : (

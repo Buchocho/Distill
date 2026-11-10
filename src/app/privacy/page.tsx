@@ -66,7 +66,7 @@ export default function Privacy() {
       </section>
       <section>
         <h2>Signing out</h2>
-        <p>Sign out at the bottom of the Invite people screen (tap your initial on Home). It ends your session on that device.</p>
+        <p>Sign out at the bottom of the Group screen (tap your initial on Home). It ends your session on that device.</p>
       </section>
     </LegalPage>
   );

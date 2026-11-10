@@ -96,6 +96,8 @@ The sharing rule. No rows for a category means it has no rule yet: its items are
 | created_at | timestamptz | |
 | saved_at | timestamptz | null until saved |
 | reading_started_at | timestamptz | when the current reading started; a receipt still "reading" 90 seconds later is shown as failed (migration 0012) |
+| total_unclear | boolean | the reading was unsure of the printed total; cleared on save (migration 0014) |
+| date_unclear | boolean | the reading was unsure of the date; cleared on save |
 | receipt_number | text | the receipt's own number as printed, null if none was read; same store plus same number cannot be saved twice in a group (SPEC.md rule 9c, checked in the service) |
 
 ### receipt_photos
@@ -119,6 +121,7 @@ The sharing rule. No rows for a category means it has no rule yet: its items are
 | discount_cents | integer | discount printed for this item, positive; information only, never summed or split (SPEC.md rule 6). Check `items_discount_positive` |
 | deleted_at | timestamptz | set when the payer removes a leftover unsorted item from a closed period (SPEC.md rule 20); removed items are left out of balances and lists but kept for the history |
 | proposed_category | text | a new category name suggested by the reading while the receipt is under review; becomes a real category on save and is then cleared (SPEC.md rule 7). Check `items_one_category`: never set together with category_id |
+| reading_flag | text | null when the price was read clearly, `unclear` when hard to read, `missing` when it could not be read (price_cents is then 0 until the person fills it in); cleared on save (migration 0014) |
 | updated_by | uuid | FK users.id, null when set by the reading step |
 | updated_at | timestamptz | |
 

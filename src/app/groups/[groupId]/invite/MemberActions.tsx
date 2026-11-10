@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Remove a member, and Leave the group, on Invite people (SPEC.md rule 2e, approved designs
+ * Remove a member, and Leave the group, on the Group screen (SPEC.md rule 2e, approved designs
  * Members, LeaveConfirm and RemoveConfirm, 10 Nov 2026). Runs in the browser.
  * Each opens a panel from the bottom saying what happens before anything changes: out of new
  * splits from today, still paying or paid for what was bought before, still agreeing and settling.
@@ -39,7 +39,7 @@ export function RemoveMember({ groupId, userId, name, groupName }: { groupId: st
   );
 }
 
-/** The Leave button at the bottom of Invite people, with its confirmation panel. */
+/** The Leave button at the bottom of the Group screen, with its confirmation panel. */
 export function LeaveGroup({ groupId, userId, groupName }: { groupId: string; userId: string; groupName: string }) {
   const [open, setOpen] = useState(false);
   return (

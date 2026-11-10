@@ -4,7 +4,7 @@
  * Google email under their name, so the group can tell which account joined (SPEC.md rule 2a).
  * Remove next to each other member and Leave at the bottom (rule 2e, approved design Members);
  * people who left are listed last in grey with when, and who removed them. Opened right after a
- * group is created (title "Group created") and from the initial on Home (title "Invite people").
+ * group is created (title "Group created") and from the initial on Home and Group on the Receipts tab (title "Group", renamed from Invite people on 10 Nov 2026).
  * Also where a person changes the name they are shown as (DisplayNameForm, SPEC.md rule 1) and
  * where the group changes when accounts close (CloseRuleForm, rule 18), and Sign out at the bottom
  * (SignOutButton, rule 1a).
@@ -46,7 +46,7 @@ export default async function Invite({ params, searchParams }: {
     <main className="flex min-h-dvh flex-col bg-paper text-ink">
       <header className="flex items-center gap-2 px-3 pb-2 pt-3">
         <Link href={`/groups/${groupId}`} aria-label="Back to Home" className="grid size-11 place-items-center rounded-xl text-ink"><Icon name="back" size={22} /></Link>
-        <h1 className="text-xl font-extrabold">{isNew ? "Group created" : "Invite people"}</h1>
+        <h1 className="text-xl font-extrabold">{isNew ? "Group created" : "Group"}</h1>
       </header>
       <div className="flex flex-1 flex-col gap-5 px-4 pb-6 pt-2">
         <p className="text-[15px] text-grey-700">Send this link to the people you shop with. They sign in and join <b className="text-ink">{group.name}</b>.</p>

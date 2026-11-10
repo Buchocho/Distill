@@ -16,6 +16,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  boolean,
   date,
   index,
   integer,
@@ -191,6 +192,9 @@ export const receipts = pgTable(
     createdBy: uuid("created_by").notNull().references(() => users.id),
     createdAt: createdAt(),
     savedAt: timestamp("saved_at", { withTimezone: true }),
+    // The reading was unsure of the printed total or the date (SPEC.md rule 8a); shown as "check".
+    totalUnclear: boolean("total_unclear").notNull().default(false),
+    dateUnclear: boolean("date_unclear").notNull().default(false),
     // When the current reading started. A reading still going long after this was cut off by the
     // server time limit, so the receipt is shown as failed with Retry (SPEC.md rule 10).
     readingStartedAt: timestamp("reading_started_at", { withTimezone: true }),
@@ -237,6 +241,10 @@ export const items = pgTable(
     // A new category name suggested by the reading step, while the receipt is under review. It
     // becomes a real category only when the receipt is saved, and is then cleared (SPEC.md rule 7).
     proposedCategory: text("proposed_category"),
+    // How sure the reading was of the price (SPEC.md rule 8a): null when clear, "unclear" when the
+    // digits were hard to read, "missing" when they could not be read at all (price_cents is then
+    // 0 and the review screen shows an empty price that must be filled before saving).
+    readingFlag: text("reading_flag", { enum: ["unclear", "missing"] }),
     // Null when set by the reading step.
     updatedBy: uuid("updated_by").references(() => users.id),
     // A leftover item removed by its payer in a closed period (SPEC.md rule 20). Kept, not erased,

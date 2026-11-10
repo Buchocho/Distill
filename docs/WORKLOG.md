@@ -270,3 +270,13 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Effect on existing test data: periods not yet agreed are recalculated with join dates, so someone who joined a test group after its first receipts stops paying for those. Agreed periods are frozen and do not change.
 - Known limits, in SPEC 2e: rules are not dated (changing a rule after someone left also changes earlier items in the open period); rejoining replaces the first stay's dates.
 - Verified: type check, lint, unit tests (new: membership dates, period members, item day, rules naming someone gone, a joiner not paying for earlier items), end to end tests, build. Signed in flows to be tested by hand with two accounts.
+
+## 2026-11-10: the reading never makes up a number; Invite renamed Group
+
+- Found by a beta tester: on a faded Coldstone receipt (Abuja, naira) Gemini read the first item as 9.10 when the digits could not be read; the real price, from the receipt's own numbers, is 10,000.00 - 900.00 - 1,111.11 = 7,988.89. The sum check showed the gap but not where it was.
+- Decided with Maduabuchi, design Review receipt v4 approved: Gemini is told never to fill in faded or cut off digits, to say per price, total and date whether it was unsure, and to leave an unreadable price empty. The review screen shows a notice at the top, marks unsure values in orange, shows an empty price as empty, and when exactly one price is in doubt and the total is known, offers "Should this be 7,988.89?" with a Use button. Save is blocked only while a price is empty. Weak point raised: a model's own "unsure" is not reliable; the sum check and the arithmetic suggestion are the backstop.
+- Also approved: "Invite" on the Receipts tab and the "Invite people" title are now "Group", since that screen holds members, settings, leaving and sign out.
+- Prompts: "The app actually creates imaginary numbers, we want to add a stop to that"; "Yes to 1 & 2".
+- Built: answer format and instructions in `gemini.ts`; `parseReading` keeps named lines with unreadable prices as missing and reads the unsure flags; `suggestPrice`; migration 0014; `ReviewForm` marks, empty price, suggestion, notice, Save blocked while a price is empty; flags cleared on save.
+- Verified: type check, lint, unit tests (new: flags read, missing kept, the Coldstone suggestion, no suggestion with two doubtful prices or no total), end to end tests, build. Reading a real faded receipt can only be checked by hand.
+- Waiting for approval: the Home header (group name larger with the arrow, period under it).

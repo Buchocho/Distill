@@ -2,7 +2,7 @@
 
 /**
  * "Signed in as ..." and Sign out (SPEC.md rule 1a, added 10 Nov 2026). Runs in the browser.
- * Shown at the bottom of Invite people, where a person's own settings live, and on Start, so
+ * Shown at the bottom of the Group screen, where a person's own settings live, and on Start, so
  * someone who signed in with the wrong Google account can see it and switch at once. Ends the
  * Supabase session on this device and goes to Sign in. Nothing in any group changes.
  */

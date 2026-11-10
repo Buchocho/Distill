@@ -14,8 +14,12 @@
  *   a warning for the same store, date and total (rule 9c);
  * - see each item's discount, for information only: the price shown is already what was paid (rule 6);
  * - see the sum check: whether the items add up to the printed total, and the difference (rule 8);
+ * - see which values the reading was unsure of, fill in prices it could not read, and use a
+ *   suggested price worked out from the total when only one price is in doubt (rule 8a, approved
+ *   design Review receipt v4, 10 Nov 2026);
  * - delete the receipt instead of saving it (rule 9b).
- * Save is never blocked by unsorted items or by a sum difference; the person decides.
+ * Save is never blocked by unsorted items, a sum difference or a value marked unsure; the person
+ * decides. It is blocked while a price is empty, so no price is ever saved that nobody entered.
  * Amounts are typed and shown in the group's currency style (rule 2b).
  */
 
@@ -23,7 +27,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { currencyAffix, formatCents, formatMoney, parseAmount } from "@/domain/money";
-import { findDuplicate, sumCheck } from "@/domain/receipts";
+import { findDuplicate, suggestPrice, sumCheck, type ReadingFlag } from "@/domain/receipts";
 import { dateLooksWrong, deviceToday, longDate } from "@/domain/dates";
 import { DeleteReceipt } from "./DeleteReceipt";
 
@@ -35,6 +39,7 @@ type Item = {
   discountCents: number | null;
   categoryId: string | null;
   proposedCategory: string | null;
+  readingFlag: ReadingFlag;
 };
 
 type Saved = {
@@ -57,6 +62,8 @@ interface Row {
   price: string;
   discountCents: number | null;
   choice: string;
+  /** How sure the reading was of the price (rule 8a). */
+  flag: ReadingFlag;
 }
 
 const NEW = "__new";
@@ -102,6 +109,8 @@ export function ReviewForm(props: {
   storeName: string | null;
   purchaseDate: string | null;
   totalCents: number | null;
+  totalUnclear: boolean;
+  dateUnclear: boolean;
   items: Item[];
   categories: Category[];
   photoCount: number;
@@ -118,8 +127,10 @@ export function ReviewForm(props: {
     props.items.map((i) => ({
       key: i.id,
       name: i.name,
-      price: formatCents(i.priceCents, props.currency),
+      // A price the reading could not read starts empty: nothing is filled in for the person (rule 8a).
+      price: i.readingFlag === "missing" ? "" : formatCents(i.priceCents, props.currency),
       discountCents: i.discountCents,
+      flag: i.readingFlag,
       choice: i.categoryId ? `c:${i.categoryId}` : i.proposedCategory ? `p:${i.proposedCategory}` : "none",
     })),
   );
@@ -139,10 +150,22 @@ export function ReviewForm(props: {
   const duplicate = findDuplicate({ storeName: store, purchaseDate: date || null, totalCents, receiptNumber: number || null }, props.saved);
   const blocked = duplicate?.kind === "block";
   const odd = date !== "" && dateLooksWrong(date, deviceToday());
+  // Values the reading was unsure of stay marked until the person changes them (rule 8a).
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const dateDoubt = props.dateUnclear && !touched.date;
+  const totalDoubt = props.totalUnclear && !touched.total;
+  const anyDoubt = dateDoubt || totalDoubt || rows.some((r) => r.flag !== null && !touched[r.key]);
+  const missingCount = prices.filter((p) => p === null).length;
+  const suggestion = suggestPrice(prices, rows.map((r) => r.flag), totalCents);
 
   /** Changes one line of the form. */
   function update(key: string, change: Partial<Row>) {
     setRows((all) => all.map((r) => (r.key === key ? { ...r, ...change } : r)));
+  }
+
+  /** Records that the person changed a value the reading was unsure of, so its mark goes. */
+  function markChecked(key: string) {
+    setTouched((t) => (t[key] ? t : { ...t, [key]: true }));
   }
 
   // Sends the reviewed receipt to the API. Field errors come back per line and are shown under it.
@@ -186,6 +209,17 @@ export function ReviewForm(props: {
   // check, and Delete and Save (mockup Review receipt v3).
   return (
     <>
+      {anyDoubt && (
+        <div role="alert" className="flex items-start gap-2.5 rounded-2xl border-[1.5px] border-orange bg-orange/15 px-3.5 py-3">
+          <span aria-hidden="true" className="grid size-[22px] shrink-0 place-items-center rounded-full bg-orange text-sm font-extrabold text-ink">!</span>
+          <p className="text-sm leading-snug">
+            <b>Some values were hard to read.</b> Check the ones marked against the receipt.
+            {props.photoCount > 0 && (
+              <> <a href={`/api/v1/receipts/${props.receiptId}/photos/1`} target="_blank" rel="noreferrer" className="font-bold text-orange underline">See photo</a></>
+            )}
+          </p>
+        </div>
+      )}
       {duplicate && (
         <div role="alert" className={`flex flex-col gap-1 rounded-2xl p-4 ${blocked ? "bg-red-tint text-red" : "bg-orange-tint text-orange-text"}`}>
           <p className="font-extrabold">{blocked ? "This receipt is already saved" : "This looks like a receipt already saved"}</p>
@@ -202,11 +236,11 @@ export function ReviewForm(props: {
       <section aria-label="Receipt details" className="flex flex-col gap-1.5 rounded-2xl bg-dark-card px-4 pb-2.5 pt-3">
         <div className="flex items-center gap-2">
           <div className="relative">
-            <span className={`text-[13px] font-semibold ${odd ? "text-orange" : "text-sand"}`}>{date ? longDate(date) : "Add the date"}</span>
-            <input type="date" aria-label="Date on the receipt" value={date} onChange={(e) => setDate(e.target.value)}
+            <span className={`text-[13px] font-semibold ${odd || dateDoubt ? "border-b-2 border-dotted border-orange font-bold text-orange" : "text-sand"}`}>{date ? longDate(date) : "Add the date"}</span>
+            <input type="date" aria-label="Date on the receipt" value={date} onChange={(e) => { setDate(e.target.value); markChecked("date"); }}
               className="absolute inset-0 cursor-pointer opacity-0" />
           </div>
-          {odd && <span className="text-[13px] font-bold text-orange">Check the date</span>}
+          {(odd || dateDoubt) && <span className="text-[13px] font-bold text-orange">Check the date</span>}
           <span className="flex-1" />
           <label className="flex items-center gap-1 text-xs text-sand">
             No.
@@ -220,13 +254,14 @@ export function ReviewForm(props: {
           <label className="flex shrink-0 items-baseline text-[26px] font-extrabold tabular-nums">
             <span className="sr-only">Printed total</span>
             {prefix}
-            <input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0,00"
+            <input inputMode="decimal" value={total} onChange={(e) => { setTotal(e.target.value); markChecked("total"); }} placeholder="0,00"
               style={amountWidth(total, 4)}
-              className="rounded-md bg-transparent text-right text-paper placeholder:text-grey-400 focus:outline focus:outline-1 focus:outline-sand" />
+              className={`rounded-md bg-transparent text-right text-paper placeholder:text-grey-400 focus:outline focus:outline-1 focus:outline-sand ${totalDoubt ? "outline outline-2 outline-orange" : ""}`} />
             {suffix && <span className="ml-1.5">{suffix}</span>}
           </label>
         </div>
         {errors.totalCents && <p className="text-right text-sm font-semibold text-orange">{errors.totalCents}</p>}
+        {totalDoubt && <p className="text-right text-[13px] font-bold text-orange">Hard to read. Check the total.</p>}
         <div className="flex items-center gap-2 text-sm text-sand">
           <span>Paid by you</span>
           <span className="flex-1" />
@@ -241,6 +276,8 @@ export function ReviewForm(props: {
         {rows.map((r, i) => {
           const attention = r.choice === "none";
           const skipped = r.choice === SKIP;
+          const empty = prices[i] === null;
+          const doubt = r.flag !== null && !touched[r.key];
           return (
             <li key={r.key} className="flex flex-col gap-2 border-b border-dark-line py-3.5 last:border-0">
               <input aria-label={`Item ${i + 1} name`} value={r.name} onChange={(e) => update(r.key, { name: e.target.value })} maxLength={80}
@@ -257,12 +294,28 @@ export function ReviewForm(props: {
                 <label className="flex h-11 shrink-0 items-center justify-end text-[23px] font-extrabold tabular-nums">
                   <span className="sr-only">Price of {r.name || `item ${i + 1}`}</span>
                   {prefix}
-                  <input inputMode="decimal" value={r.price} onChange={(e) => update(r.key, { price: e.target.value })}
-                    style={amountWidth(r.price, 4)}
-                    className="rounded-md bg-transparent text-right text-paper focus:outline focus:outline-1 focus:outline-sand" />
+                  <input inputMode="decimal" value={r.price} onChange={(e) => { update(r.key, { price: e.target.value }); markChecked(r.key); }}
+                    style={amountWidth(r.price, empty ? 6 : 4)} placeholder="____"
+                    className={`rounded-md bg-transparent text-right text-paper placeholder:text-grey-400 focus:outline focus:outline-1 focus:outline-sand ${doubt || empty ? "outline outline-2 outline-orange" : ""}`} />
                   {suffix && <span className="ml-1.5">{suffix}</span>}
                 </label>
               </div>
+              {(empty || doubt) && (
+                <span className="self-end text-[13px] font-bold text-orange">
+                  {empty ? "Could not read this price. Enter it from the receipt." : "Hard to read. Check this price."}
+                </span>
+              )}
+              {suggestion?.index === i && (
+                <div className="flex items-center gap-2.5 rounded-xl bg-dark px-3 py-2.5">
+                  <span className="flex-1 text-[13px] leading-snug text-sand">
+                    Should this be <b className="text-paper">{formatMoney(suggestion.cents, props.currency)}</b>? That makes the items match the total.
+                  </span>
+                  <button type="button" onClick={() => { update(r.key, { price: formatCents(suggestion.cents, props.currency) }); markChecked(r.key); }}
+                    className="min-h-11 shrink-0 rounded-lg bg-orange px-3 text-sm font-extrabold text-ink">
+                    Use {formatMoney(suggestion.cents, props.currency)}
+                  </button>
+                </div>
+              )}
               {r.discountCents !== null && (
                 <span className="self-end text-[13px] font-semibold text-sand">
                   Discount {formatMoney(r.discountCents, props.currency)} (already in the price)
@@ -301,18 +354,20 @@ export function ReviewForm(props: {
           ) : (
             <span className="text-orange">
               Items come to {formatMoney(check.itemsCents, props.currency)}, {formatMoney(Math.abs(check.differenceCents), props.currency)}{" "}
-              {check.differenceCents > 0 ? "more" : "less"} than the total. Check the prices.
+              {check.differenceCents > 0 ? "more" : "less"} than the total.{" "}
+              {missingCount > 0 ? `${missingCount === 1 ? "One price is" : `${missingCount} prices are`} missing.` : "Check the prices."}
             </span>
           )}
         </div>
         {errors.form && <p role="alert" className="px-1 text-sm font-semibold text-orange">{errors.form}{errors.items ? ` ${errors.items}` : ""}</p>}
         <div className="flex flex-wrap gap-2.5">
           <DeleteReceipt receiptId={props.receiptId} groupId={props.groupId} compact />
-          <button type="button" onClick={() => void save()} disabled={saving || blocked}
+          <button type="button" onClick={() => void save()} disabled={saving || blocked || missingCount > 0}
             className="min-h-13 flex-1 rounded-xl bg-orange text-base font-extrabold text-ink disabled:opacity-40">
             {saving ? "Saving..." : duplicate?.kind === "warn" ? "Save anyway" : "Save receipt"}
           </button>
         </div>
+        {missingCount > 0 && <p className="text-center text-[13px] text-sand">Enter the missing price{missingCount === 1 ? "" : "s"} to save.</p>}
       </div>
     </>
   );

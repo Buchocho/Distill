@@ -166,6 +166,8 @@ export async function readReceipt(userId: string, receiptId: string, localToday:
             discountCents: item.discountCents,
             categoryId: match?.categoryId ?? null,
             proposedCategory: match?.proposed ?? null,
+            // Unsure or unreadable prices are marked for the review screen (rule 8a).
+            readingFlag: item.flag,
           };
         }),
       );
@@ -177,6 +179,8 @@ export async function readReceipt(userId: string, receiptId: string, localToday:
           receiptNumber: reading.receiptNumber,
           purchaseDate: reading.purchaseDate,
           totalCents: reading.totalCents,
+          totalUnclear: reading.totalUnclear,
+          dateUnclear: reading.dateUnclear,
         })
         .where(eq(receipts.id, receiptId));
     });
@@ -338,6 +342,9 @@ export async function saveReceipt(userId: string, receiptId: string, input: Save
         receiptNumber: input.receiptNumber?.trim() || null,
         purchaseDate: input.purchaseDate,
         totalCents: input.totalCents,
+        // Saving means the person checked the values (rule 8a).
+        totalUnclear: false,
+        dateUnclear: false,
       })
       .where(and(eq(receipts.id, receiptId), eq(receipts.status, "ready")))
       .returning({ id: receipts.id });

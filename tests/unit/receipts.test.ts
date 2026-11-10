@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import continente from "../fixtures/reading-continente.json";
 import usReceipt from "../fixtures/reading-us-tax-discount.json";
 import { parseAmount } from "@/domain/money";
-import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, shownStatus, storeKey, sumCheck, validateReview } from "@/domain/receipts";
+import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, shownStatus, storeKey, suggestPrice, sumCheck, validateReview } from "@/domain/receipts";
 
 describe("parseAmount", () => {
   it("reads both decimal styles", () => {
@@ -37,20 +37,22 @@ describe("parseReading", () => {
     expect(r.purchaseDate).toBe("2026-09-10");
     expect(r.totalCents).toBe(1290);
     expect(r.items).toHaveLength(7);
-    expect(r.items[6]).toEqual({ name: "Saco Plastico", priceCents: 10, discountCents: null, category: null });
+    expect(r.items[6]).toEqual({ name: "Saco Plastico", priceCents: 10, discountCents: null, category: null, flag: null });
     // The Twix line is already the price paid; its discount is kept for information only.
     expect(r.items[5]).toMatchObject({ name: "Snack Twix", priceCents: 108, discountCents: 37 });
     expect(sumCheck(r.items.map((i) => i.priceCents), r.totalCents).differenceCents).toBe(0);
   });
-  it("attaches item discounts, keeps a voucher as a negative line and tax as an item, drops broken lines and a false date", () => {
+  it("attaches item discounts, keeps a voucher as a negative line and tax as an item, drops nameless lines and a false date, keeps an unreadable price as missing", () => {
     const r = parseReading(usReceipt);
     expect(r.storeName).toBe("Trader Joe's");
     expect(r.purchaseDate).toBeNull();
-    expect(r.items.map((i) => i.name)).toEqual(["Bananas", "Oat Milk", "Coffee Beans", "Store voucher", "Sales tax"]);
+    expect(r.items.map((i) => i.name)).toEqual(["Bananas", "Oat Milk", "Coffee Beans", "Store voucher", "Sales tax", "Unreadable line"]);
+    // A price that cannot be read is never made up: it is left for the person to fill in (rule 8a).
+    expect(r.items[5]).toMatchObject({ priceCents: 0, flag: "missing" });
     // A discount written as negative is still stored as a positive amount.
     expect(r.items[2]).toMatchObject({ priceCents: 1199, discountCents: 100 });
     expect(r.items[3].priceCents).toBe(-200);
-    expect(r.items[4]).toEqual({ name: "Sales tax", priceCents: 190, discountCents: null, category: "Tax" });
+    expect(r.items[4]).toEqual({ name: "Sales tax", priceCents: 190, discountCents: null, category: "Tax", flag: null });
     expect(sumCheck(r.items.map((i) => i.priceCents), r.totalCents)).toEqual({ itemsCents: 1837, differenceCents: 0 });
   });
   it("throws when there is nothing usable, so the receipt can be retried", () => {
@@ -159,5 +161,41 @@ describe("shownStatus", () => {
   it("leaves other statuses alone", () => {
     expect(shownStatus("ready", null, now)).toBe("ready");
     expect(shownStatus("saved", new Date("2026-11-01T00:00:00Z"), now)).toBe("saved");
+  });
+});
+
+describe("unclear readings (rule 8a)", () => {
+  it("keeps a line whose price could not be read, flagged missing, and flags unsure values", () => {
+    const r = parseReading({
+      store: "Coldstone Creamery Gateway",
+      total: "10000.00",
+      total_unclear: false,
+      date: "2026-09-15",
+      date_unclear: true,
+      items: [
+        { name: "FOUNDERS FAVOU", price: null },
+        { name: "PLAIN WAFFLE", price: "900.00" },
+        { name: "Tax", price: "1111.11", price_unclear: true },
+      ],
+    });
+    expect(r.items.map((i) => [i.priceCents, i.flag])).toEqual([[0, "missing"], [90000, null], [111111, "unclear"]]);
+    expect(r.dateUnclear).toBe(true);
+    expect(r.totalUnclear).toBe(false);
+  });
+
+  it("suggests the one missing price from the total (the Coldstone receipt)", () => {
+    expect(suggestPrice([null, 90000, 111111], ["missing", null, "unclear"], 1000000)).toEqual({ index: 0, cents: 798889 });
+  });
+
+  it("suggests the one unclear price when none is missing and the sums disagree", () => {
+    expect(suggestPrice([910, 90000, 111111], ["unclear", null, null], 1000000)).toEqual({ index: 0, cents: 798889 });
+    // Already matching: nothing to suggest.
+    expect(suggestPrice([798889, 90000, 111111], ["unclear", null, null], 1000000)).toBeNull();
+  });
+
+  it("does not guess with two doubtful prices, no total, or a result of zero or less", () => {
+    expect(suggestPrice([null, null, 111111], ["missing", "missing", null], 1000000)).toBeNull();
+    expect(suggestPrice([null, 90000], ["missing", null], null)).toBeNull();
+    expect(suggestPrice([null, 90000], ["missing", null], 50000)).toBeNull();
   });
 });
