@@ -18,10 +18,10 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/server/db/client";
-import { groupMembers, groups, ledgers, users } from "@/server/db/schema";
+import { groupMembers, groups, items, ledgers, receipts, users } from "@/server/db/schema";
 import { type NewGroupInput, validateNewGroup } from "@/domain/groups";
 import { firstLedger } from "@/domain/ledgers";
-import { periodMembers, type Membership } from "@/domain/members";
+import { itemDay, membersOn, periodMembers, type Membership } from "@/domain/members";
 import { periodStage } from "@/domain/periods";
 import { ServiceError } from "./errors";
 import { ensurePeriods, requestToday } from "./periodClock";
@@ -53,10 +53,34 @@ export async function listMyGroups(userId: string) {
   return shown;
 }
 
-/** True while a period the person was part of is not settled yet, open periods included (rule 2e). */
+/**
+ * True while someone who left still has something to settle in the group (rule 2e): a period
+ * not settled yet that involves them. Agreed periods involve them when the frozen amounts name
+ * them; open and closed ones when they paid for an item in it, or an item in it was bought while
+ * they were a member (the same test as periodPeople). Someone who left with nothing in any period
+ * loses the group at once (found by Maduabuchi, 10 Nov 2026: a group joined and left on the same
+ * day, with no receipts, stayed listed with nothing to do).
+ */
 async function stillToSettle(groupId: string, m: Membership): Promise<boolean> {
   const all = await db.select().from(ledgers).where(eq(ledgers.groupId, groupId));
-  return all.some((l) => periodMembers([m], l.startsOn, l.endsOn).length > 0 && periodStage(l) !== "settled");
+  for (const l of all) {
+    const stage = periodStage(l);
+    if (stage === "settled" || periodMembers([m], l.startsOn, l.endsOn).length === 0) continue;
+    if (stage === "agreed") {
+      if ((l.frozenLines ?? []).some((line) => line.from === m.userId || line.to === m.userId)) return true;
+      continue;
+    }
+    const rows = await db
+      .select({ payerId: receipts.paidBy, purchaseDate: receipts.purchaseDate, savedAt: receipts.savedAt })
+      .from(items)
+      .innerJoin(receipts, eq(receipts.id, items.receiptId))
+      .where(and(eq(receipts.ledgerId, l.id), eq(receipts.status, "saved"), isNull(items.deletedAt)));
+    const involved = rows.some(
+      (r) => r.payerId === m.userId || membersOn([m], itemDay(r.purchaseDate, r.savedAt?.toISOString().slice(0, 10) ?? null, l.startsOn)).length > 0,
+    );
+    if (involved) return true;
+  }
+  return false;
 }
 
 /** Every membership of a group, current and past, for working out who shares what (rule 2d). */
@@ -114,6 +138,10 @@ export async function assertMember(userId: string, groupId: string): Promise<voi
     .from(groupMembers)
     .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
   if (!membership) throw new ServiceError("not_found", "Group not found.");
+  // Someone who left keeps access only while they still have something to settle (rule 2e).
+  if (membership.leftOn && !(await stillToSettle(groupId, { userId, joinedOn: membership.joinedOn, leftOn: membership.leftOn }))) {
+    throw new ServiceError("not_found", "Group not found.");
+  }
 }
 
 /** True when the person is a current member of the group (not left). Used to check "paid by" (SPEC.md rule 4). */

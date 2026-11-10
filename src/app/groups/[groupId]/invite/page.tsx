@@ -3,7 +3,8 @@
  * Shows the group's invite link with Share and Copy, and the member list with each member's
  * Google email under their name, so the group can tell which account joined (SPEC.md rule 2a).
  * Remove next to each other member and Leave at the bottom (rule 2e, approved design Members);
- * people who left are listed last in grey with when, and who removed them. Opened right after a
+ * people who left are listed last in grey with when, and who removed them. Someone who left does
+ * not see the invite link (they cannot bring people into a group they are no longer in). Opened right after a
  * group is created (title "Group created") and from the initial on Home and Group on the Receipts tab (title "Group", renamed from Invite people on 10 Nov 2026).
  * Also where a person changes the name they are shown as (DisplayNameForm, SPEC.md rule 1) and
  * where the group changes when accounts close (CloseRuleForm, rule 18), and Sign out at the bottom
@@ -49,8 +50,16 @@ export default async function Invite({ params, searchParams }: {
         <h1 className="text-xl font-extrabold">{isNew ? "Group created" : "Group"}</h1>
       </header>
       <div className="flex flex-1 flex-col gap-5 px-4 pb-6 pt-2">
-        <p className="text-[15px] text-grey-700">Send this link to the people you shop with. They sign in and join <b className="text-ink">{group.name}</b>.</p>
-        <CopyLink url={`${origin}/join/${group.inviteToken}`} />
+        {current ? (
+          <>
+            <p className="text-[15px] text-grey-700">Send this link to the people you shop with. They sign in and join <b className="text-ink">{group.name}</b>.</p>
+            <CopyLink url={`${origin}/join/${group.inviteToken}`} />
+          </>
+        ) : (
+          <p className="rounded-2xl bg-red-tint px-4 py-3 text-sm font-bold text-red">
+            You left {group.name} on {longDate(me.leftOn ?? "")}. You can still agree and settle what is left on the Balance tab.
+          </p>
+        )}
         <div className="flex flex-col gap-2">
           <h2 className="text-sm font-bold">Members</h2>
           <ul className="rounded-2xl bg-white px-4">

@@ -300,3 +300,10 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Built: Gemini now returns the subtotal, the tax total and whether tax is inside the prices, is told not to list included tax as an item, and is told amounts may group thousands with a comma or point. `reconcileTax` decides from the receipt's own sums: items alone make the total, tax is inside; items plus tax make the total, or items make the subtotal, tax is on top; otherwise (a price missing or misread) the reading's own answer. Included tax is removed from the items, kept on the receipt (migration 0015) and shown on the review screen: "Tax of 1,111.11 is already in these prices, so it is not added again." The one-price suggestion then gives 9,100.00. Rule 6a added.
 - No mockup: one line of text on the approved Review v4 screen.
 - Verified: type check, lint, unit tests (new: Coldstone read right, tax on top kept, missing price with the reading's answer gives 9,100.00, tax only in the tax total), end to end tests, build.
+
+## 2026-11-10: a leaver with nothing to settle loses the group
+
+- Found by Maduabuchi: he joined a group and left it the same day with no receipts added; Your groups still listed it as Settle up, opening it offered nothing to do, and the Group screen still showed the invite link.
+- Cause: a group stayed listed while any unsettled period overlapped the membership, including the open period, whether or not it involved the person.
+- Changed: a group someone left stays listed, and opens, only while a period not yet settled involves them (agreed: the frozen amounts name them; open or closed: they paid for an item, or an item was bought while they were a member). Otherwise it drops off and its pages say Not found, like any group they are not in. The invite link is hidden from people who left; the Group screen tells them they left and where to settle.
+- Verified: type check, lint, unit tests, end to end tests, build.
