@@ -155,7 +155,8 @@ export async function agree(userId: string, ledgerId: string) {
     // Only if not frozen already by another request.
     await db
       .update(ledgers)
-      .set({ agreedAt: new Date(), frozenLines: balance.lines, frozenRules: balance.rulesUsed })
+      // Nothing owed at all: there is nothing to pay, so the period is settled at once (stage 2).
+      .set({ agreedAt: new Date(), frozenLines: balance.lines, frozenRules: balance.rulesUsed, settledAt: balance.lines.length === 0 ? new Date() : null })
       .where(and(eq(ledgers.id, ledgerId), isNull(ledgers.agreedAt)));
     return { stage: "agreed" as const };
   }

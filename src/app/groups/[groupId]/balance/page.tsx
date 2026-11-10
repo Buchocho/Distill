@@ -5,7 +5,8 @@
  * it (SPEC.md rules 15 to 17). White (approved design, BalanceWhite).
  * "See the breakdown" opens the open period's category by category statement, and Past periods
  * lists every closed period with the reader's amount and status (approved 10 Nov 2026).
- * PARTLY BUILT: Payments come in step 6.
+ * Payments opens the Payments screen, with a count of payments waiting for the reader to confirm
+ * (step 6, story US9, SPEC.md rules 24 to 26).
  */
 
 import Link from "next/link";
@@ -14,6 +15,7 @@ import { requireUser } from "@/server/session";
 import { groupOr404 } from "@/server/pageData";
 import { getOpenBalance } from "@/server/services/balance";
 import { listClosedPeriods } from "@/server/services/periods";
+import { countToConfirm } from "@/server/services/payments";
 import { Icon } from "@/components/Icon";
 import { formatCents, formatMoney } from "@/domain/money";
 import { longDate } from "@/domain/dates";
@@ -26,6 +28,8 @@ export default async function Balance({ params }: { params: Promise<{ groupId: s
   await groupOr404(user.id, groupId);
   const b = await getOpenBalance(user.id, groupId);
   const closed = await listClosedPeriods(user.id, groupId);
+  const toConfirm = await countToConfirm(user.id, groupId);
+  const showPayments = toConfirm > 0 || closed.some((c) => c.stage !== "closed");
   const monthOf = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleString("en-US", { month: "long", timeZone: "UTC" });
   const month = b.openLedger
     ? new Date(`${b.openLedger.endsOn}T00:00:00Z`).toLocaleString("en-US", { month: "long", timeZone: "UTC" }).toUpperCase()
@@ -87,6 +91,16 @@ export default async function Balance({ params }: { params: Promise<{ groupId: s
       {b.openLedger && (
         <Link href={`/groups/${groupId}/balance/${b.openLedger.id}`} className="inline-flex min-h-10 self-start items-center px-1 text-[15px] font-bold text-ink underline underline-offset-2">
           See the breakdown
+        </Link>
+      )}
+
+      {showPayments && (
+        <Link href={`/groups/${groupId}/balance/payments`} className="flex min-h-14 items-center gap-3 rounded-2xl border border-grey-100 px-4 text-ink no-underline">
+          <span className="flex-1 font-extrabold">Payments</span>
+          {toConfirm > 0 && (
+            <span className="inline-flex h-[26px] items-center rounded-full bg-orange px-2.5 text-xs font-bold text-ink">{toConfirm} to confirm</span>
+          )}
+          <Icon name="arrow" size={18} strokeWidth={2.5} />
         </Link>
       )}
 

@@ -1,5 +1,5 @@
 // End to end tests for the receipt, category and balance screens and API that can run without
-// signing in (stories US2 to US4).
+// signing in (stories US2 to US4, US7 to US9).
 // The signed in scan, read and save flow is checked by hand on the deployed app, because tests
 // cannot reach the real Google sign in or the real Gemini API (CLAUDE.md).
 
@@ -11,6 +11,13 @@ const RECEIPT = "00000000-0000-0000-0000-000000000002";
 test("signed out visitors to a receipt are sent to sign in and brought back", async ({ page }) => {
   await page.goto(`/groups/${GROUP}/receipts/${RECEIPT}`);
   await expect(page).toHaveURL(new RegExp(`/login\\?next=${encodeURIComponent(`/groups/${GROUP}/receipts/${RECEIPT}`)}`));
+});
+
+test("signed out visitors to Payments are sent to sign in and brought back (US9)", async ({ page }) => {
+  for (const path of [`/groups/${GROUP}/balance/payments`]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(new RegExp(`/login\\?next=${encodeURIComponent(path)}`));
+  }
 });
 
 test("the receipt API refuses callers who are not signed in", async ({ request }) => {
@@ -35,6 +42,11 @@ test("the receipt API refuses callers who are not signed in", async ({ request }
     ["GET", `/api/v1/groups/${GROUP}/periods`],
     ["GET", `/api/v1/periods/${RECEIPT}`],
     ["POST", `/api/v1/periods/${RECEIPT}/agree`],
+    ["GET", `/api/v1/groups/${GROUP}/payments`],
+    ["GET", `/api/v1/periods/${RECEIPT}/payments`],
+    ["POST", `/api/v1/periods/${RECEIPT}/payments`],
+    ["POST", `/api/v1/payments/${RECEIPT}/confirm`],
+    ["DELETE", `/api/v1/payments/${RECEIPT}`],
   ] as const) {
     const res = await request.fetch(url, { method, data: method === "GET" || method === "DELETE" ? undefined : {}, maxRedirects: 0 });
     expect(res.status(), `${method} ${url}`).toBe(401);

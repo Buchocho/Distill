@@ -158,7 +158,9 @@ Rule: any change to an item in a closed ledger deletes that ledger's agreements 
 | paid_on | date | |
 | recorded_by | uuid | FK users.id; must be from_user or to_user |
 | created_at | timestamptz | |
-| confirmed_at | timestamptz | null until the other person confirms |
+| confirmed_at | timestamptz | null until the other person confirms; a confirmed payment never changes |
+
+Rules kept by the service (step 6): a payment is recorded only by its payer (so `recorded_by` always equals `from_user` from step 6 on), only on an agreed, unsettled ledger, for a pair that owes in its frozen amounts, and never above what is left after waiting payments. A waiting payment is deleted when cancelled or declined. `ledgers.settled_at` is set when confirmed payments cover every frozen amount, or at agreement when nothing is owed. No schema change in step 6.
 
 ## Relations
 

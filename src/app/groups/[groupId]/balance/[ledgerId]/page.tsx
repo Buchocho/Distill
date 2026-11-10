@@ -9,7 +9,12 @@
  * - before everyone agrees: leftover items to sort (any member) or remove (their payer only),
  *   categories without a rule, the amounts as they stand, who has agreed, and Agree, which opens
  *   only when nothing is left to sort;
- * - once everyone agreed: the frozen amounts and when they were agreed. Payments come in step 6.
+ * - once everyone agreed: the frozen amounts, with paid and left on each line. On the reader's own
+ *   debt ("You owe Rui") they record what they paid and can cancel it while it waits; on money owed
+ *   to them ("Sam owes you") they confirm or decline what was recorded (step 6, story US9, SPEC.md
+ *   rules 24 to 26, approved design AgreedPeriod, 10 Nov 2026). Lines between others show only
+ *   paid and left. A link opens Payments for history and yearly totals;
+ * - once confirmed payments cover everything: Settled, read only (rule 22a).
  * White, like the rest of the Balance journey (approved design, ClosePeriod2). Members only.
  */
 
@@ -21,11 +26,14 @@ import { RemoveItem } from "@/components/RemoveItem";
 import { SubScreen } from "@/components/SubScreen";
 import { requireUser } from "@/server/session";
 import { getPeriod } from "@/server/services/periods";
+import { periodPayments } from "@/server/services/payments";
 import { ServiceError } from "@/server/services/errors";
 import { formatCents, formatMoney } from "@/domain/money";
 import { longDate } from "@/domain/dates";
 import { AgreeButton } from "./AgreeButton";
 import { Breakdown } from "./Breakdown";
+import { RecordPayment } from "./RecordPayment";
+import { PaymentActions } from "../payments/PaymentActions";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +52,11 @@ export default async function ClosePeriod({ params, searchParams }: {
     throw e;
   });
   if (p.ledger.groupId !== groupId) notFound();
+  const paid = await periodPayments(user.id, ledgerId);
+  /** Paid, waiting and left on one amount owed, once the period is agreed (rule 26). */
+  const progress = (l: (typeof p.lines)[number]) => paid.debts.find((d) => d.from === l.from && d.to === l.to);
+  /** Payments still waiting on one amount owed, for Cancel (payer) or Confirm / Decline (person paid). */
+  const waitingOn = (l: (typeof p.lines)[number]) => paid.waiting.filter((w) => w.from === l.from && w.to === l.to);
   // Whose statement to show: a member chosen with ?person=, else the reader.
   const personId = p.members.some((m) => m.id === person) ? (person as string) : user.id;
   const first = (name: string) => name.split(" ")[0];
@@ -59,7 +72,9 @@ export default async function ClosePeriod({ params, searchParams }: {
           ? `Open until ${longDate(p.ledger.endsOn)}. Amounts change as receipts come in.`
           : p.stage === "closed"
             ? `Closed on ${longDate(p.ledger.endsOn)}. No new receipts.`
-            : "Everyone agreed. These amounts are final."}
+            : p.stage === "settled"
+              ? "Settled. Every amount has been paid and confirmed."
+              : "Everyone agreed. These amounts are final. Record what you pay; confirm what you receive."}
       </p>
 
       {(p.unsorted.length > 0 || p.noRule.length > 0) && (
@@ -97,9 +112,34 @@ export default async function ClosePeriod({ params, searchParams }: {
         {p.lines.length > 0 && (
           <ul className="mt-2 flex flex-col">
             {p.lines.map((l) => (
-              <li key={`${l.from}-${l.to}`} className="flex min-h-14 items-center gap-3 border-t border-grey-100 last:border-b">
-                <span className="flex-1">{sentence(l)}</span>
-                <span className="text-lg font-extrabold tabular-nums">{formatCents(l.cents, p.currency)}</span>
+              <li key={`${l.from}-${l.to}`} className="flex flex-col gap-2.5 border-t border-grey-100 py-3 last:border-b">
+                <div className="flex min-h-8 items-center gap-3">
+                  <span className="flex flex-1 flex-col">
+                    <span>{sentence(l)}</span>
+                    {progress(l) && (
+                      <span className="text-[13px] text-grey-600">
+                        {progress(l)?.leftCents === 0
+                          ? "Paid"
+                          : `${formatMoney(progress(l)?.confirmedCents ?? 0, p.currency)} confirmed · ${formatMoney(progress(l)?.leftCents ?? 0, p.currency)} left`}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-lg font-extrabold tabular-nums">{formatCents(l.cents, p.currency)}</span>
+                </div>
+                {(l.from === user.id || l.to === user.id) && waitingOn(l).map((w) => (
+                  <div key={w.id} className="flex flex-col gap-2 rounded-xl bg-grey-100 px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="flex-1 text-sm font-bold">
+                        {w.from === user.id ? `You recorded ${formatCents(w.amountCents, p.currency)}` : `${first(l.fromName)} paid you ${formatCents(w.amountCents, p.currency)}`} on {longDate(w.paidOn)}
+                      </span>
+                      <span className="inline-flex h-6 items-center rounded-full bg-white px-2 text-xs font-bold">{w.from === user.id ? `Waiting for ${first(l.toName)}` : "Waiting for you"}</span>
+                    </div>
+                    <PaymentActions paymentId={w.id} canConfirm={w.to === user.id} confirmLabel={`Confirm I received ${formatCents(w.amountCents, p.currency)}`} />
+                  </div>
+                ))}
+                {p.stage === "agreed" && l.from === user.id && (progress(l)?.capCents ?? 0) > 0 && (
+                  <RecordPayment ledgerId={p.ledger.id} toUser={l.to} toName={first(l.toName)} capCents={progress(l)?.capCents ?? 0} currency={p.currency} />
+                )}
               </li>
             ))}
           </ul>
@@ -127,6 +167,11 @@ export default async function ClosePeriod({ params, searchParams }: {
       )}
 
       {p.stage === "closed" && <AgreeButton ledgerId={p.ledger.id} blockedBy={p.agreeBlockedBy} agreed={Boolean(me?.agreed)} />}
+      {(p.stage === "agreed" || p.stage === "settled") && (
+        <Link href={`/groups/${groupId}/balance/payments`} className="inline-flex min-h-11 self-start items-center px-1 text-[15px] font-bold text-ink underline underline-offset-2">
+          All payments and yearly totals
+        </Link>
+      )}
       {p.stage !== "open" && <p className="px-1 text-center text-[13px] text-grey-600">The next period is already open.</p>}
     </SubScreen>
   );

@@ -80,9 +80,9 @@ Term: a period in the app is stored as a ledger in the database.
 23a. Every period, open or closed, has a breakdown a member can check before agreeing (approved design 10 Nov 2026): for each category, the person's share as the main figure, how many times it was bought and the total, and how it was split in words; each purchase and who paid it on tap; and totals (paid, share, owed) that match the period's amount. Any member's statement can be viewed. The Balance tab lists all past periods with the reader's amount and status.
 
 **Payments**
-24. Either the payer or the receiver records a payment against a ledger: who paid, who received, amount, date.
-25. It shows as paid only after the other person confirms it (US9). Until then it shows as waiting. A confirmed payment reduces what is owed between those two people in that ledger.
-26. The payment screen shows the history and a total per pair for the current year.
+24. The person who paid records a payment against a ledger: who paid, who received, amount, date. Decided 10 Nov 2026: only the payer records, from the agreed period's screen, on their own line ("You owe Rui"); the person paid confirms. Accepted weakness: if the payer never records, the person owed cannot mark it paid. Payments can be recorded only once everyone has agreed the period (stage 1, rule 22a) and until it is settled; one payment covers one period; part payments are allowed, but a payment can never be more than is left for that pair in that period after payments already waiting; the date cannot be in the future.
+25. It shows as paid only after the other person confirms it (US9). Until then it shows as waiting. A confirmed payment reduces what is owed between those two people in that ledger. While it is waiting, the payer can cancel it and the person paid can decline it (nothing is kept of a removed payment); a confirmed payment cannot change. When confirmed payments cover every amount owed in a period, the period is settled (rule 22a). A period agreed with nothing owed is settled at once.
+26. The payment screen shows the history and a total per pair for the current year. Payments waiting for the reader to confirm are listed first. The period screen shows confirmed and left on each amount.
 
 ## 5. Screens
 
@@ -101,7 +101,7 @@ All screens are designed at phone width first. Bottom tab bar on every screen in
 | 4 | Categories and sharing rules, rule editor | /groups/[id]/categories | US3 |
 | 4c | Category history: who created or changed which rule, and when | /groups/[id]/categories/history | US3 |
 | 5 | Balance: open period balance; closed periods with unsorted items, balance and agree | /groups/[id]/balance | US6, US7, US8 |
-| 6 | Payments: history, confirm, record a payment, yearly total | /groups/[id]/balance/payments | US9 |
+| 6 | Payments: waiting for you (confirm, decline), history, yearly total. Recording is on the agreed period screen | /groups/[id]/balance/payments, /groups/[id]/balance/[ledgerId] | US9 |
 
 Every form shows validation errors next to the field. Every screen has a loading state and an error state with a retry.
 

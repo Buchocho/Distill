@@ -1,7 +1,7 @@
 # Distill: business rules register
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 10 Nov 2026, build step 5 (closing periods, agreeing).
+Last updated: 10 Nov 2026, build step 6 (payments).
 
 Each business rule in SPEC.md section 4, whether it is built, and the files that enforce it. Rule numbers are the SPEC.md numbers, so a code comment that says "SPEC.md rule 15" points to the same row here.
 
@@ -66,7 +66,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 20 | A closed period takes no new receipts or edits, except sorting leftovers (any member), removing them (payer only), and setting rules | Built | `changeItemCategory`, `deleteItem` in `src/server/services/categories.ts`, `balance/[ledgerId]/page.tsx` |
 | 21 | Agree only when nothing is unsorted and every used category has a rule | Built | `src/domain/periods.ts` (`agreeBlockedBy`), `agree` in `src/server/services/periods.ts`, `AgreeButton.tsx` |
 | 22 | Each member agrees to their amount; any change before everyone agrees clears agreements | Built | `agree`, `clearOpenAgreements` (called by `setRule`, `changeItemCategory`, `deleteItem`) |
-| 22a | Two stage settling: amounts frozen when the last member agrees; settled when all paid | Stage 1 built; stage 2 in step 6 | `agree` in `src/server/services/periods.ts`, `ledgers.frozen_lines`, `ledgers.frozen_rules` |
+| 22a | Two stage settling: amounts frozen when the last member agrees; settled when all paid | Built | `agree` in `src/server/services/periods.ts` (stage 1, and settled at once when nothing is owed), `settleIfPaid` in `src/server/services/payments.ts` with `isSettled` in `src/domain/payments.ts` (stage 2), `ledgers.frozen_lines`, `ledgers.frozen_rules`, `ledgers.settled_at` |
 | 23a | Every period has a breakdown by category, per person, that matches its amount; past periods are listed | Built | `src/domain/breakdown.ts`, `balance/[ledgerId]/Breakdown.tsx`, `getPeriod` and `listClosedPeriods` in `src/server/services/periods.ts`, `balance/page.tsx` |
 | 23 | The next period opens on time whether or not anyone agreed | Built | `ensurePeriods` in `src/server/services/periodClock.ts` |
 
@@ -74,9 +74,9 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
-| 24 | Payer or receiver records a payment | Prepared: the database refuses a payment recorded by someone else, to yourself, or of zero | `payments` checks in `src/server/db/schema.ts` |
-| 25 | Shown as paid only after the other person confirms | Prepared: `confirmed_at` | `src/server/db/schema.ts` |
-| 26 | Payment history and a yearly total per pair | Not built (step 6) | |
+| 24 | Only the payer records a payment, from the agreed period, part payments allowed up to what is left (after waiting payments), date not in the future | Built | `checkPayment` and `debtStatus` in `src/domain/payments.ts`; `recordPayment` in `src/server/services/payments.ts` (payer is always the caller); database checks on `payments` in `src/server/db/schema.ts`; form in `balance/[ledgerId]/RecordPayment.tsx` |
+| 25 | Counts only after the person paid confirms; payer can cancel, person paid can decline while waiting; confirmed is final; settled when all paid | Built | `confirmPayment`, `removePayment`, `settleIfPaid` in `src/server/services/payments.ts`; `isSettled` in `src/domain/payments.ts` |
+| 26 | Payment history, still owed, a yearly total per pair; paid and left per amount on the period screen | Built | `listPayments`, `periodPayments` in `src/server/services/payments.ts`; `yearTotals` in `src/domain/payments.ts`; `balance/payments/page.tsx` (waiting for you, history, totals), `balance/[ledgerId]/page.tsx` (confirmed and left per line) |
 
 ## Architecture rules (ARCHITECTURE.md section 3; A8 from CLAUDE.md)
 
