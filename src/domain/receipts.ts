@@ -238,3 +238,20 @@ export function findDuplicate<T extends DuplicateFacts>(
   );
   return similar ? { kind: "warn", match: similar } : null;
 }
+
+/**
+ * How long a reading can take before it is treated as failed. The server stops a reading after
+ * 60 seconds; a receipt still marked "reading" well after that was cut off and will never finish.
+ */
+export const READING_GIVE_UP_MS = 90_000;
+
+/**
+ * The status to show for a receipt (SPEC.md rule 10, fixed 10 Nov 2026): "reading" that started
+ * more than READING_GIVE_UP_MS ago, or has no start time, is shown as "failed" so the person
+ * gets Retry instead of waiting forever. Every other status is shown as it is.
+ */
+export function shownStatus<S extends string>(status: S, readingStartedAt: Date | null, now: Date): S | "failed" {
+  if (status !== "reading") return status;
+  if (!readingStartedAt || now.getTime() - readingStartedAt.getTime() > READING_GIVE_UP_MS) return "failed";
+  return status;
+}

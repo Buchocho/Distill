@@ -183,6 +183,9 @@ export const receipts = pgTable(
     createdBy: uuid("created_by").notNull().references(() => users.id),
     createdAt: createdAt(),
     savedAt: timestamp("saved_at", { withTimezone: true }),
+    // When the current reading started. A reading still going long after this was cut off by the
+    // server time limit, so the receipt is shown as failed with Retry (SPEC.md rule 10).
+    readingStartedAt: timestamp("reading_started_at", { withTimezone: true }),
   },
   (t) => [index("receipts_ledger").on(t.ledgerId)],
 );

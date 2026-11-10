@@ -38,6 +38,7 @@ Term: a period in the app is stored as a ledger in the database.
 **Groups and members**
 1. Signing in uses a Google account. The Google name is shown at first; a user can change the name they are shown as (1 to 30 characters), once for all their groups, and signing in again does not overwrite it.
 1a. A member can sign out on the Invite people screen, which also holds their name in Distill (added 10 Nov 2026). Signing out ends the session on that device only; nothing in the group changes. Signing in always shows Google's account chooser, so a person can sign out and straight back in with another Google account.
+1b. Privacy and Terms pages are public (no sign in) and linked from Sign in (added 10 Nov 2026, build step 7). They are needed to take Google sign in out of testing mode. Contact: the project's FEUP address.
 2. The group creator is a member. Anyone with the invite link who signs in becomes a member.
 2b. The group chooses a currency when it is created (default euro). It is display only: amounts are shown in that currency and nothing is converted. Only currencies with two decimal places are offered, so money stays in whole cents. The currency cannot be changed after the group is created.
 2c. Dates follow the local date of the device doing the action (for example creating a group or scanning a receipt), not the server's date. No time zone is stored.
@@ -54,7 +55,7 @@ Term: a period in the app is stored as a ledger in the database.
 9a. A receipt can have any number of photos. Once it is saved into the ledger, no photos can be added or removed.
 9b. A receipt that is not saved yet can be deleted with its photo, after a confirm step. A saved receipt cannot be deleted.
 9c. The reading step also returns the receipt's own number (document or transaction number, not a tax number). A receipt with the same store and receipt number as a saved receipt in the group cannot be saved. Otherwise, a receipt with the same store, date and total as a saved one shows a warning, even when the receipt numbers differ (a number can be misread or cropped), and the person can delete it or save it anyway. Store names are compared without accents, capitals or punctuation.
-10. If reading fails, the receipt is kept with its photos and status "failed", and the user can retry.
+10. If reading fails, the receipt is kept with its photos and status "failed", and the user can retry. A reading cut off by the server time limit (still "reading" 90 seconds after it started) is shown as failed, with Retry (fixed 10 Nov 2026).
 
 **Sharing**
 11. A category's rule is one of: Everyone equal (split between all current members); Whoever paid (the receipt's payer carries the item, so it moves no money, for example each person's own chocolate bars); One person (always the same member); Custom (chosen members and percentages totalling exactly 100%).

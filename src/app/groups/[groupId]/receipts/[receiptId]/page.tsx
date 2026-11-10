@@ -60,7 +60,7 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
       </header>
       <div className="flex flex-1 flex-col gap-2.5 px-3 pt-1">
         {mine && (receipt.status === "draft" || receipt.status === "reading" || receipt.status === "failed") && (
-          <ReadingStep receiptId={receipt.id} groupId={groupId} status={receipt.status} />
+          <ReadingStep key={receipt.status} receiptId={receipt.id} groupId={groupId} status={receipt.status} />
         )}
 
         {mine && receipt.status === "ready" && (

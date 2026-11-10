@@ -24,7 +24,7 @@ import "server-only";
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/server/db/client";
 import { categories, categoryChanges, groups, items, ledgers, receiptPhotos, receipts, users } from "@/server/db/schema";
-import { categoryKey, findDuplicate, matchCategory, parseReading, type ReviewItem, validateReview } from "@/domain/receipts";
+import { categoryKey, findDuplicate, matchCategory, parseReading, type ReviewItem, shownStatus, validateReview } from "@/domain/receipts";
 import { readReceiptPhotos } from "@/server/integrations/gemini";
 import { createUploadLink, deletePhotos, downloadPhoto, photoPath, viewLink } from "@/server/integrations/storage";
 import { assertMember, getGroupForMember, UUID } from "./groups";
@@ -67,10 +67,11 @@ function assertOwnReceipt(receipt: { createdBy: string }, userId: string) {
 export async function listReceipts(userId: string, groupId: string) {
   await assertMember(userId, groupId);
   const unsorted = sql<number>`count(${items.id}) filter (where ${items.categoryId} is null and ${items.deletedAt} is null)`.mapWith(Number);
-  return db
+  const rows = await db
     .select({
       id: receipts.id,
       status: receipts.status,
+      readingStartedAt: receipts.readingStartedAt,
       storeName: receipts.storeName,
       purchaseDate: receipts.purchaseDate,
       totalCents: receipts.totalCents,
@@ -85,6 +86,9 @@ export async function listReceipts(userId: string, groupId: string) {
     .groupBy(receipts.id, users.displayName)
     .orderBy(desc(receipts.createdAt))
     .limit(RECENT_LIMIT);
+  // A reading cut off by the server time limit is shown as failed, not "reading" forever (rule 10).
+  const now = new Date();
+  return rows.map(({ readingStartedAt, ...r }) => ({ ...r, status: shownStatus(r.status, readingStartedAt, now) }));
 }
 
 /**
@@ -131,7 +135,8 @@ export async function readReceipt(userId: string, receiptId: string, localToday:
   const receipt = await receiptForMember(userId, receiptId);
   assertOwnReceipt(receipt, userId);
   if (receipt.status === "saved") throw new ServiceError("invalid", "This receipt is already saved.");
-  await db.update(receipts).set({ status: "reading" }).where(eq(receipts.id, receiptId));
+  // The start time lets a reading cut off by the server time limit show as failed later (rule 10).
+  await db.update(receipts).set({ status: "reading", readingStartedAt: new Date() }).where(eq(receipts.id, receiptId));
 
   try {
     const photos = await db
@@ -188,7 +193,9 @@ export async function readReceipt(userId: string, receiptId: string, localToday:
  * saved receipt the change history of its items (rule 14). Photo links are not made here: they expire, so each is made when it is tapped (photoLink).
  */
 export async function getReceipt(userId: string, receiptId: string) {
-  const receipt = await receiptForMember(userId, receiptId);
+  const stored = await receiptForMember(userId, receiptId);
+  // A reading cut off by the server time limit is shown as failed, so Retry appears (rule 10).
+  const receipt = { ...stored, status: shownStatus(stored.status, stored.readingStartedAt, new Date()) };
   const [group] = await db.select({ name: groups.name, currency: groups.currency }).from(groups).where(eq(groups.id, receipt.groupId));
   const lines = await db.select().from(items).where(eq(items.receiptId, receiptId)).orderBy(asc(items.position));
   const groupCategories = await db

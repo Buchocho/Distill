@@ -17,6 +17,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 |---|---|---|---|
 | 1 | Sign in with Google; a person can change the name they are shown as | Built (restored 9 Nov at Maduabuchi's request) | `src/server/auth.ts`, `src/app/login`, `src/server/services/users.ts` (`ensureUser`, `setDisplayName`), `src/domain/users.ts`, `invite/DisplayNameForm.tsx`, `src/server/session.ts` and `src/server/api.ts` (use the stored name) |
 | 1a | Sign out on the Invite people screen, this device only; sign in always asks which Google account | Built | `invite/SignOutButton.tsx` (Supabase sign out in the browser), `login/SignInButton.tsx` (`prompt=select_account`) |
+| 1b | Public Privacy and Terms pages, linked from Sign in | Built | `src/app/privacy/page.tsx`, `src/app/terms/page.tsx`, `src/components/LegalPage.tsx`, `src/lib/contact.ts` |
 | 2 | The creator is a member; anyone with the invite link who signs in joins | Built | `src/server/services/groups.ts` (`createGroup`, `joinByToken`), `src/server/session.ts` (returns to the link after sign in) |
 | 2b | Group currency chosen at creation, cannot be changed, display only, two decimal currencies only | Built for creation and the API. Amounts on screens use it from step 2, through `formatMoney`. | `src/domain/currencies.ts`, `src/domain/money.ts` (`formatMoney`), `src/domain/groups.ts`, `groups_currency_code` in `src/server/db/schema.ts`, `src/app/groups/new/NewGroupForm.tsx` |
 | 2c | Dates follow the device's local date | Built for group creation (first period). Receipts send it from step 2; closing uses it from step 5. | `src/domain/groups.ts` (`isValidLocalDate`), `src/app/actions.ts`, `src/app/api/v1/groups/route.ts`, `src/app/groups/new/NewGroupForm.tsx` |
@@ -36,7 +37,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 9a | Any number of photos; locked once saved | Partly built: one photo per receipt; saved receipts cannot be read or saved again. More photos are step 4 | `src/server/services/receipts.ts`, `src/server/db/schema.ts` |
 | 9b | An unsaved receipt can be deleted with its photo; a saved one cannot | Built | `deleteReceipt` in `src/server/services/receipts.ts`, `DeleteReceipt.tsx`, `src/server/integrations/storage.ts` (`deletePhotos`) |
 | 9c | Same store and receipt number cannot be saved twice; same store, date and total warns, even with different numbers | Built | `src/domain/receipts.ts` (`findDuplicate`), `saveReceipt` and `savedReceiptsFor` in `src/server/services/receipts.ts`, `ReviewForm.tsx`, `receipts.receipt_number` |
-| 10 | A failed reading keeps the receipt with status "failed" for retry | Built: Retry reads the same photo again | `readReceipt` in `src/server/services/receipts.ts`, `ReadingStep.tsx` |
+| 10 | A failed reading keeps the receipt with status "failed" for retry; a reading cut off by the time limit shows as failed after 90 seconds | Built: Retry reads the same photo again | `readReceipt`, `getReceipt`, `listReceipts` in `src/server/services/receipts.ts`, `shownStatus` in `src/domain/receipts.ts`, `receipts.reading_started_at`, `ReadingStep.tsx` |
 
 ## Sharing (build step 3)
 

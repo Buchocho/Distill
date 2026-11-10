@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import continente from "../fixtures/reading-continente.json";
 import usReceipt from "../fixtures/reading-us-tax-discount.json";
 import { parseAmount } from "@/domain/money";
-import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, storeKey, sumCheck, validateReview } from "@/domain/receipts";
+import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, shownStatus, storeKey, sumCheck, validateReview } from "@/domain/receipts";
 
 describe("parseAmount", () => {
   it("reads both decimal styles", () => {
@@ -144,5 +144,20 @@ describe("findDuplicate", () => {
     expect(storeKey("Pingo-Doce ")).toBe("pingo doce");
     const r = findDuplicate({ storeName: "Intermarche", purchaseDate: null, totalCents: null, receiptNumber: "FS 0123/4567" }, saved);
     expect(r?.kind).toBe("block");
+  });
+});
+
+describe("shownStatus", () => {
+  const now = new Date("2026-11-10T17:00:00Z");
+  it("keeps a reading that started recently", () => {
+    expect(shownStatus("reading", new Date("2026-11-10T16:59:30Z"), now)).toBe("reading");
+  });
+  it("shows a reading cut off by the time limit as failed, so Retry appears", () => {
+    expect(shownStatus("reading", new Date("2026-11-10T16:58:00Z"), now)).toBe("failed");
+    expect(shownStatus("reading", null, now)).toBe("failed");
+  });
+  it("leaves other statuses alone", () => {
+    expect(shownStatus("ready", null, now)).toBe("ready");
+    expect(shownStatus("saved", new Date("2026-11-01T00:00:00Z"), now)).toBe("saved");
   });
 });

@@ -230,3 +230,13 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Cause: signing out of Distill does not sign out of Google, and Google reuses the account it remembers.
 - Changed: sign in asks Google for its account chooser every time (`prompt=select_account`). Cost: one extra tap at each sign in, which is rare because sessions last. Distill does not sign anyone out of Google itself.
 - Verified: type check, lint, unit tests, end to end tests, build. The chooser itself can only be checked by hand.
+
+## 2026-11-10: step 6 passed; step 7 started: Privacy, Terms, stuck readings
+
+- Step 6 (payments, US9) tested by Maduabuchi with Izu: record, part payment, cap, decline, cancel, confirm, settled, yearly totals, Home line. Passed.
+- Step 7 order agreed: Privacy page and Google sign in out of testing mode first (the only part that depends on Google), then the stuck reading fix, demo data later with the demo script, then signed in tests, design review and screen check, documents last. Step 4 (several photos) proposed to be dropped.
+- Prompts: "build out the Privacy page and other pages required as well as fixing the receipts getting stuck on reading. Leave Demo Data for later."; contact address chosen: his FEUP address.
+- Built: public `/privacy` and `/terms` (shared `LegalPage` layout), linked from Sign in; the Sign in page doubles as the home page Google asks for. Privacy names what is kept, Supabase and Vercel in Ireland, Google sign in, receipt photos sent to Google Gemini under its API terms, two cookies, deletion by email, the CNPD. Rule 1b added.
+- Stuck readings: a reading that runs past the server's 60 second limit is cut off before it can mark the receipt failed, so it stayed "reading" and the screen waited forever. Now each reading records when it started (migration 0012); a receipt still "reading" 90 seconds later is shown as failed, with Retry, on the receipt and in the Receipts list. Receipts already stuck have no start time and show as failed at once. The reading screen reloads its state when the status changes.
+- Not legal advice: the privacy text was written for a student project and should be read by Maduabuchi; whether Google may use photos sent on the free Gemini quota depends on the Gemini API terms for the EEA, so the page points to those terms rather than promising either way.
+- Verified: type check, lint, unit tests, end to end tests (new: Privacy and Terms open signed out), build.

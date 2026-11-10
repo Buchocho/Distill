@@ -2,8 +2,10 @@
  * Screen 0, Sign in. Route: /login. Story US1, SPEC.md rule 1.
  * Shows what the app does in three lines and the Google sign in button. `next` is the page to
  * return to after sign in (for example an invite link); only addresses inside the app are accepted.
+ * Links to Privacy and Terms (rule 1b). This page is also the app home page given to Google.
  */
 
+import Link from "next/link";
 import { DistillMark } from "@/components/DistillMark";
 import { SignInButton } from "./SignInButton";
 
@@ -33,6 +35,11 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
       {error && <p role="alert" className="mb-3 text-center text-sm font-semibold text-red">Sign in failed. Try again.</p>}
       <SignInButton next={safeNext} />
       <p className="mt-3 text-center text-[13px] text-grey-600">We only use your name and email.</p>
+      <p className="mt-2 text-center text-[13px] text-grey-600">
+        <Link href="/privacy" className="inline-flex min-h-11 items-center px-2 font-semibold text-grey-700">Privacy</Link>
+        ·
+        <Link href="/terms" className="inline-flex min-h-11 items-center px-2 font-semibold text-grey-700">Terms</Link>
+      </p>
     </main>
   );
 }
