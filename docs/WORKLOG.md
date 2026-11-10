@@ -149,3 +149,7 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Verified: type check, lint, 76 unit tests (new: rules and balance, including Whoever paid moving no money, netting, vouchers, left out items), end to end tests (signed out), build, and a browser render of the rule form. Not verifiable here: the screens against real data; checked by hand next.
 - Left open: closing a period and Agree (step 5), payments (step 6). The stuck "reading" fix stays deferred.
 
+## 2026-11-10: step 3 passed
+
+- Hand check by Maduabuchi, with his brother, on the deployed app: rules (Everyone equal, Whoever paid), the needs sorting flag and Sort screen, the balance from both members' receipts with netting, changing a saved item's category with its history, category History, and another member seeing "still adding" on an unsaved receipt. All seven passed; he called it a pass "for now".
+
