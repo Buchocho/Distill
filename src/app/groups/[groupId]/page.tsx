@@ -1,10 +1,12 @@
 /**
  * Screen 0c, Home. Route: /groups/<id>. The landing page of a group, outside the tabs.
  * Three stacked sections, dark to light, each opening its tab: Receipts, Categories, Balance
- * (approved design, canvas "Distill screens" page v2). No amounts are shown on Home by design;
- * the Balance section only says when the period closes.
+ * (approved design, canvas "Distill screens" page v2). No amounts are shown on Home by design.
  * The status lines are live: Receipts says what is waiting (SPEC.md rule 9); Categories says how
- * many items need sorting (rules 12 and 17), the same count as the flag on the Categories tab.
+ * many items need sorting (rules 12 and 17), the same count as the flag on the Categories tab;
+ * Balance says the most pressing thing waiting for the reader (a payment to confirm, a declined
+ * payment, a period to agree, a payment to record), and only otherwise when the period closes
+ * (src/domain/home.ts, decided 10 Nov 2026), counted with the device's date (rule 2c).
  */
 
 import Link from "next/link";
@@ -13,9 +15,10 @@ import { CartFigure, ScaleFigure, TagFigure } from "@/components/Figures";
 import { Icon } from "@/components/Icon";
 import { requireUser } from "@/server/session";
 import { groupOr404 } from "@/server/pageData";
-import { daysUntil } from "@/domain/ledgers";
+import { balanceLine, needsAction } from "@/domain/home";
 import { listReceipts } from "@/server/services/receipts";
 import { countToSort } from "@/server/services/categories";
+import { balanceSituation } from "@/server/services/payments";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +37,9 @@ export default async function Home({ params }: { params: Promise<{ groupId: stri
     : toReview > 0 ? `${toReview} receipt${toReview === 1 ? "" : "s"} to review`
     : unsorted > 0 ? `${unsorted} item${unsorted === 1 ? "" : "s"} without a category`
     : "All receipts sorted";
-  const today = new Date().toISOString().slice(0, 10);
-  const daysLeft = openLedger ? daysUntil(today, openLedger.endsOn) : null;
+  const situation = await balanceSituation(user.id, groupId);
+  const balanceText = balanceLine(situation);
+  const balanceUrgent = needsAction(situation);
   const month = openLedger ? new Date(`${openLedger.endsOn}T00:00:00Z`).toLocaleString("en-GB", { month: "long", timeZone: "UTC" }) : "";
   const pill = "mt-1.5 inline-flex h-10 items-center gap-2 self-start rounded-full px-4 text-sm font-extrabold";
   const section = "relative flex min-h-[230px] flex-1 overflow-hidden rounded-t-[28px] pb-11 pl-5 pr-4 pt-5 no-underline";
@@ -78,8 +82,8 @@ export default async function Home({ params }: { params: Promise<{ groupId: stri
         <div className="z-10 flex flex-1 flex-col gap-2">
           <span className="text-xs font-bold tracking-[1.4px] text-grey-600">BALANCE</span>
           <span className="text-2xl font-extrabold leading-tight tracking-tight">The group&apos;s<br />balance</span>
-          {daysLeft !== null && (
-            <span className="text-[13px] text-grey-600">{month} closes {daysLeft === 0 ? "today" : `in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`}</span>
+          {balanceText && (
+            <span className={`text-[13px] ${balanceUrgent ? "font-bold text-orange-text" : "text-grey-600"}`}>{balanceText}</span>
           )}
           <span className={`${pill} bg-ink text-paper`}>
             <span aria-hidden="true" className="grid size-[22px] rotate-[14deg] place-items-center rounded-full bg-orange text-sm font-extrabold text-ink">€</span>

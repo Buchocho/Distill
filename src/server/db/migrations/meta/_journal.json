@@ -71,6 +71,13 @@
       "when": 1794317330959,
       "tag": "0009_frozen_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794326897708,
+      "tag": "0010_payment_removed",
+      "breakpoints": true
     }
   ]
 }

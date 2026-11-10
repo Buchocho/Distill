@@ -81,7 +81,7 @@ Term: a period in the app is stored as a ledger in the database.
 
 **Payments**
 24. The person who paid records a payment against a ledger: who paid, who received, amount, date. Decided 10 Nov 2026: only the payer records, from the agreed period's screen, on their own line ("You owe Rui"); the person paid confirms. Accepted weakness: if the payer never records, the person owed cannot mark it paid. Payments can be recorded only once everyone has agreed the period (stage 1, rule 22a) and until it is settled; one payment covers one period; part payments are allowed, but a payment can never be more than is left for that pair in that period after payments already waiting; the date cannot be in the future.
-25. It shows as paid only after the other person confirms it (US9). Until then it shows as waiting. A confirmed payment reduces what is owed between those two people in that ledger. While it is waiting, the payer can cancel it and the person paid can decline it (nothing is kept of a removed payment); a confirmed payment cannot change. When confirmed payments cover every amount owed in a period, the period is settled (rule 22a). A period agreed with nothing owed is settled at once.
+25. It shows as paid only after the other person confirms it (US9). Until then it shows as waiting. A confirmed payment reduces what is owed between those two people in that ledger. While it is waiting, the payer can cancel it and the person paid can decline it; a cancelled or declined payment stops counting but stays in the history marked as such, and a declined one shows on the period's line until the payer records again; a confirmed payment cannot change. When confirmed payments cover every amount owed in a period, the period is settled (rule 22a). A period agreed with nothing owed is settled at once.
 26. The payment screen shows the history and a total per pair for the current year. Payments waiting for the reader to confirm are listed first. The period screen shows confirmed and left on each amount.
 
 ## 5. Screens
@@ -93,7 +93,7 @@ All screens are designed at phone width first. Bottom tab bar on every screen in
 | 0 | Sign in with Google | /login | US1 |
 | 0a | Start: create a group or join one (first sign in, no group yet) | /start | US1 |
 | 0b | Join a group from an invite link | /join/[token] | US1 |
-| 0c | Home: landing page outside the tabs, three sections stacked dark to light: Receipts (scan), Categories (what needs a rule), Balance (your amount). Each shows a live one line status and opens its tab. Drawn stick figures with motion, no photos | /groups/[id] | US1 to US9 |
+| 0c | Home: landing page outside the tabs, three sections stacked dark to light: Receipts (scan), Categories (what needs a rule), Balance (the most pressing thing waiting in Balance: confirm a payment from someone, a declined payment, a closed period to agree, a payment to record; only otherwise when the open period closes; no amounts, decided 10 Nov 2026). Each shows a live one line status and opens its tab. Drawn stick figures with motion, no photos | /groups/[id] | US1 to US9 |
 | 1 | New group: name, members by invite link, close rule, currency | /groups/new | US1, US6 |
 | 2 | Receipts: take a photo, choose a file, paid by, recent receipts with status | /groups/[id]/receipts | US2 |
 | 2a | Receipt photos: one or more sections, reorder, retake | /groups/[id]/receipts/capture | US2 |

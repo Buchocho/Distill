@@ -19,6 +19,9 @@ import { ledgers, payments } from "@/server/db/schema";
 import { checkPayment, debtStatus, isSettled, yearTotals } from "@/domain/payments";
 import { isIsoDate } from "@/domain/receipts";
 import { periodStage } from "@/domain/periods";
+import { daysUntil } from "@/domain/ledgers";
+import type { BalanceSituation } from "@/domain/home";
+import { listClosedPeriods } from "./periods";
 import { getGroupForMember, UUID } from "./groups";
 import { ServiceError } from "./errors";
 import { requestToday } from "./periodClock";
@@ -26,9 +29,17 @@ import { requestToday } from "./periodClock";
 /** A payment as the rules need it. */
 const fact = (p: typeof payments.$inferSelect) => ({ from: p.fromUser, to: p.toUser, amountCents: p.amountCents, confirmed: p.confirmedAt !== null });
 
-/** The amounts owed in an agreed period with what has been paid against them. */
+/** What happened to a payment, for the history: confirmed, waiting, or removed by whom (rule 25). */
+function statusOf(p: typeof payments.$inferSelect): "confirmed" | "waiting" | "cancelled" | "declined" {
+  if (p.confirmedAt) return "confirmed";
+  if (!p.removedAt) return "waiting";
+  // The payer removing their own payment is a cancel; the person paid removing it is a decline.
+  return p.removedBy === p.fromUser ? "cancelled" : "declined";
+}
+
+/** The amounts owed in an agreed period with what has been paid against them (removed payments do not count). */
 async function periodDebts(ledger: typeof ledgers.$inferSelect) {
-  const list = await db.select().from(payments).where(eq(payments.ledgerId, ledger.id));
+  const list = await db.select().from(payments).where(and(eq(payments.ledgerId, ledger.id), isNull(payments.removedAt)));
   return debtStatus(ledger.frozenLines ?? [], list.map(fact));
 }
 
@@ -43,8 +54,9 @@ async function settleIfPaid(ledgerId: string) {
 
 /**
  * Everything the Payments screen needs (rule 26): every payment in the group, newest first, with
- * names, period and status (payments waiting for the reader to confirm are picked out on the
- * screen), and confirmed totals per pair for the current year.
+ * names, period and status, including cancelled and declined ones so nothing disappears (payments
+ * waiting for the reader to confirm are picked out on the screen), and confirmed totals per pair
+ * for the current year.
  */
 export async function listPayments(userId: string, groupId: string) {
   const { group, members } = await getGroupForMember(userId, groupId);
@@ -72,6 +84,7 @@ export async function listPayments(userId: string, groupId: string) {
       paidOn: p.paidOn,
       recordedBy: p.recordedBy,
       confirmed: p.confirmedAt !== null,
+      status: statusOf(p),
     })),
     totals: yearTotals(all.map((p) => ({ ...fact(p), paidOn: p.paidOn })), year).map((t) => ({ ...t, fromName: nameOf(t.from), toName: nameOf(t.to) })),
   };
@@ -116,6 +129,7 @@ async function openPaymentFor(userId: string, paymentId: string) {
   const [p] = await db.select().from(payments).where(eq(payments.id, paymentId));
   if (!p || (p.fromUser !== userId && p.toUser !== userId)) throw new ServiceError("not_found", "Payment not found.");
   if (p.confirmedAt) throw new ServiceError("invalid", "This payment is already confirmed and cannot change.");
+  if (p.removedAt) throw new ServiceError("invalid", "This payment was already cancelled or declined.");
   return p;
 }
 
@@ -126,19 +140,23 @@ async function openPaymentFor(userId: string, paymentId: string) {
 export async function confirmPayment(userId: string, paymentId: string) {
   const p = await openPaymentFor(userId, paymentId);
   if (p.toUser !== userId || p.recordedBy === userId) throw new ServiceError("forbidden", "Only the person who was paid can confirm this payment.");
-  await db.update(payments).set({ confirmedAt: new Date() }).where(and(eq(payments.id, paymentId), isNull(payments.confirmedAt)));
+  await db.update(payments).set({ confirmedAt: new Date() }).where(and(eq(payments.id, paymentId), isNull(payments.confirmedAt), isNull(payments.removedAt)));
   await settleIfPaid(p.ledgerId);
   return { id: paymentId, confirmed: true };
 }
 
 /**
- * Removes a payment that is still waiting: the payer who recorded it cancels it, or the person
- * paid declines it (for example the money never arrived). A confirmed payment cannot be removed.
- * Nothing is kept of a removed payment (accepted for the MVP).
+ * Takes back a payment that is still waiting: the payer who recorded it cancels it, or the person
+ * paid declines it (for example the money never arrived). It stops counting but stays in the
+ * history marked cancelled or declined, so the other person sees what happened (rule 25, decided
+ * 10 Nov 2026). A confirmed payment cannot be removed.
  */
 export async function removePayment(userId: string, paymentId: string) {
   await openPaymentFor(userId, paymentId);
-  await db.delete(payments).where(and(eq(payments.id, paymentId), isNull(payments.confirmedAt)));
+  await db
+    .update(payments)
+    .set({ removedAt: new Date(), removedBy: userId })
+    .where(and(eq(payments.id, paymentId), isNull(payments.confirmedAt), isNull(payments.removedAt)));
   return { id: paymentId, removed: true };
 }
 
@@ -149,7 +167,7 @@ export async function countToConfirm(userId: string, groupId: string): Promise<n
   const waiting = await db
     .select({ id: payments.id, recordedBy: payments.recordedBy, from: payments.fromUser, to: payments.toUser })
     .from(payments)
-    .where(and(inArray(payments.ledgerId, groupLedgers.map((l) => l.id)), isNull(payments.confirmedAt)));
+    .where(and(inArray(payments.ledgerId, groupLedgers.map((l) => l.id)), isNull(payments.confirmedAt), isNull(payments.removedAt)));
   return waiting.filter((w) => w.to === userId && w.recordedBy !== userId).length;
 }
 
@@ -164,10 +182,74 @@ export async function periodPayments(userId: string, ledgerId: string) {
   if (!ledger) throw new ServiceError("not_found", "Period not found.");
   await getGroupForMember(userId, ledger.groupId);
   const stage = periodStage(ledger);
-  if (stage !== "agreed" && stage !== "settled") return { debts: [], waiting: [] };
-  const list = await db.select().from(payments).where(and(eq(payments.ledgerId, ledgerId), isNull(payments.confirmedAt))).orderBy(payments.createdAt);
+  if (stage !== "agreed" && stage !== "settled") return { debts: [], waiting: [], declined: [] };
+  const list = await db.select().from(payments).where(eq(payments.ledgerId, ledgerId)).orderBy(payments.createdAt);
+  const short = (p: typeof payments.$inferSelect) => ({ id: p.id, from: p.fromUser, to: p.toUser, amountCents: p.amountCents, paidOn: p.paidOn });
   return {
     debts: await periodDebts(ledger),
-    waiting: list.map((p) => ({ id: p.id, from: p.fromUser, to: p.toUser, amountCents: p.amountCents, paidOn: p.paidOn })),
+    waiting: list.filter((p) => statusOf(p) === "waiting").map(short),
+    declined: latestDeclines(list).map(short),
   };
+}
+
+/**
+ * Declined payments still worth showing: per pair in a period, the last decline, when nothing was
+ * recorded after it. Once the payer records again, the old decline drops off the period screen
+ * and Home (it stays in the Payments history).
+ */
+function latestDeclines(list: (typeof payments.$inferSelect)[]) {
+  const shown: (typeof payments.$inferSelect)[] = [];
+  const pairs = new Set(list.map((p) => `${p.ledgerId}|${p.fromUser}|${p.toUser}`));
+  for (const pair of pairs) {
+    const mine = list.filter((p) => `${p.ledgerId}|${p.fromUser}|${p.toUser}` === pair).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const last = mine[mine.length - 1];
+    if (last && statusOf(last) === "declined") shown.push(last);
+  }
+  return shown;
+}
+
+/**
+ * What is waiting for the reader in Balance, for the one line on Home (src/domain/home.ts):
+ * payments to confirm (by who paid), their latest declined payment, a closed period they have not
+ * agreed, a payment they still have to record, and the open period's close date by the device's
+ * date (rule 2c). Members only.
+ */
+export async function balanceSituation(userId: string, groupId: string): Promise<BalanceSituation> {
+  const { members, openLedger } = await getGroupForMember(userId, groupId);
+  const first = (id: string) => (members.find((m) => m.id === id)?.name ?? "Someone").split(" ")[0];
+  const groupLedgers = await db.select().from(ledgers).where(eq(ledgers.groupId, groupId));
+  const all = groupLedgers.length
+    ? await db.select().from(payments).where(inArray(payments.ledgerId, groupLedgers.map((l) => l.id)))
+    : [];
+  const confirmFrom = [...new Set(all.filter((p) => statusOf(p) === "waiting" && p.toUser === userId).map((p) => first(p.fromUser)))];
+
+  const byOldest = [...groupLedgers].sort((a, b) => a.endsOn.localeCompare(b.endsOn));
+  const declinedRow = latestDeclines(all).filter((p) => p.fromUser === userId).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+  const ledgerOf = (id: string) => groupLedgers.find((l) => l.id === id);
+
+  const closed = await listClosedPeriods(userId, groupId);
+  const notAgreed = closed.filter((c) => c.stage === "closed" && !c.iAgreed).sort((a, b) => a.endsOn.localeCompare(b.endsOn))[0];
+
+  let toPay: BalanceSituation["toPay"] = null;
+  for (const l of byOldest.filter((x) => periodStage(x) === "agreed")) {
+    const debts = debtStatus(l.frozenLines ?? [], all.filter((p) => p.ledgerId === l.id && !p.removedAt).map(fact));
+    const mine = debts.find((d) => d.from === userId && d.capCents > 0);
+    if (mine) {
+      toPay = { to: first(mine.to), month: monthName(l.endsOn) };
+      break;
+    }
+  }
+  const today = await requestToday();
+  return {
+    confirmFrom,
+    declined: declinedRow ? { by: first(declinedRow.toUser), month: monthName(ledgerOf(declinedRow.ledgerId)?.endsOn ?? today) } : null,
+    toAgree: notAgreed ? monthName(notAgreed.endsOn) : null,
+    toPay,
+    closes: openLedger ? { month: monthName(openLedger.endsOn), daysLeft: daysUntil(today, openLedger.endsOn) } : null,
+  };
+}
+
+/** The month a period belongs to, by its last day, for example "October". */
+function monthName(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
 }

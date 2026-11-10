@@ -75,8 +75,9 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
 | 24 | Only the payer records a payment, from the agreed period, part payments allowed up to what is left (after waiting payments), date not in the future | Built | `checkPayment` and `debtStatus` in `src/domain/payments.ts`; `recordPayment` in `src/server/services/payments.ts` (payer is always the caller); database checks on `payments` in `src/server/db/schema.ts`; form in `balance/[ledgerId]/RecordPayment.tsx` |
-| 25 | Counts only after the person paid confirms; payer can cancel, person paid can decline while waiting; confirmed is final; settled when all paid | Built | `confirmPayment`, `removePayment`, `settleIfPaid` in `src/server/services/payments.ts`; `isSettled` in `src/domain/payments.ts` |
+| 25 | Counts only after the person paid confirms; payer can cancel, person paid can decline while waiting (kept in the history as cancelled or declined, a decline shown on the period's line); confirmed is final; settled when all paid | Built | `confirmPayment`, `removePayment` (sets `removed_at`, `removed_by`), `settleIfPaid` in `src/server/services/payments.ts`; `isSettled` in `src/domain/payments.ts` |
 | 26 | Payment history, still owed, a yearly total per pair; paid and left per amount on the period screen | Built | `listPayments`, `periodPayments` in `src/server/services/payments.ts`; `yearTotals` in `src/domain/payments.ts`; `balance/payments/page.tsx` (waiting for you, history, totals), `balance/[ledgerId]/page.tsx` (confirmed and left per line) |
+| 0c | Home's Balance line shows the most pressing thing waiting (confirm a payment, a declined payment, a period to agree, a payment to record), otherwise when the period closes; no amounts | Built | `balanceLine` in `src/domain/home.ts`, `balanceSituation` in `src/server/services/payments.ts`, `groups/[groupId]/page.tsx` |
 
 ## Architecture rules (ARCHITECTURE.md section 3; A8 from CLAUDE.md)
 

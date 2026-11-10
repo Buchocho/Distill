@@ -304,9 +304,14 @@ export const payments = pgTable(
     recordedBy: uuid("recorded_by").notNull().references(() => users.id),
     createdAt: createdAt(),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    // Set when a waiting payment is cancelled by the payer or declined by the person paid. The row
+    // is kept so both people see what happened in the payment history (SPEC.md rule 25, 10 Nov 2026).
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: uuid("removed_by").references(() => users.id),
   },
   (t) => [
     index("payments_ledger").on(t.ledgerId),
+    check("payments_confirmed_or_removed", sql`${t.confirmedAt} is null or ${t.removedAt} is null`),
     check("payments_amount_positive", sql`${t.amountCents} > 0`),
     check("payments_different_people", sql`${t.fromUser} <> ${t.toUser}`),
     check(

@@ -3,7 +3,8 @@
  * SPEC.md rule 26 (approved design Payments3, 10 Nov 2026).
  *
  * Payments waiting for the reader to confirm, with Confirm and Decline, so they need not open each
- * period; every payment in the group newest first with its status; and confirmed totals per pair
+ * period; every payment in the group newest first with its status, including cancelled and
+ * declined ones so a payment never just disappears (rule 25, 10 Nov 2026); and confirmed totals per pair
  * for this year. Payments are recorded from the agreed period, by the person who paid (rule 24), so
  * there is no Record button here. Members only.
  */
@@ -32,25 +33,29 @@ export default async function Payments({ params }: { params: Promise<{ groupId: 
   const first = (name: string) => name.split(" ")[0];
   const who = (id: string, name: string) => (id === user.id ? "You" : first(name));
   const whom = (id: string, name: string) => (id === user.id ? "you" : first(name));
-  const forMe = data.payments.filter((p) => !p.confirmed && p.to === user.id);
+  const forMe = data.payments.filter((p) => p.status === "waiting" && p.to === user.id);
+  /** The status pill: confirmed, waiting for someone, or who cancelled or declined it. */
+  const pill = (p: (typeof data.payments)[number]) =>
+    p.status === "confirmed" ? { text: "Confirmed by both", cls: "bg-green text-white" }
+    : p.status === "waiting" ? { text: `Waiting for ${whom(p.to, p.toName)}`, cls: "bg-grey-100 text-ink" }
+    : p.status === "declined" ? { text: `Declined by ${whom(p.to, p.toName)}`, cls: "bg-red text-white" }
+    : { text: `Cancelled by ${whom(p.from, p.fromName)}`, cls: "bg-grey-100 text-grey-600" };
 
   /** One payment: who paid whom, amount, date and period, status, and the reader's buttons. */
   const Row = ({ p }: { p: (typeof data.payments)[number] }) => (
     <li className="flex flex-col gap-2 border-b border-grey-100 py-3">
       <div className="flex items-baseline gap-2">
         <span className="flex-1 font-bold">{who(p.from, p.fromName)} paid {whom(p.to, p.toName)}</span>
-        <span className="text-lg font-extrabold tabular-nums">{formatCents(p.amountCents, data.currency)}</span>
+        <span className={`text-lg font-extrabold tabular-nums ${p.status === "declined" || p.status === "cancelled" ? "text-grey-600 line-through" : ""}`}>{formatCents(p.amountCents, data.currency)}</span>
       </div>
       <div className="flex items-center gap-2">
         <span className="flex-1 text-[13px] text-grey-600">{longDate(p.paidOn)} · for {monthName(p.endsOn)}</span>
-        <span className={`inline-flex h-[26px] items-center rounded-full px-2.5 text-xs font-bold ${p.confirmed ? "bg-green text-white" : "bg-grey-100 text-ink"}`}>
-          {p.confirmed ? "Confirmed by both" : `Waiting for ${whom(p.to, p.toName)}`}
-        </span>
+        <span className={`inline-flex h-[26px] items-center rounded-full px-2.5 text-xs font-bold ${pill(p).cls}`}>{pill(p).text}</span>
       </div>
-      {!p.confirmed && p.to === user.id && (
+      {p.status === "waiting" && p.to === user.id && (
         <PaymentActions paymentId={p.id} canConfirm confirmLabel={`Confirm I received ${formatCents(p.amountCents, data.currency)}`} />
       )}
-      {!p.confirmed && p.from === user.id && <PaymentActions paymentId={p.id} canConfirm={false} confirmLabel="" />}
+      {p.status === "waiting" && p.from === user.id && <PaymentActions paymentId={p.id} canConfirm={false} confirmLabel="" />}
     </li>
   );
 

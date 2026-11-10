@@ -13,7 +13,8 @@
  *   debt ("You owe Rui") they record what they paid and can cancel it while it waits; on money owed
  *   to them ("Sam owes you") they confirm or decline what was recorded (step 6, story US9, SPEC.md
  *   rules 24 to 26, approved design AgreedPeriod, 10 Nov 2026). Lines between others show only
- *   paid and left. A link opens Payments for history and yearly totals;
+ *   paid and left. A payment declined by the person paid shows on the line until the payer records
+ *   again. A link opens Payments for history and yearly totals;
  * - once confirmed payments cover everything: Settled, read only (rule 22a).
  * White, like the rest of the Balance journey (approved design, ClosePeriod2). Members only.
  */
@@ -57,6 +58,8 @@ export default async function ClosePeriod({ params, searchParams }: {
   const progress = (l: (typeof p.lines)[number]) => paid.debts.find((d) => d.from === l.from && d.to === l.to);
   /** Payments still waiting on one amount owed, for Cancel (payer) or Confirm / Decline (person paid). */
   const waitingOn = (l: (typeof p.lines)[number]) => paid.waiting.filter((w) => w.from === l.from && w.to === l.to);
+  /** The last declined payment on one amount owed, if nothing was recorded after it (rule 25). */
+  const declinedOn = (l: (typeof p.lines)[number]) => paid.declined.find((d) => d.from === l.from && d.to === l.to);
   // Whose statement to show: a member chosen with ?person=, else the reader.
   const personId = p.members.some((m) => m.id === person) ? (person as string) : user.id;
   const first = (name: string) => name.split(" ")[0];
@@ -137,6 +140,13 @@ export default async function ClosePeriod({ params, searchParams }: {
                     <PaymentActions paymentId={w.id} canConfirm={w.to === user.id} confirmLabel={`Confirm I received ${formatCents(w.amountCents, p.currency)}`} />
                   </div>
                 ))}
+                {(l.from === user.id || l.to === user.id) && declinedOn(l) && (
+                  <p className="rounded-xl bg-red-tint px-3 py-2.5 text-sm font-bold text-red">
+                    {l.from === user.id
+                      ? `${first(l.toName)} declined your payment of ${formatCents(declinedOn(l)?.amountCents ?? 0, p.currency)} (${longDate(declinedOn(l)?.paidOn ?? "")}). Check with ${first(l.toName)}, then record it again.`
+                      : `You declined ${first(l.fromName)}'s payment of ${formatCents(declinedOn(l)?.amountCents ?? 0, p.currency)} (${longDate(declinedOn(l)?.paidOn ?? "")}).`}
+                  </p>
+                )}
                 {p.stage === "agreed" && l.from === user.id && (progress(l)?.capCents ?? 0) > 0 && (
                   <RecordPayment ledgerId={p.ledger.id} toUser={l.to} toName={first(l.toName)} capCents={progress(l)?.capCents ?? 0} currency={p.currency} />
                 )}
