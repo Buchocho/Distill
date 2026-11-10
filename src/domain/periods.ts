@@ -54,3 +54,26 @@ export function agreeBlockedBy(unsortedCount: number, noRuleCount: number): stri
   ].filter(Boolean);
   return `Agree opens when there are no items left to sort (${parts.join(", ")}).`;
 }
+
+/**
+ * The reader's position in words, in the right tense for the period's stage: "You are owed",
+ * "You owe", "You are all square"; once settled everything has been paid, so it is past:
+ * "You were owed", "You owed", "You were all square" (decided 10 Nov 2026, rule 22a).
+ */
+export function positionWords(myNet: number, stage: PeriodStage): string {
+  const past = stage === "settled";
+  if (myNet > 0) return past ? "You were owed" : "You are owed";
+  if (myNet < 0) return past ? "You owed" : "You owe";
+  return past ? "You were all square" : "You are all square";
+}
+
+/**
+ * One amount owed in words from the reader's side, in the period's tense: "Izu owes you",
+ * "You owe Izu", "Izu owes Sam"; once settled "Izu owed you", "You owed Izu", "Izu owed Sam".
+ */
+export function debtWords(from: { id: string; name: string }, to: { id: string; name: string }, readerId: string, stage: PeriodStage): string {
+  const verb = stage === "settled" ? "owed" : from.id === readerId ? "owe" : "owes";
+  if (to.id === readerId) return `${from.name} ${verb} you`;
+  if (from.id === readerId) return `You ${verb} ${to.name}`;
+  return `${from.name} ${verb} ${to.name}`;
+}

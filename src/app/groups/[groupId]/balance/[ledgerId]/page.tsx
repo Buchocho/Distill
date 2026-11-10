@@ -31,6 +31,7 @@ import { periodPayments } from "@/server/services/payments";
 import { ServiceError } from "@/server/services/errors";
 import { formatCents, formatMoney } from "@/domain/money";
 import { longDate } from "@/domain/dates";
+import { debtWords, positionWords } from "@/domain/periods";
 import { AgreeButton } from "./AgreeButton";
 import { Breakdown } from "./Breakdown";
 import { RecordPayment } from "./RecordPayment";
@@ -64,8 +65,9 @@ export default async function ClosePeriod({ params, searchParams }: {
   const personId = p.members.some((m) => m.id === person) ? (person as string) : user.id;
   const first = (name: string) => name.split(" ")[0];
   const me = p.members.find((m) => m.id === user.id);
+  // In the past tense once the period is settled ("Izu owed you"), rule 22a.
   const sentence = (l: (typeof p.lines)[number]) =>
-    l.to === user.id ? `${first(l.fromName)} owes you` : l.from === user.id ? `You owe ${first(l.toName)}` : `${first(l.fromName)} owes ${first(l.toName)}`;
+    debtWords({ id: l.from, name: first(l.fromName) }, { id: l.to, name: first(l.toName) }, user.id, p.stage);
 
   // The return draws the status banner, leftovers, the amounts, who agreed, and Agree.
   return (
@@ -110,7 +112,7 @@ export default async function ClosePeriod({ params, searchParams }: {
       )}
 
       <section className="flex flex-col gap-1.5">
-        <span className="px-1 text-[15px] font-semibold text-grey-700">{p.myNet > 0 ? "You are owed" : p.myNet < 0 ? "You owe" : "You are all square"}</span>
+        <span className="px-1 text-[15px] font-semibold text-grey-700">{positionWords(p.myNet, p.stage)}</span>
         <span className="px-1 text-4xl font-extrabold tabular-nums">{formatMoney(Math.abs(p.myNet), p.currency)}</span>
         {p.lines.length > 0 && (
           <ul className="mt-2 flex flex-col">

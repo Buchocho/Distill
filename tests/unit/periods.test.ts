@@ -1,6 +1,6 @@
 /** Tests for src/domain/periods.ts (SPEC.md rules 18 to 23). */
 import { describe, expect, it } from "vitest";
-import { agreeBlockedBy, periodForToday, periodStage } from "@/domain/periods";
+import { agreeBlockedBy, debtWords, periodForToday, periodStage, positionWords } from "@/domain/periods";
 
 const monthEnd = { rule: "month_end" as const, day: null };
 
@@ -35,5 +35,29 @@ describe("agreeBlockedBy", () => {
   });
   it("says what is left", () => {
     expect(agreeBlockedBy(2, 1)).toContain("2 items to sort, 1 item without a rule");
+  });
+});
+
+describe("positionWords and debtWords", () => {
+  const me = { id: "me", name: "Buchi" };
+  const izu = { id: "izu", name: "Izu" };
+  const sam = { id: "sam", name: "Sam" };
+
+  it("uses the present until the period is settled", () => {
+    expect(positionWords(110, "agreed")).toBe("You are owed");
+    expect(positionWords(-110, "closed")).toBe("You owe");
+    expect(positionWords(0, "open")).toBe("You are all square");
+    expect(debtWords(izu, me, "me", "agreed")).toBe("Izu owes you");
+    expect(debtWords(me, izu, "me", "agreed")).toBe("You owe Izu");
+    expect(debtWords(izu, sam, "me", "agreed")).toBe("Izu owes Sam");
+  });
+
+  it("uses the past once settled", () => {
+    expect(positionWords(110, "settled")).toBe("You were owed");
+    expect(positionWords(-110, "settled")).toBe("You owed");
+    expect(positionWords(0, "settled")).toBe("You were all square");
+    expect(debtWords(izu, me, "me", "settled")).toBe("Izu owed you");
+    expect(debtWords(me, izu, "me", "settled")).toBe("You owed Izu");
+    expect(debtWords(izu, sam, "me", "settled")).toBe("Izu owed Sam");
   });
 });

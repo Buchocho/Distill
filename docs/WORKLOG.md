@@ -203,3 +203,9 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Built: `src/domain/home.ts` (`balanceLine`: confirm a payment from X, Y declined your payment for October, October is closed · agree your amount, Record your payment to Y for October, otherwise the close date; no amounts, as the approved Home design); `balanceSituation` in the payments service; Home uses it, in bold orange when it asks for action, counted with the device's date (Home used the server's date for the close days before, against rule 2c). Payments are no longer deleted when cancelled or declined: migration 0010 adds `removed_at` and `removed_by`; Payments shows "Declined by Izu" or "Cancelled by you" with the amount struck through; the period line shows "Izu declined your payment of 5,00 ... record it again" until the payer records again. No new mockup: the wording sits in the existing Home and period layouts.
 - Verified: type check, lint, 98 unit tests (new: Home line priority and wording), end to end tests, build.
 - Left open: periods agreed before today with nothing owed stay Agreed (his decision).
+
+## 2026-11-10: settled periods worded in the past
+
+- Found by Maduabuchi after testing payments with Izu (all step 6 tests passed): Past periods showed November as Settled and "You are owed 1,10 €" at the same time. "You can't be saying you are owed and settled at the same time."
+- Changed: `positionWords` and `debtWords` in `src/domain/periods.ts` give the past tense once a period is settled: "You were owed", "You owed", "Izu owed you". Used on the Past periods list and on the period screen (big figure and each line). Open, closed and agreed periods keep the present tense.
+- Verified: type check, lint, 100 unit tests (new: both tenses), end to end tests, build.

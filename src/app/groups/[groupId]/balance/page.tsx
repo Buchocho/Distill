@@ -19,6 +19,7 @@ import { countToConfirm } from "@/server/services/payments";
 import { Icon } from "@/components/Icon";
 import { formatCents, formatMoney } from "@/domain/money";
 import { longDate } from "@/domain/dates";
+import { positionWords } from "@/domain/periods";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +115,8 @@ export default async function Balance({ params }: { params: Promise<{ groupId: s
                 : c.stage === "agreed" ? { text: "Agreed", cls: "bg-grey-100 text-ink" }
                 : c.iAgreed ? { text: "Waiting", cls: "bg-grey-100 text-ink" }
                 : { text: "Agree", cls: "bg-orange text-ink" };
-              const amount = c.myNet > 0 ? `You are owed ${formatMoney(c.myNet, b.currency)}` : c.myNet < 0 ? `You owe ${formatMoney(-c.myNet, b.currency)}` : "All square";
+              // Settled periods are past: "You were owed", not "You are owed" (rule 22a).
+              const amount = c.myNet === 0 ? (c.stage === "settled" ? "Were all square" : "All square") : `${positionWords(c.myNet, c.stage)} ${formatMoney(Math.abs(c.myNet), b.currency)}`;
               return (
                 <li key={c.id}>
                   <Link href={`/groups/${groupId}/balance/${c.id}`} className="flex min-h-16 items-center gap-3 border-b border-grey-100 text-ink no-underline">
