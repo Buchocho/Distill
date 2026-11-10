@@ -16,9 +16,10 @@
  */
 
 import "server-only";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/server/db/client";
-import { categories, categoryChanges, categoryShares, itemChanges, items, ledgers, receipts, users } from "@/server/db/schema";
+import { agreements, categories, categoryChanges, categoryShares, itemChanges, items, ledgers, receipts, users } from "@/server/db/schema";
+import { periodStage } from "@/domain/periods";
 import { describeRule, type Rule, type RuleKind, validateRule } from "@/domain/rules";
 import { CATEGORY_NAME_MAX, categoryKey } from "@/domain/receipts";
 import { assertMember, getGroupForMember, UUID } from "./groups";
@@ -45,6 +46,38 @@ export async function rulesForGroup(groupId: string): Promise<Map<string, Rule |
   return rules;
 }
 
+/**
+ * Clears every agreement given for the group's closed periods that are not yet agreed by all
+ * (SPEC.md rule 22): a change that can move their amounts means everyone checks again.
+ * Periods everyone agreed are frozen and keep their agreements (rule 22a). Pass a ledger id to
+ * clear only that period.
+ */
+export async function clearOpenAgreements(groupId: string, ledgerId?: string) {
+  const unagreed = await db
+    .select({ id: ledgers.id })
+    .from(ledgers)
+    .where(and(eq(ledgers.groupId, groupId), eq(ledgers.status, "closed"), isNull(ledgers.agreedAt), ledgerId ? eq(ledgers.id, ledgerId) : undefined));
+  if (unagreed.length > 0) await db.delete(agreements).where(inArray(agreements.ledgerId, unagreed.map((l) => l.id)));
+}
+
+/** Saved items of one period with their receipt's payer, leaving out deleted ones. The balance and the sort lists use these. */
+export async function ledgerItems(ledgerId: string) {
+  return db
+    .select({
+      id: items.id,
+      name: items.name,
+      priceCents: items.priceCents,
+      categoryId: items.categoryId,
+      receiptId: receipts.id,
+      storeName: receipts.storeName,
+      payerId: receipts.paidBy,
+    })
+    .from(items)
+    .innerJoin(receipts, eq(receipts.id, items.receiptId))
+    .where(and(eq(receipts.ledgerId, ledgerId), eq(receipts.status, "saved"), isNull(items.deletedAt)))
+    .orderBy(asc(receipts.savedAt), asc(items.position));
+}
+
 /** Saved items in the group's open period, with their receipt's payer. The balance and the sort list use these. */
 export async function openPeriodItems(groupId: string) {
   return db
@@ -60,7 +93,7 @@ export async function openPeriodItems(groupId: string) {
     .from(items)
     .innerJoin(receipts, eq(receipts.id, items.receiptId))
     .innerJoin(ledgers, eq(ledgers.id, receipts.ledgerId))
-    .where(and(eq(receipts.groupId, groupId), eq(receipts.status, "saved"), eq(ledgers.status, "open")))
+    .where(and(eq(receipts.groupId, groupId), eq(receipts.status, "saved"), eq(ledgers.status, "open"), isNull(items.deletedAt)))
     .orderBy(asc(receipts.savedAt), asc(items.position));
 }
 
@@ -134,6 +167,8 @@ export async function setRule(userId: string, categoryId: string, rule: Rule) {
     await tx.update(categories).set({ ruleKind: rule.kind }).where(eq(categories.id, categoryId));
     await tx.insert(categoryChanges).values({ categoryId, changedBy: userId, summary: `Rule set to ${describeRule(rule, nameOf)}` });
   });
+  // The closed periods not yet agreed by all follow the current rules, so their amounts may move.
+  await clearOpenAgreements(category.groupId);
   return { categoryId, ruleText: describeRule(rule, nameOf) };
 }
 
@@ -193,13 +228,15 @@ export async function listToSort(userId: string, groupId: string) {
 
 /**
  * Moves a saved item to another category, or back to unsorted (SPEC.md rules 13 and 14, story US4).
- * Any member can do it, while the item's period is open. Only the category can change after saving,
- * never the name or price. The change is logged with who made it and shown on the item.
+ * Any member can do it while the item's period is open. In a closed period not yet agreed by all,
+ * only a leftover item with no category can be given one (rule 20), and that clears the agreements
+ * given so far (rule 22). Only the category can change after saving, never the name or price.
+ * The change is logged with who made it and shown on the item.
  */
 export async function changeItemCategory(userId: string, itemId: string, categoryId: string | null) {
   if (!UUID.test(itemId)) throw new ServiceError("not_found", "Item not found.");
   const [row] = await db
-    .select({ item: items, receipt: receipts, ledgerStatus: ledgers.status })
+    .select({ item: items, receipt: receipts, ledger: ledgers })
     .from(items)
     .innerJoin(receipts, eq(receipts.id, items.receiptId))
     .innerJoin(ledgers, eq(ledgers.id, receipts.ledgerId))
@@ -209,7 +246,12 @@ export async function changeItemCategory(userId: string, itemId: string, categor
     throw new ServiceError("not_found", "Item not found.");
   });
   if (row.receipt.status !== "saved") throw new ServiceError("invalid", "Save the receipt first.");
-  if (row.ledgerStatus !== "open") throw new ServiceError("invalid", "This period is closed. Its items can no longer change.");
+  if (row.item.deletedAt) throw new ServiceError("invalid", "This item was removed.");
+  const stage = periodStage(row.ledger);
+  if (stage === "agreed" || stage === "settled") throw new ServiceError("invalid", "Everyone has agreed this period. Its items can no longer change.");
+  if (stage === "closed" && row.item.categoryId !== null) {
+    throw new ServiceError("invalid", "This period is closed. Only items without a category can still be sorted.");
+  }
   if (categoryId !== null) {
     if (!UUID.test(categoryId)) throw new ServiceError("invalid", "Choose a category.");
     const [cat] = await db.select({ id: categories.id }).from(categories).where(and(eq(categories.id, categoryId), eq(categories.groupId, row.receipt.groupId)));
@@ -222,7 +264,38 @@ export async function changeItemCategory(userId: string, itemId: string, categor
     await tx.update(items).set({ categoryId, updatedBy: userId, updatedAt: new Date() }).where(eq(items.id, itemId));
     await tx.insert(itemChanges).values({ itemId, changedBy: userId, summary: `Category changed from ${label(row.item.categoryId)} to ${label(categoryId)}` });
   });
+  if (stage === "closed") await clearOpenAgreements(row.receipt.groupId, row.ledger.id);
   return { itemId, unchanged: false };
+}
+
+/**
+ * Removes a leftover item with no category from a closed period (SPEC.md rule 20). Only the person
+ * who paid for its receipt can do it, so nobody removes someone else's purchase (decided 10 Nov
+ * 2026). The item is marked removed, not erased, and the removal is logged. Clears the agreements
+ * given so far for the period (rule 22).
+ */
+export async function deleteItem(userId: string, itemId: string) {
+  if (!UUID.test(itemId)) throw new ServiceError("not_found", "Item not found.");
+  const [row] = await db
+    .select({ item: items, receipt: receipts, ledger: ledgers })
+    .from(items)
+    .innerJoin(receipts, eq(receipts.id, items.receiptId))
+    .innerJoin(ledgers, eq(ledgers.id, receipts.ledgerId))
+    .where(eq(items.id, itemId));
+  if (!row) throw new ServiceError("not_found", "Item not found.");
+  await assertMember(userId, row.receipt.groupId).catch(() => {
+    throw new ServiceError("not_found", "Item not found.");
+  });
+  if (row.item.deletedAt) return { itemId };
+  if (periodStage(row.ledger) !== "closed") throw new ServiceError("invalid", "Items can only be removed from a closed period before everyone agrees.");
+  if (row.item.categoryId !== null) throw new ServiceError("invalid", "Only items without a category can be removed.");
+  if (row.receipt.paidBy !== userId) throw new ServiceError("forbidden", "Only the person who paid for this receipt can remove its items.");
+  await db.transaction(async (tx) => {
+    await tx.update(items).set({ deletedAt: new Date(), updatedBy: userId, updatedAt: new Date() }).where(eq(items.id, itemId));
+    await tx.insert(itemChanges).values({ itemId, changedBy: userId, summary: "Removed from the closed period" });
+  });
+  await clearOpenAgreements(row.receipt.groupId, row.ledger.id);
+  return { itemId };
 }
 
 /** The change history of a receipt's items, newest first, for the saved receipt screen (SPEC.md rule 14). */

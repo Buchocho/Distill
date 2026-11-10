@@ -22,6 +22,7 @@ import { groupMembers, groups, ledgers, users } from "@/server/db/schema";
 import { type NewGroupInput, validateNewGroup } from "@/domain/groups";
 import { firstLedger } from "@/domain/ledgers";
 import { ServiceError } from "./errors";
+import { ensurePeriods, requestToday } from "./periodClock";
 
 /** Shape of a database id. A group id in the address that does not match is treated as not found. */
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -101,7 +102,8 @@ export async function isMember(userId: string, groupId: string): Promise<boolean
 }
 
 /**
- * Loads a group with its members and its open period, for members only.
+ * Loads a group with its members and its open period, for members only. Closes the open period
+ * first if its last day has passed (SPEC.md rule 19), so every screen and API call sees the right one.
  *
  * A non member gets "not found" rather than "not allowed", so the app does not reveal that
  * a group exists (architecture rule 4). Every screen inside a group starts by calling this.
@@ -110,6 +112,8 @@ export async function isMember(userId: string, groupId: string): Promise<boolean
 export async function getGroupForMember(userId: string, groupId: string) {
   // Membership check first: nothing about the group is read until this passes.
   await assertMember(userId, groupId);
+  // Close the period if its last day has passed, before anything is read (SPEC.md rule 19).
+  await ensurePeriods(groupId, await requestToday());
 
   const [group] = await db.select().from(groups).where(eq(groups.id, groupId));
   const members = await db

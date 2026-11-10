@@ -9,7 +9,8 @@
  * being added (rule 4).
  * - saved: the saved items. Any member can change an item's category while the period is open,
  *   and each change is shown under the item with who made it (story US4, SPEC.md rules 13, 14).
- *   The name and price cannot change after saving.
+ *   The name and price cannot change after saving. Once the period closes only unsorted items can
+ *   be sorted, and once everyone agreed nothing changes (rule 20); removed items are struck through.
  * Dark like the rest of the Receipts journey (approved design, Review2). Members only.
  */
 
@@ -91,11 +92,18 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
             <ul className="rounded-2xl bg-dark-card px-4">
               {data.items.map((item) => {
                 const changes = data.history.filter((h) => h.itemId === item.id);
+                // Open period: any item can move. Closed, not agreed: only unsorted items (rule 20).
+                const canChange = !item.deletedAt && (data.periodStage === "open" || (data.periodStage === "closed" && item.categoryId === null));
+                const categoryName = data.categories.find((c) => c.id === item.categoryId)?.name ?? "Unsorted";
                 return (
                   <li key={item.id} className="flex flex-col gap-2 border-b border-dark-line py-3 last:border-0">
-                    <span className="text-base font-bold">{item.name}</span>
+                    <span className={`text-base font-bold ${item.deletedAt ? "text-sand line-through" : ""}`}>{item.name}</span>
                     <div className="flex items-center gap-3">
-                      <ItemCategoryPicker itemId={item.id} itemName={item.name} categoryId={item.categoryId} categories={data.categories} tone="dark" />
+                      {canChange ? (
+                        <ItemCategoryPicker itemId={item.id} itemName={item.name} categoryId={item.categoryId} categories={data.categories} tone="dark" />
+                      ) : (
+                        <span className="flex-1 text-[15px] text-sand">{item.deletedAt ? "Removed" : categoryName}</span>
+                      )}
                       <span className="flex h-11 shrink-0 items-center text-[23px] font-extrabold tabular-nums">{formatMoney(item.priceCents, currency)}</span>
                     </div>
                     {item.discountCents !== null && (

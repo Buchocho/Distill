@@ -2,7 +2,8 @@
  * Invite screen. Route: /groups/<id>/invite. Story US1.
  * Shows the group's invite link with Share and Copy, and the member list. Opened right after a
  * group is created (title "Group created") and from the initial on Home (title "Invite people").
- * Also where a person changes the name they are shown as (DisplayNameForm, SPEC.md rule 1).
+ * Also where a person changes the name they are shown as (DisplayNameForm, SPEC.md rule 1) and
+ * where the group changes when accounts close (CloseRuleForm, rule 18).
  * The link is built from the address the app is running at, so it works on any deploy.
  */
 
@@ -13,6 +14,8 @@ import { requireUser } from "@/server/session";
 import { groupOr404 } from "@/server/pageData";
 import { CopyLink } from "./CopyLink";
 import { DisplayNameForm } from "./DisplayNameForm";
+import { CloseRuleForm } from "./CloseRuleForm";
+import { longDate } from "@/domain/dates";
 
 export default async function Invite({ params, searchParams }: {
   params: Promise<{ groupId: string }>;
@@ -21,7 +24,7 @@ export default async function Invite({ params, searchParams }: {
   const { groupId } = await params;
   const { new: isNew } = await searchParams;
   const user = await requireUser(`/groups/${groupId}/invite`);
-  const { group, members } = await groupOr404(user.id, groupId);
+  const { group, members, openLedger } = await groupOr404(user.id, groupId);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
   return (
@@ -46,6 +49,7 @@ export default async function Invite({ params, searchParams }: {
           </ul>
         </div>
         <DisplayNameForm current={user.name} />
+        <CloseRuleForm groupId={groupId} rule={group.closeRule} day={group.closeDay} currentEnd={openLedger ? longDate(openLedger.endsOn) : null} />
         <Link href={`/groups/${groupId}`} className="mt-auto flex min-h-13 items-center justify-center rounded-xl border-[1.5px] border-ink bg-white font-extrabold text-ink no-underline">Go to Home</Link>
       </div>
     </main>

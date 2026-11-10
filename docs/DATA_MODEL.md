@@ -39,6 +39,9 @@ One row per signed-in person, created on first Google sign in. The id is the Sup
 | joined_at | timestamptz | |
 
 ### ledgers
+
+`agreed_at` timestamptz and `frozen_lines` jsonb (`[{from, to, cents}]`): set when the last member agrees; the period's amounts are frozen there (SPEC.md rule 22a, stage 1). `settled_at` timestamptz: set when every amount is confirmed paid (stage 2, step 6).
+
 Shown in the app as a period. One group has many ledgers; at most one is open.
 
 | Column | Type | Key / rule |
@@ -108,6 +111,7 @@ The sharing rule. No rows for a category means it has no rule yet: its items are
 | price_cents | integer | negative allowed for discount lines |
 | category_id | uuid | FK categories.id, null = unsorted |
 | discount_cents | integer | discount printed for this item, positive; information only, never summed or split (SPEC.md rule 6). Check `items_discount_positive` |
+| deleted_at | timestamptz | set when the payer removes a leftover unsorted item from a closed period (SPEC.md rule 20); removed items are left out of balances and lists but kept for the history |
 | proposed_category | text | a new category name suggested by the reading while the receipt is under review; becomes a real category on save and is then cleared (SPEC.md rule 7). Check `items_one_category`: never set together with category_id |
 | updated_by | uuid | FK users.id, null when set by the reading step |
 | updated_at | timestamptz | |

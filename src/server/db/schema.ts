@@ -19,6 +19,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   smallint,
@@ -95,6 +96,14 @@ export const ledgers = pgTable(
     endsOn: date("ends_on").notNull(),
     status: text("status", { enum: ["open", "closed"] }).notNull().default("open"),
     closedAt: timestamp("closed_at", { withTimezone: true }),
+    // Stage 1 of settling (agreed with Maduabuchi on 10 Nov 2026): set when the last member agrees.
+    // From then the period's amounts are frozen in frozen_lines, and later rule changes do not
+    // touch it (SPEC.md rule 22a). Null while not everyone has agreed.
+    agreedAt: timestamp("agreed_at", { withTimezone: true }),
+    // The balance lines at the moment everyone agreed: [{ from, to, cents }] (src/domain/balance.ts).
+    frozenLines: jsonb("frozen_lines").$type<{ from: string; to: string; cents: number }[]>(),
+    // Stage 2: set when every amount owed in the period is confirmed paid (step 6). Then read only.
+    settledAt: timestamp("settled_at", { withTimezone: true }),
   },
   (t) => [
     uniqueIndex("ledgers_one_open_per_group").on(t.groupId).where(sql`${t.status} = 'open'`),
@@ -213,6 +222,9 @@ export const items = pgTable(
     proposedCategory: text("proposed_category"),
     // Null when set by the reading step.
     updatedBy: uuid("updated_by").references(() => users.id),
+    // A leftover item removed by its payer in a closed period (SPEC.md rule 20). Kept, not erased,
+    // so the removal stays in the item's history; deleted items are left out everywhere else.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

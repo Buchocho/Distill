@@ -30,6 +30,11 @@ test("the receipt API refuses callers who are not signed in", async ({ request }
     ["GET", `/api/v1/categories/${RECEIPT}`],
     ["PUT", `/api/v1/categories/${RECEIPT}/rule`],
     ["PATCH", `/api/v1/items/${RECEIPT}`],
+    ["DELETE", `/api/v1/items/${RECEIPT}`],
+    ["PATCH", `/api/v1/groups/${GROUP}`],
+    ["GET", `/api/v1/groups/${GROUP}/periods`],
+    ["GET", `/api/v1/periods/${RECEIPT}`],
+    ["POST", `/api/v1/periods/${RECEIPT}/agree`],
   ] as const) {
     const res = await request.fetch(url, { method, data: method === "GET" || method === "DELETE" ? undefined : {}, maxRedirects: 0 });
     expect(res.status(), `${method} ${url}`).toBe(401);

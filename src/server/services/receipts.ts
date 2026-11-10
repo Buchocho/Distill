@@ -29,6 +29,8 @@ import { readReceiptPhotos } from "@/server/integrations/gemini";
 import { createUploadLink, deletePhotos, downloadPhoto, photoPath, viewLink } from "@/server/integrations/storage";
 import { assertMember, getGroupForMember, UUID } from "./groups";
 import { itemHistory } from "./categories";
+import { ensurePeriods, requestToday } from "./periodClock";
+import { periodStage } from "@/domain/periods";
 import { ServiceError } from "./errors";
 
 /** How many receipts the Receipts screen lists. */
@@ -64,7 +66,7 @@ function assertOwnReceipt(receipt: { createdBy: string }, userId: string) {
  */
 export async function listReceipts(userId: string, groupId: string) {
   await assertMember(userId, groupId);
-  const unsorted = sql<number>`count(${items.id}) filter (where ${items.categoryId} is null)`.mapWith(Number);
+  const unsorted = sql<number>`count(${items.id}) filter (where ${items.categoryId} is null and ${items.deletedAt} is null)`.mapWith(Number);
   return db
     .select({
       id: receipts.id,
@@ -94,6 +96,8 @@ export async function listReceipts(userId: string, groupId: string) {
  */
 export async function startReceipt(userId: string, groupId: string) {
   await assertMember(userId, groupId);
+  // A receipt goes into the period open now, so close an ended one first (rules 5 and 19).
+  await ensurePeriods(groupId, await requestToday());
   const paidBy = userId;
   const [openLedger] = await db
     .select()
@@ -197,6 +201,8 @@ export async function getReceipt(userId: string, receiptId: string) {
   const saved = receipt.status === "saved" ? [] : await savedReceiptsFor(receipt.groupId, receiptId);
   // On a saved receipt, each item's change history is shown under it (SPEC.md rule 14).
   const history = receipt.status === "saved" ? await itemHistory(receiptId) : [];
+  // The stage of the receipt's period decides which items can still change category (rules 13, 20).
+  const [ledger] = await db.select().from(ledgers).where(eq(ledgers.id, receipt.ledgerId));
   return {
     receipt,
     currency: group.currency,
@@ -206,6 +212,7 @@ export async function getReceipt(userId: string, receiptId: string) {
     photoCount,
     saved,
     history,
+    periodStage: periodStage(ledger),
   };
 }
 

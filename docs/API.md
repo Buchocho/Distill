@@ -23,7 +23,12 @@ Authentication: the browser session cookie, or `Authorization: Bearer <Supabase 
 | GET | /groups/{groupId}/balance | Open period balance: `lines` (`from`, `to`, `cents`, names), `myNet` (positive: owed to the caller), `unsortedCount`, `noRuleCount`, `receiptCount`, `currency`. |
 | GET | /categories/{categoryId} | One category with its rule, the members and the latest change. |
 | PUT | /categories/{categoryId}/rule | Set the rule. Body `{ "kind": "everyone" \| "payer" \| "shares", "shares": [{ "userId", "bp" }] }`; `bp` is basis points (10000 = 100%), used only for `shares`, totalling 10000. Logged. |
-| PATCH | /items/{itemId} | Move a saved item to another category, or to unsorted with `null`. Body `{ "categoryId" }`. Open period only; logged. |
+| PATCH | /items/{itemId} | Move a saved item to another category, or to unsorted with `null`. Body `{ "categoryId" }`. Any item in the open period; only an unsorted item in a closed period not yet agreed. Logged. |
+| DELETE | /items/{itemId} | Remove a leftover unsorted item from a closed period not yet agreed. Only the receipt's payer (403 otherwise). Logged. |
+| PATCH | /groups/{groupId} | Change when accounts close. Body `{ "closeRule", "closeDay" }`. Applies from the next period. |
+| GET | /groups/{groupId}/periods | Closed periods not yet settled: `stage` (`closed` or `agreed`), `iAgreed`, `agreedCount`, `memberCount`. |
+| GET | /periods/{ledgerId} | One period: `stage`, `lines`, `myNet`, `unsorted`, `noRule`, `members` with `agreed`, `agreeBlockedBy`. |
+| POST | /periods/{ledgerId}/agree | Agree to your amount. Refused (400) while items are left to sort. Returns the `stage`; `agreed` when the last member agreed and the amounts were frozen. |
 | POST | /receipts/{receiptId}/read | Read the photo with Gemini. Optional body `{ "localDate": "YYYY-MM-DD" }`, the caller's date, used to read dates printed year first. Returns `{ "status": "ready" }` or `{ "status": "failed" }`. Calling it again is Retry. Can take up to a minute. Not allowed once the receipt is saved. |
 | GET | /receipts/{receiptId} | The receipt, its items (with `discountCents`, and `categoryId` or `proposedCategory`), the group's categories and members, the group `currency`, `photoCount`, and `saved` (the group's other saved receipts: store, date, total, receipt number, who paid) for duplicate checking. Members only. |
 | DELETE | /receipts/{receiptId} | Delete a receipt that is not saved yet, with its photos. A saved receipt is refused (400). |

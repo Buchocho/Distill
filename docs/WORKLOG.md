@@ -153,3 +153,12 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 
 - Hand check by Maduabuchi, with his brother, on the deployed app: rules (Everyone equal, Whoever paid), the needs sorting flag and Sort screen, the balance from both members' receipts with netting, changing a saved item's category with its history, category History, and another member seeing "still adding" on an unsaved receipt. All seven passed; he called it a pass "for now".
 
+## 2026-11-10: step 5 built: closing periods, sorting leftovers, agreeing
+
+- Order: Step 4 (several photos per receipt) moved after steps 5 to 7, to be built only if time is left; long receipts are rare and he has none to test with.
+- Decisions: two stage settling, his idea: while a closed period is not yet agreed by all, its amounts follow the current rules and any change clears agreements; when the last member agrees the amounts are frozen (stage 1); when everything is confirmed paid the period is settled and read only (stage 2, step 6). Weak point accepted: before everyone agrees, a rule change made for the new period also moves the closed one (and clears its agreements). Assumptions he accepted: only the payer can remove a leftover item, logged; closing uses the device's date; the close date can be changed on the members screen.
+- Prompts: "let's move on to step 5"; "we can freeze partially on one and more completely on the second"; "Yes".
+- Built: period closing on group load with the device's date (cookie set by `DeviceDate`), skipping unused periods; closed period screen with leftovers (sort, or remove by payer), categories without a rule, amounts, who agreed, and Agree (closed while anything is left to sort); freeze on the last agreement; agreements cleared by rule changes, sorting and removing; Balance cards per closed period; "Accounts close" setting on the members screen; saved receipts follow the period stage (only unsorted items can change once closed, nothing once agreed; removed items struck through). Migration 0008.
+- Verified: type check, lint, 83 unit tests (new: period stages, period for today, Agree check), end to end tests (signed out), build. Not verifiable here: a real period closing; to test by hand, the close date must pass (for example set "Every week" on today's weekday and wait a day, or a day of the month).
+- Left open: Home does not yet mention a closed period waiting for agreement.
+

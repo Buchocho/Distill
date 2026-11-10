@@ -3,7 +3,8 @@
  * The person's own position in large type, who owes whom (netted to one line per pair), the
  * period's close date and receipt count, and what is left out of the balance with a link to sort
  * it (SPEC.md rules 15 to 17). White (approved design, BalanceWhite).
- * PARTLY BUILT: closing the period and Agree come in step 5, Payments in step 6.
+ * Below, one card per closed period not yet settled, leading to Close the period (step 5).
+ * PARTLY BUILT: Payments come in step 6.
  */
 
 import Link from "next/link";
@@ -11,6 +12,8 @@ import { TabScreen } from "@/components/TabScreen";
 import { requireUser } from "@/server/session";
 import { groupOr404 } from "@/server/pageData";
 import { getOpenBalance } from "@/server/services/balance";
+import { listClosedPeriods } from "@/server/services/periods";
+import { Icon } from "@/components/Icon";
 import { formatCents, formatMoney } from "@/domain/money";
 import { longDate } from "@/domain/dates";
 
@@ -21,6 +24,8 @@ export default async function Balance({ params }: { params: Promise<{ groupId: s
   const user = await requireUser(`/groups/${groupId}/balance`);
   await groupOr404(user.id, groupId);
   const b = await getOpenBalance(user.id, groupId);
+  const closed = await listClosedPeriods(user.id, groupId);
+  const monthOf = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleString("en-US", { month: "long", timeZone: "UTC" });
   const month = b.openLedger
     ? new Date(`${b.openLedger.endsOn}T00:00:00Z`).toLocaleString("en-US", { month: "long", timeZone: "UTC" }).toUpperCase()
     : "";
@@ -77,6 +82,23 @@ export default async function Balance({ params }: { params: Promise<{ groupId: s
           <Link href={`/groups/${groupId}/categories/sort`} className="inline-flex min-h-11 items-center rounded-full bg-ink px-4 text-sm font-bold text-paper no-underline">Sort</Link>
         </div>
       )}
+
+      {closed.map((c) => (
+        <Link key={c.id} href={`/groups/${groupId}/balance/${c.id}`}
+          className="flex min-h-[68px] items-center gap-3 rounded-2xl border-[1.5px] border-ink px-4 text-ink no-underline">
+          <div className="flex flex-1 flex-col gap-0.5">
+            <span className="font-extrabold">{monthOf(c.endsOn)} {c.stage === "agreed" ? "is agreed" : "is closed"}</span>
+            <span className="text-[13px] text-grey-600">
+              {c.stage === "agreed"
+                ? "Everyone agreed. Payments come next."
+                : c.iAgreed
+                  ? `You agreed. Waiting for ${c.memberCount - c.agreedCount} more.`
+                  : "Check your amount and agree"}
+            </span>
+          </div>
+          <Icon name="arrow" size={20} strokeWidth={2.5} />
+        </Link>
+      ))}
     </TabScreen>
   );
 }

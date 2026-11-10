@@ -70,11 +70,12 @@ Term: a period in the app is stored as a ledger in the database.
 17a. The Balance tab opens on the open period. A closed period that still needs agreement is shown as one card linking to it. There is no list of all past periods in this version.
 
 **Periods and closing**
-18. The group chooses the close rule: last day of the month, a day of the month (1 to 28), or a day of the week. It can be changed; the change applies from the next period.
-19. A period runs from its start date to its end date inclusive. After the end date passes, it closes and the next period opens the following day (US6). Closing is checked whenever group data is loaded.
-20. A closed period takes no new receipts and no edits, with two exceptions: its unsorted items can be given a category or deleted, and rules can be set for categories that have none (US7).
+18. The group chooses the close rule: last day of the month, a day of the month (1 to 28), or a day of the week. Any member can change it on the members screen; the change applies from the next period.
+19. A period runs from its start date to its end date inclusive. After the end date passes, it closes and the next period opens the following day (US6). Closing is checked whenever group data is loaded, using the device's date (rule 2c). Periods in which nobody used the app are skipped.
+20. A closed period takes no new receipts and no edits, with two exceptions: its unsorted items can be given a category (any member) or removed (only the person who paid for that receipt; logged), and rules can be set for categories that have none (US7).
 21. The Agree button for a period is active only when that period has no unsorted items and every category used in it has a rule (US7).
-22. Each member agrees to their own amount. Any change to the period's items after that clears all agreements for the period (US8).
+22. Each member agrees to their own amount. Until everyone has agreed, the period's amounts follow the current rules, and any change that can move them (sorting or removing a leftover item, setting or changing a rule) clears all agreements for the period (US8).
+22a. Settling has two stages (agreed 10 Nov 2026). Stage 1: when the last member agrees, the period's amounts are frozen; later rule changes do not touch it. Stage 2: when every amount owed is confirmed paid (rule 25), the period is settled and read only.
 23. The next period opens on time whether or not anyone agreed.
 
 **Payments**
@@ -114,7 +115,7 @@ Each step works end to end, with tests, before the next starts. A step is done o
 | 1 | US1: sign in, create group, invite link, join | 29 Oct |
 | 2 | US2 and US5 with one photo: capture, reading, review, save, unsorted items | 1 Nov |
 | 3 | US3 and US4: categories, rules, item changes and change log; open period balance | 3 Nov |
-| 4 | Multi photo receipts (section 7) | 4 Nov |
+| 4 | Multi photo receipts (section 7). Moved after steps 5 to 7 on 10 Nov; built only if time is left | 4 Nov |
 | 5 | US6, US7, US8: close rule, closing, sorting leftovers, agree | 6 Nov |
 | 6 | US9: payments | 8 Nov |
 | 7 | Remaining tests, UX review by the LLM against the Assignment 1 mockups, manual check of every screen, privacy page and Google sign in published (out of testing mode), data tables PDF, screenshots, demo script and rehearsal | 9 to 15 Nov |

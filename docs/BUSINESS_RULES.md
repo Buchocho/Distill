@@ -1,7 +1,7 @@
 # Distill: business rules register
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 9 Nov 2026, build step 3 (sharing rules, item category changes, open period balance).
+Last updated: 10 Nov 2026, build step 5 (closing periods, agreeing).
 
 Each business rule in SPEC.md section 4, whether it is built, and the files that enforce it. Rule numbers are the SPEC.md numbers, so a code comment that says "SPEC.md rule 15" points to the same row here.
 
@@ -61,12 +61,13 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
-| 18 | Close rule: last day of month, a day 1 to 28, or a weekday; can be changed | Partly built: chosen when the group is created and checked in the app and the database. Changing it later is not built, although the New group screen says "You can change it later". | `src/domain/ledgers.ts`, `src/domain/groups.ts`, `groups_close_day_valid` in `src/server/db/schema.ts` |
-| 19 | A period runs start to end inclusive; the next opens the following day; checked when group data loads | Partly built: the first period opens when the group is created, and the date logic for the next one is written and tested. Closing on load is not built. | `src/domain/ledgers.ts` (`firstLedger`, `nextLedger`), `src/server/services/groups.ts`, `ledgers_one_open_per_group` in `src/server/db/schema.ts` |
-| 20 | A closed period takes no new receipts or edits, except sorting leftovers and setting missing rules | Not built (step 5) | |
-| 21 | Agree is active only with no unsorted items and every category used having a rule | Not built (step 5) | |
-| 22 | Each member agrees to their amount; any change clears all agreements | Prepared: `agreements` table | `src/server/db/schema.ts` |
-| 23 | The next period opens on time whether or not anyone agreed | Not built (step 5) | |
+| 18 | The group chooses and can change the close rule; a change applies from the next period | Built | `src/domain/ledgers.ts`, `setCloseRule` in `src/server/services/periods.ts`, `invite/CloseRuleForm.tsx` |
+| 19 | A period closes after its end date and the next opens; checked when group data loads, by the device's date | Built | `src/domain/periods.ts` (`periodForToday`), `src/server/services/periodClock.ts`, `src/components/DeviceDate.tsx` |
+| 20 | A closed period takes no new receipts or edits, except sorting leftovers (any member), removing them (payer only), and setting rules | Built | `changeItemCategory`, `deleteItem` in `src/server/services/categories.ts`, `balance/[ledgerId]/page.tsx` |
+| 21 | Agree only when nothing is unsorted and every used category has a rule | Built | `src/domain/periods.ts` (`agreeBlockedBy`), `agree` in `src/server/services/periods.ts`, `AgreeButton.tsx` |
+| 22 | Each member agrees to their amount; any change before everyone agrees clears agreements | Built | `agree`, `clearOpenAgreements` (called by `setRule`, `changeItemCategory`, `deleteItem`) |
+| 22a | Two stage settling: amounts frozen when the last member agrees; settled when all paid | Stage 1 built; stage 2 in step 6 | `agree` in `src/server/services/periods.ts`, `ledgers.frozen_lines` |
+| 23 | The next period opens on time whether or not anyone agreed | Built | `ensurePeriods` in `src/server/services/periodClock.ts` |
 
 ## Payments (build step 6)
 

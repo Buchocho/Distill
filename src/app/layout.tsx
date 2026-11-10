@@ -1,10 +1,11 @@
 /**
  * The frame around every screen: page title, phone sizing, the Open Sans font and the dark
- * background. Content is kept to 480 px wide so the phone first design still looks right on a laptop.
+ * background. Also sends the device's date to the server (DeviceDate, SPEC.md rule 2c). Content is kept to 480 px wide so the phone first design still looks right on a laptop.
  */
 
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { DeviceDate } from "@/components/DeviceDate";
 
 export const metadata: Metadata = {
   title: "Distill",
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body className="bg-ink text-ink antialiased">
+        <DeviceDate />
         <div className="mx-auto min-h-dvh max-w-[480px]">{children}</div>
       </body>
     </html>
