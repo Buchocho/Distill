@@ -223,3 +223,10 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Agreed after discussion ("Yes to both"): a rule change applies now, the open period ending on the new rule's first close date from today (today counts, never in the past), with no separate one-off date picker; periods are named automatically from their dates, not typed. Weakness I raised: any member can move the close date, again and again (no admin). Mitigation: the setting shows who changed it last and when.
 - Built: `endAfterRuleChange` in `src/domain/ledgers.ts`; `setCloseRule` moves the open period's end and records who and when (migration 0011); the Accounts close form shows "This period will now end on 11 Nov 2026" before saving and "Last changed by Izu on 10 Nov 2026". `periodLabel` in `src/domain/periods.ts`: "October" for a whole calendar month, otherwise "4–10 Nov" or "11 Oct – 10 Nov", year added when not this year. Used on Home (header and Balance line), the Balance header, Past periods, the period screen and its breakdown, and Payments. This also fixes monthly periods closing on a day other than the last, which were named by their end month only.
 - Verified: type check, lint, 104 unit tests (new: period names, new end after a rule change), end to end tests, build.
+
+## 2026-11-10: choose the Google account at sign in
+
+- Found by Maduabuchi: after signing out, Continue with Google let him straight back in with the same account; he needs to sign out and in with another account at once. He accepted the weakness on close date changes (any member can keep moving it).
+- Cause: signing out of Distill does not sign out of Google, and Google reuses the account it remembers.
+- Changed: sign in asks Google for its account chooser every time (`prompt=select_account`). Cost: one extra tap at each sign in, which is rare because sessions last. Distill does not sign anyone out of Google itself.
+- Verified: type check, lint, unit tests, end to end tests, build. The chooser itself can only be checked by hand.

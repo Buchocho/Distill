@@ -3,7 +3,7 @@
 /**
  * The "Continue with Google" button on Sign in. Runs in the browser.
  * Hands the user to Google through Supabase; Google returns them to /auth/callback, which then
- * opens the page in `next`.
+ * opens the page in `next`. Google always asks which account to use, so accounts can be switched.
  */
 
 import { useState } from "react";
@@ -18,7 +18,13 @@ export function SignInButton({ next }: { next: string }) {
     setBusy(true);
     setError(null);
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const { error: e } = await supabaseBrowser().auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+    // prompt=select_account makes Google show its account chooser every time, so after signing
+    // out a person can sign in with another Google account instead of being let straight back in
+    // (decided 10 Nov 2026, SPEC.md rule 1a).
+    const { error: e } = await supabaseBrowser().auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo, queryParams: { prompt: "select_account" } },
+    });
     if (e) {
       setError("Sign in did not start. Try again.");
       setBusy(false);
