@@ -24,6 +24,9 @@ export function Breakdown({ items, members, personId, viewerId, currency, monthL
 }) {
   const first = (id: string) => members.find((m) => m.id === id)?.name.split(" ")[0] ?? "Someone";
   const b = computeBreakdown(items, personId, viewerId, members.map((m) => m.id), first);
+  // The switch starts with the reader ("You"), then the others in the order they joined, so each
+  // person sees their own statement first (asked by Maduabuchi, 10 Nov 2026).
+  const switchOrder = [...members].sort((a, b) => Number(b.id === viewerId) - Number(a.id === viewerId));
   const mine = personId === viewerId;
   const money = (c: number) => formatMoney(c, currency);
 
@@ -33,7 +36,7 @@ export function Breakdown({ items, members, personId, viewerId, currency, monthL
       <h2 id="breakdown" className="mx-1 text-xs font-bold tracking-[1.4px] text-grey-600">{monthLabel.toUpperCase()}, CATEGORY BY CATEGORY</h2>
       {members.length > 1 && (
         <div role="group" aria-label="Show the statement for" className="flex flex-wrap gap-2">
-          {members.map((m) => (
+          {switchOrder.map((m) => (
             <Link key={m.id} href={`${basePath}?person=${m.id}`} aria-current={m.id === personId ? "true" : undefined} scroll={false}
               className={`inline-flex min-h-10 items-center rounded-full px-4 text-sm font-bold no-underline ${m.id === personId ? "bg-ink text-white" : "border-[1.5px] border-ink text-ink"}`}>
               {m.id === viewerId ? "You" : first(m.id)}

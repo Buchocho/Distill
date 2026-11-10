@@ -247,3 +247,8 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Prompt: "on the invites page under members, I want to see the emails for the people signing in ... in lighter fonts".
 - Changed: Invite people lists each member's Google email under their name, in grey (rule 2a; the Privacy page now says members see each other's name and email). Start shows "Signed in with Google as ..." with Sign out and a hint that they may be using a different account. Sign out moved to `src/components/SignOutButton.tsx` with a dark version for Start.
 - Verified: type check, lint, unit tests, end to end tests, build.
+
+## 2026-11-10: breakdown switch starts with "You"
+
+- Found by Maduabuchi on Izu's account: the breakdown's person switch read "Butch, You". It now starts with the reader ("You"), then the others in the order they joined. The statement shown first was already the reader's.
+- Verified: type check, lint, unit tests, build.
