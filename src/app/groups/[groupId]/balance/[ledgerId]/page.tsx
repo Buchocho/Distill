@@ -53,7 +53,7 @@ export default async function ClosePeriod({ params }: { params: Promise<{ groupI
         <section className="flex flex-col gap-2">
           <h2 className="mx-1 text-xs font-bold tracking-[1.4px] text-grey-600">LEFT TO SORT</h2>
           {p.noRule.map((c) => (
-            <Link key={c.id} href={`/groups/${groupId}/categories/${c.id}`} className="flex min-h-14 items-center gap-3 rounded-2xl bg-ink px-4 text-paper no-underline">
+            <Link key={c.id} href={`/groups/${groupId}/categories/${c.id}?from=${encodeURIComponent(`/groups/${groupId}/balance/${p.ledger.id}`)}`} className="flex min-h-14 items-center gap-3 rounded-2xl bg-ink px-4 text-paper no-underline">
               <span className="flex-1 font-extrabold">{c.name} needs a rule</span>
               <span className="text-orange"><Icon name="arrow" size={20} strokeWidth={2.5} /></span>
             </Link>

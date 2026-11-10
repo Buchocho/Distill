@@ -9,7 +9,8 @@
  * - One person: always the same member, whoever paid;
  * - Custom: tick who shares and type each percentage; they must add up to 100%. "Split evenly"
  *   fills equal shares (approved design, RuleEditor2).
- * Saving applies the rule to every item in the category in the open period (rule 13a) and logs it.
+ * Saving applies the rule to every item in the category in the open period (rule 13a), logs it,
+ * and returns to the screen the rule was opened from.
  */
 
 import { useRouter } from "next/navigation";
@@ -28,8 +29,8 @@ function choiceFor(rule: Rule | null): Choice | null {
   return rule.kind;
 }
 
-export function RuleForm({ groupId, categoryId, categoryName, rule, members, me }: {
-  groupId: string;
+export function RuleForm({ returnTo, categoryId, categoryName, rule, members, me }: {
+  returnTo: string;
   categoryId: string;
   categoryName: string;
   rule: Rule | null;
@@ -79,7 +80,7 @@ export function RuleForm({ groupId, categoryId, categoryName, rule, members, me 
       setSaving(false);
       return setError(b.error ?? "Could not save. Try again.");
     }
-    router.push(`/groups/${groupId}/categories`);
+    router.push(returnTo);
     router.refresh();
   }
 

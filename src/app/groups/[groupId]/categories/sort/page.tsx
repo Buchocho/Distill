@@ -39,7 +39,7 @@ export default async function Sort({ params }: { params: Promise<{ groupId: stri
           <ul className="flex flex-col gap-2">
             {noRule.map((c) => (
               <li key={c.id}>
-                <Link href={`/groups/${groupId}/categories/${c.id}`} className="flex min-h-16 items-center gap-3 rounded-2xl bg-ink px-4 text-paper no-underline">
+                <Link href={`/groups/${groupId}/categories/${c.id}?from=${encodeURIComponent(`/groups/${groupId}/categories/sort`)}`} className="flex min-h-16 items-center gap-3 rounded-2xl bg-ink px-4 text-paper no-underline">
                   <span className="flex flex-1 flex-col gap-0.5">
                     <span className="font-extrabold">{c.name} needs a rule</span>
                     <span className="text-[13px] text-sand">{c.itemCount} item{c.itemCount === 1 ? "" : "s"} waiting</span>

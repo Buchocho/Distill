@@ -169,3 +169,10 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Changed: the item dropdown used on the Needs sorting screen, saved receipts and the closed period screen has "New category...", which creates the category (or reuses one with the same name) and moves the item into it; the new category starts with no rule, so it then shows as needing one. Add category moved above the category list, under the needs sorting flag.
 - Verified: type check, lint, unit tests, end to end tests, build.
 
+## 2026-11-10: rule screen returned to the wrong place
+
+- Found by Maduabuchi: from Balance, a closed period, "Flour needs a rule", setting Whoever paid and saving went back to Categories instead of the closed period.
+- Cause: the rule screen's Save and Back always led to Categories.
+- Changed: links to a rule from the closed period screen and from Needs sorting add `?from=` with the page to return to; the rule screen's Back and Save go there (only paths inside the same group are accepted), otherwise to Categories.
+- Verified: type check, lint, unit tests, end to end tests, build.
+
