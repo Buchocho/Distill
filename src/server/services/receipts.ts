@@ -181,6 +181,7 @@ export async function readReceipt(userId: string, receiptId: string, localToday:
           totalCents: reading.totalCents,
           totalUnclear: reading.totalUnclear,
           dateUnclear: reading.dateUnclear,
+          taxIncludedCents: reading.taxIncludedCents,
         })
         .where(eq(receipts.id, receiptId));
     });

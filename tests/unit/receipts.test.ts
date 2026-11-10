@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import continente from "../fixtures/reading-continente.json";
 import usReceipt from "../fixtures/reading-us-tax-discount.json";
 import { parseAmount } from "@/domain/money";
-import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, shownStatus, storeKey, suggestPrice, sumCheck, validateReview } from "@/domain/receipts";
+import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, reconcileTax, shownStatus, storeKey, suggestPrice, sumCheck, validateReview } from "@/domain/receipts";
 
 describe("parseAmount", () => {
   it("reads both decimal styles", () => {
@@ -183,7 +183,7 @@ describe("unclear readings (rule 8a)", () => {
     expect(r.totalUnclear).toBe(false);
   });
 
-  it("suggests the one missing price from the total (the Coldstone receipt)", () => {
+  it("suggests the one missing price from the total, tax added on top", () => {
     expect(suggestPrice([null, 90000, 111111], ["missing", null, "unclear"], 1000000)).toEqual({ index: 0, cents: 798889 });
   });
 
@@ -197,5 +197,35 @@ describe("unclear readings (rule 8a)", () => {
     expect(suggestPrice([null, null, 111111], ["missing", "missing", null], 1000000)).toBeNull();
     expect(suggestPrice([null, 90000], ["missing", null], null)).toBeNull();
     expect(suggestPrice([null, 90000], ["missing", null], 50000)).toBeNull();
+  });
+});
+
+describe("tax inside the prices (rule 6a)", () => {
+  const item = (name: string, priceCents: number, category: string | null = null, flag: "unclear" | "missing" | null = null) =>
+    ({ name, priceCents, discountCents: null, category, flag });
+
+  it("drops the tax line when the items alone make the total (the Coldstone receipt, read right)", () => {
+    const r = reconcileTax([item("FOUNDERS FAVOU", 910000), item("PLAIN WAFFLE", 90000), item("Tax", 111111, "Tax")], 1000000, 888889, 111111, false);
+    expect(r.items.map((i) => i.name)).toEqual(["FOUNDERS FAVOU", "PLAIN WAFFLE"]);
+    expect(r.taxIncludedCents).toBe(111111);
+  });
+
+  it("keeps the tax line when it is added on top", () => {
+    const r = reconcileTax([item("Bananas", 1000), item("Sales tax", 80, "Tax")], 1080, 1000, 80, false);
+    expect(r.items).toHaveLength(2);
+    expect(r.taxIncludedCents).toBeNull();
+  });
+
+  it("follows the reading's own answer when a price is missing, so the suggestion is right", () => {
+    const r = reconcileTax([item("FOUNDERS FAVOU", 0, null, "missing"), item("PLAIN WAFFLE", 90000), item("Tax", 111111, "Tax")], 1000000, 888889, 111111, true);
+    expect(r.items.map((i) => i.name)).toEqual(["FOUNDERS FAVOU", "PLAIN WAFFLE"]);
+    // With the tax out, the one missing price is the total minus the waffle: 9,100.00.
+    expect(suggestPrice([null, 90000], ["missing", null], 1000000)).toEqual({ index: 0, cents: 910000 });
+  });
+
+  it("reads the tax from the tax total when the reading did not list it as an item", () => {
+    const r = reconcileTax([item("FOUNDERS FAVOU", 910000), item("PLAIN WAFFLE", 90000)], 1000000, 888889, 111111, true);
+    expect(r.taxIncludedCents).toBe(111111);
+    expect(r.items).toHaveLength(2);
   });
 });

@@ -194,6 +194,9 @@ export const receipts = pgTable(
     savedAt: timestamp("saved_at", { withTimezone: true }),
     // The reading was unsure of the printed total or the date (SPEC.md rule 8a); shown as "check".
     totalUnclear: boolean("total_unclear").notNull().default(false),
+    // Tax already inside the item prices, printed on the receipt for information (SPEC.md rule 6a).
+    // Never an item and never added again; null when tax is added on top or there is none.
+    taxIncludedCents: integer("tax_included_cents"),
     dateUnclear: boolean("date_unclear").notNull().default(false),
     // When the current reading started. A reading still going long after this was cut off by the
     // server time limit, so the receipt is shown as failed with Retry (SPEC.md rule 10).

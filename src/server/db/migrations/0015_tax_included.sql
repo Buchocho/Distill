@@ -1,0 +1,1 @@
+ALTER TABLE "receipts" ADD COLUMN "tax_included_cents" integer;

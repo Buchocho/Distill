@@ -14,6 +14,7 @@
  *   a warning for the same store, date and total (rule 9c);
  * - see each item's discount, for information only: the price shown is already what was paid (rule 6);
  * - see the sum check: whether the items add up to the printed total, and the difference (rule 8);
+ * - see, when tax was already inside the item prices, that it is not added again (rule 6a);
  * - see which values the reading was unsure of, fill in prices it could not read, and use a
  *   suggested price worked out from the total when only one price is in doubt (rule 8a, approved
  *   design Review receipt v4, 10 Nov 2026);
@@ -111,6 +112,7 @@ export function ReviewForm(props: {
   totalCents: number | null;
   totalUnclear: boolean;
   dateUnclear: boolean;
+  taxIncludedCents: number | null;
   items: Item[];
   categories: Category[];
   photoCount: number;
@@ -340,6 +342,11 @@ export function ReviewForm(props: {
           );
         })}
       </ul>
+      {props.taxIncludedCents !== null && (
+        <p className="mx-1 text-[13px] text-sand">
+          Tax of {formatMoney(props.taxIncludedCents, props.currency)} is already in these prices, so it is not added again.
+        </p>
+      )}
       <p className="mx-1 text-[13px] text-sand">Tap a name or price to correct it.</p>
 
       <div className="mt-auto flex flex-col gap-2.5 pb-3 pt-1">

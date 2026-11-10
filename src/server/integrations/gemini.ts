@@ -11,7 +11,7 @@
  * (architecture rule 7). Tests never call this; they use the sample answers in tests/fixtures.
  *
  * Business rules: SPEC.md rules 6 (what is read; an item's discount is attached to it and its
- * price is what was paid; tax lines are items), 8a (never make up a number: unsure values are
+ * price is what was paid; tax lines are items only when tax is added on top, rule 6a), 8a (never make up a number: unsure values are
  * flagged and unreadable prices left empty, added 10 Nov 2026) and 7 (category at product type level, from the
  * group's list or a proposed new one).
  */
@@ -28,6 +28,9 @@ const RESPONSE_SCHEMA = {
     date_unclear: { type: "BOOLEAN", description: "True if any part of the date was faded, cut off or guessed" },
     total: { type: "STRING", nullable: true, description: "Final total paid, digits with a point, e.g. 12.90" },
     total_unclear: { type: "BOOLEAN", description: "True if any digit of the total was faded, cut off or guessed" },
+    subtotal: { type: "STRING", nullable: true, description: "Amount before tax if printed (Bill Amount, Subtotal, Net), digits with a point" },
+    tax_total: { type: "STRING", nullable: true, description: "Total tax printed on the receipt, digits with a point, or null" },
+    tax_included: { type: "BOOLEAN", description: "True if the item prices already include the tax, so the items alone add up to the final total" },
     items: {
       type: "ARRAY",
       items: {
@@ -77,7 +80,15 @@ function instructions(categoryNames: readonly string[], today: string): string {
     "Check which way the receipt works: the item prices must add up to the final total.",
     "A discount on the whole receipt that belongs to no item (a voucher, a coupon on the total)",
     "is its own item with a negative price.",
-    "Tax printed on its own line (for example sales tax or GST) is its own item with the category Tax.",
+    "Tax: first work out how this receipt charges it.",
+    "- Tax added on top (the items add up to the subtotal and the tax is added to reach the total):",
+    "  list the tax as its own item with the category Tax, and set tax_included to false.",
+    "- Tax already inside the item prices (the items alone add up to the final total, and the tax",
+    "  lines only show how much of it was tax, as in many Nigerian and European receipts):",
+    "  do NOT list the tax as an item, set tax_included to true and give the tax in tax_total.",
+    "Always give subtotal (the amount before tax, if printed) and tax_total, so the app can check the sums.",
+    "Amounts can use a comma or a point to group thousands (9,100.00 or 9.100,00 is nine thousand",
+    "one hundred). Read the whole number; never drop the thousands.",
     "Do not list subtotals, payment lines, change or loyalty points as items.",
     "",
     "Give each item a category at the level of the product type: what the thing is, not where the",

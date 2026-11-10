@@ -68,7 +68,7 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
         {mine && receipt.status === "ready" && (
           <ReviewForm receiptId={receipt.id} groupId={groupId} currency={currency} storeName={receipt.storeName}
             purchaseDate={receipt.purchaseDate} totalCents={receipt.totalCents}
-            totalUnclear={receipt.totalUnclear} dateUnclear={receipt.dateUnclear}
+            totalUnclear={receipt.totalUnclear} dateUnclear={receipt.dateUnclear} taxIncludedCents={receipt.taxIncludedCents}
             items={data.items} categories={data.categories} photoCount={data.photoCount}
             receiptNumber={receipt.receiptNumber} saved={data.saved} />
         )}

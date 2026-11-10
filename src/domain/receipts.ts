@@ -54,6 +54,8 @@ export interface Reading {
   /** The reading was unsure of the printed total or the date (rule 8a). */
   totalUnclear: boolean;
   dateUnclear: boolean;
+  /** Tax already inside the item prices, shown for information and never added again (rule 6a); null otherwise. */
+  taxIncludedCents: number | null;
 }
 
 /** Text from the reading, trimmed and cut to a length, or null when empty or not text. */
@@ -112,10 +114,51 @@ export function parseReading(raw: unknown): Reading {
     receiptNumber: cleanText(r.receipt_number, 60),
     purchaseDate: date && isIsoDate(date) ? date : null,
     totalCents: cleanAmount(r.total),
-    items,
     totalUnclear: r.total_unclear === true,
     dateUnclear: r.date_unclear === true,
+    // Tax already in the prices is not an item (rule 6a).
+    ...reconcileTax(items, cleanAmount(r.total), cleanAmount(r.subtotal), cleanAmount(r.tax_total), r.tax_included === true),
   };
+}
+
+/** True for a line that is tax, by its category or its name. */
+export function isTaxLine(item: { name: string; category: string | null }): boolean {
+  const t = (s: string | null) => (s ?? "").trim().toLowerCase();
+  return t(item.category) === "tax" || /^(tax|vat|iva|gst|sales tax|cons(umption)? ?tax)\b/.test(t(item.name));
+}
+
+/**
+ * Works out whether the receipt's tax is added on top or already inside the item prices
+ * (SPEC.md rule 6a, found by a beta tester on 10 Nov 2026: a Nigerian receipt printed
+ * "Bill Amount 8,888.89, Tax 1,111.11, Payable 10,000.00" while the item prices already came to
+ * 10,000.00). Counting the tax as an item then charges it twice. The receipt's own sums decide:
+ * - the items without the tax lines already make the total: tax is inside the prices;
+ * - the items plus the tax lines make the total: tax is added on top, keep the tax lines;
+ * - otherwise (a price unreadable or misread), follow the subtotal: if subtotal plus tax makes the
+ *   total and the items without tax make the subtotal, tax is on top; if not, the reading's own
+ *   answer (tax_included) decides.
+ * When the tax is inside the prices, the tax lines are removed and the amount kept for
+ * information. Returns the items to keep and that amount.
+ */
+export function reconcileTax(
+  items: ReadItem[],
+  totalCents: number | null,
+  subtotalCents: number | null,
+  taxTotalCents: number | null,
+  readSaysIncluded: boolean,
+): { items: ReadItem[]; taxIncludedCents: number | null } {
+  const taxLines = items.filter(isTaxLine);
+  const others = items.filter((i) => !isTaxLine(i));
+  const sum = (list: ReadItem[]) => list.reduce((n, i) => n + i.priceCents, 0);
+  const taxCents = taxLines.length > 0 ? sum(taxLines) : taxTotalCents;
+  const allClear = others.every((i) => i.flag === null);
+  let included: boolean;
+  if (totalCents !== null && allClear && sum(others) === totalCents) included = true;
+  else if (totalCents !== null && allClear && taxLines.length > 0 && sum(others) + sum(taxLines) === totalCents) included = false;
+  else if (allClear && subtotalCents !== null && sum(others) === subtotalCents) included = false;
+  else included = readSaysIncluded;
+  if (!included || !taxCents) return { items, taxIncludedCents: null };
+  return { items: others.length > 0 ? others : items, taxIncludedCents: taxCents };
 }
 
 /**
