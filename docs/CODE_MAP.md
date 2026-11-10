@@ -123,8 +123,8 @@ Screen numbers match SPEC.md section 5.
 | `/start` | `start/page.tsx` | 0a, Start: create a group or use an invite link; signed in account and Sign out | Built |
 | `/groups` | `groups/page.tsx` | 0d, Your groups: choose or switch group, Create a group, Sign out | Built |
 | `/join/<code>` | `join/[token]/page.tsx` | 0b, Join a group | Built |
-| `/groups/new` | `groups/new/page.tsx`, `groups/new/NewGroupForm.tsx` | 1, New group | Built |
-| `/groups/<id>` | `groups/[groupId]/page.tsx` | 0c, Home | Built. All three status lines are live; Balance shows what is waiting before the close date |
+| `/groups/new` | `groups/new/page.tsx`, `groups/new/NewGroupForm.tsx` | 1, New group; Back to Your groups, or Start when in no group | Built |
+| `/groups/<id>` | `groups/[groupId]/page.tsx` | 0c, Home | Built. Large group name with its arrow opens Your groups, period under it. All three status lines are live; Balance shows what is waiting before the close date |
 | `/groups/<id>/invite` | `groups/[groupId]/invite/page.tsx`, `invite/CopyLink.tsx`, `invite/DisplayNameForm.tsx`, `invite/CloseRuleForm.tsx`, `invite/MemberActions.tsx` | Group (was Invite people): invite link, members, "Your name in Distill", "Accounts close" (applies now, shows the new end and who changed it last), Sign out. Members show their Google email; Remove and Leave with a confirmation panel; people who left listed in grey | Built |
 | `/groups/<id>/receipts` | `groups/[groupId]/receipts/page.tsx`, `receipts/ScanPanel.tsx` | 2, Receipts: take a photo or choose a file, paid by, recent receipts with status | Built (one photo per receipt; more in step 4) |
 | `/groups/<id>/receipts/<receiptId>` | `receipts/[receiptId]/page.tsx`, `ReadingStep.tsx`, `ReviewForm.tsx`, `DeleteReceipt.tsx` | 3, Review receipt: reading, Retry, review and save (layout from mockup v3), delete before saving, saved view | Built. On a saved receipt any member can change an item's category; changes shown under the item |

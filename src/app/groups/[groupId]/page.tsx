@@ -1,6 +1,7 @@
 /**
  * Screen 0c, Home. Route: /groups/<id>. The landing page of a group, outside the tabs.
- * The group name at the top opens Your groups, to switch group or create another (rule 3b).
+ * The group name at the top, large, with its arrow, opens Your groups, to switch group or create
+ * another (rule 3b); the period is on the line under it (approved design Home header, 10 Nov 2026).
  * Three stacked sections, dark to light, each opening its tab: Receipts, Categories, Balance
  * (approved design, canvas "Distill screens" page v2). No amounts are shown on Home by design.
  * The status lines are live: Receipts says what is waiting (SPEC.md rule 9); Categories says how
@@ -53,16 +54,18 @@ export default async function Home({ params }: { params: Promise<{ groupId: stri
 
   return (
     <main className="flex min-h-dvh flex-col bg-ink text-paper">
-      <header className="flex items-center gap-3 px-5 pb-2 pt-5">
-        <div className="flex flex-1 flex-col gap-0.5">
+      <header className="flex items-start gap-3 px-5 pb-2 pt-5">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <DistillMark tone="dark" />
-          <Link href="/groups" aria-label={`${group.name}. Switch group`} className="-my-2 inline-flex min-h-11 items-center gap-1 self-start text-[13px] text-sand no-underline">
-            {group.name}{month ? ` · ${month}` : ""}
-            <Icon name="chevron" size={14} strokeWidth={2.5} />
+          <Link href="/groups" aria-label={`${group.name}. Switch group`}
+            className="line-clamp-2 min-h-11 text-xl font-extrabold leading-tight tracking-tight text-paper no-underline">
+            {group.name}
+            <span className="ml-1.5 inline-block align-[-2px]"><Icon name="chevron" size={18} strokeWidth={3} /></span>
           </Link>
+          {month && <span className="text-[13px] text-sand">Period {month}</span>}
         </div>
-        <Link href={`/groups/${groupId}/invite`} aria-label="Group members and invite link"
-          className="grid size-10 place-items-center rounded-full bg-paper text-[15px] font-extrabold text-ink no-underline">
+        <Link href={`/groups/${groupId}/invite`} aria-label="Group: members, invite link and settings"
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-paper text-[15px] font-extrabold text-ink no-underline">
           {first[0]}
         </Link>
       </header>

@@ -280,3 +280,9 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Built: answer format and instructions in `gemini.ts`; `parseReading` keeps named lines with unreadable prices as missing and reads the unsure flags; `suggestPrice`; migration 0014; `ReviewForm` marks, empty price, suggestion, notice, Save blocked while a price is empty; flags cleared on save.
 - Verified: type check, lint, unit tests (new: flags read, missing kept, the Coldstone suggestion, no suggestion with two doubtful prices or no total), end to end tests, build. Reading a real faded receipt can only be checked by hand.
 - Waiting for approval: the Home header (group name larger with the arrow, period under it).
+
+## 2026-11-10: Home header; Back from New group
+
+- Found by Maduabuchi on his phone: the switch-group arrow sat far from the group name, small and grey next to the B, so it read as broken; and Back from New group opened the first group's Home instead of Your groups.
+- Built, design Home header (arrow in the name's colour and weight, approved after he asked for it to match): the group name is large and bold with the arrow right after its last word, the whole name opens Your groups, the period ("Period 3–15 Nov") is on its own line underneath; B unchanged. Back on New group goes to Your groups when already in a group, otherwise to Start.
+- Verified: type check, lint, unit tests, end to end tests, build.
