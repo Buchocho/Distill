@@ -1,6 +1,7 @@
 /**
  * Invite screen. Route: /groups/<id>/invite. Story US1.
- * Shows the group's invite link with Share and Copy, and the member list. Opened right after a
+ * Shows the group's invite link with Share and Copy, and the member list with each member's
+ * Google email under their name, so the group can tell which account joined (SPEC.md rule 2a). Opened right after a
  * group is created (title "Group created") and from the initial on Home (title "Invite people").
  * Also where a person changes the name they are shown as (DisplayNameForm, SPEC.md rule 1) and
  * where the group changes when accounts close (CloseRuleForm, rule 18), and Sign out at the bottom
@@ -16,7 +17,7 @@ import { groupOr404 } from "@/server/pageData";
 import { CopyLink } from "./CopyLink";
 import { DisplayNameForm } from "./DisplayNameForm";
 import { CloseRuleForm } from "./CloseRuleForm";
-import { SignOutButton } from "./SignOutButton";
+import { SignOutButton } from "@/components/SignOutButton";
 import { longDate } from "@/domain/dates";
 
 export default async function Invite({ params, searchParams }: {
@@ -44,7 +45,10 @@ export default async function Invite({ params, searchParams }: {
             {members.map((m, i) => (
               <li key={m.id} className={`flex min-h-14 items-center gap-3 ${i ? "border-t border-grey-200" : ""}`}>
                 <span className="grid size-9 place-items-center rounded-full bg-ink text-sm font-bold text-paper">{m.name[0]}</span>
-                <span className="flex-1 font-semibold">{m.name}</span>
+                <span className="flex min-w-0 flex-1 flex-col py-2">
+                  <span className="font-semibold">{m.name}</span>
+                  <span className="truncate text-[13px] text-grey-600">{m.email}</span>
+                </span>
                 {m.id === user.id && <span className="text-[13px] text-grey-600">You</span>}
               </li>
             ))}

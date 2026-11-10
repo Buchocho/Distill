@@ -1,16 +1,17 @@
 "use client";
 
 /**
- * Sign out, at the bottom of the Invite people screen, which is where a person's own settings
- * live (their name in Distill). Runs in the browser. Ends the Supabase session on this device and
- * goes to Sign in (SPEC.md rule 1a, added 10 Nov 2026). Nothing in the group changes.
+ * "Signed in as ..." and Sign out (SPEC.md rule 1a, added 10 Nov 2026). Runs in the browser.
+ * Shown at the bottom of Invite people, where a person's own settings live, and on Start, so
+ * someone who signed in with the wrong Google account can see it and switch at once. Ends the
+ * Supabase session on this device and goes to Sign in. Nothing in any group changes.
  */
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
-export function SignOutButton({ email }: { email: string }) {
+export function SignOutButton({ email, tone = "light" }: { email: string; tone?: "light" | "dark" }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,12 +32,12 @@ export function SignOutButton({ email }: { email: string }) {
   // The return draws who is signed in, the button, and any error.
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <span className="text-[13px] text-grey-600">Signed in with Google as {email}</span>
+      <span className={`text-[13px] ${tone === "dark" ? "text-sand" : "text-grey-600"}`}>Signed in with Google as {email}</span>
       <button type="button" onClick={() => void signOut()} disabled={busy}
-        className="min-h-11 px-4 text-[15px] font-bold text-red underline underline-offset-2 disabled:opacity-50">
+        className={`min-h-11 px-4 text-[15px] font-bold underline underline-offset-2 disabled:opacity-50 ${tone === "dark" ? "text-paper" : "text-red"}`}>
         {busy ? "Signing out..." : "Sign out"}
       </button>
-      {error && <p role="alert" className="text-sm font-semibold text-red">{error}</p>}
+      {error && <p role="alert" className={`text-sm font-semibold ${tone === "dark" ? "text-orange" : "text-red"}`}>{error}</p>}
     </div>
   );
 }

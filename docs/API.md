@@ -11,7 +11,7 @@ Authentication: the browser session cookie, or `Authorization: Bearer <Supabase 
 | PATCH | /me | Change the name the user is shown as in every group. Body `{ "displayName": "Butch" }`, 1 to 30 characters. |
 | GET | /groups | The user's groups. |
 | POST | /groups | Create a group. Body: `{ "name": "Rua das Flores 12", "closeRule": "month_end" \| "month_day" \| "weekly", "closeDay": number \| null, "currency": "EUR", "localDate": "2026-11-06" }`. `currency` is optional (default `EUR`) and must be a two decimal code from `src/domain/currencies.ts`. `localDate` is optional: the caller's own date, which starts the first ledger; without it the UTC date is used, and a date more than one day from UTC is refused. Opens the first ledger. |
-| GET | /groups/{groupId} | Group, members and open ledger. Members only. |
+| GET | /groups/{groupId} | Group, members (`id`, `name`, `email`) and open ledger. Members only. |
 | GET | /invites/{token} | Group name, members, close rule and currency behind an invite link. |
 | POST | /invites/{token}/join | Join the group behind an invite link. Joining twice is harmless. |
 | GET | /groups/{groupId}/receipts | The group's receipts, newest first (30 at most): status, store, date, total, who paid, number of items with no category. Receipts still uploading are left out. Members only. |

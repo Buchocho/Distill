@@ -2,11 +2,14 @@
  * Screen 0a, Start. Route: /start. SPEC.md rule 3a.
  * Shown after sign in to someone who is in no group yet: create a group, or open the invite link
  * someone sent. There is no "enter a code" field; joining is only through the link.
+ * Shows which Google account is signed in, with Sign out, so someone who used the wrong account
+ * can switch straight away instead of creating a group by mistake (rule 1a, 10 Nov 2026).
  */
 
 import Link from "next/link";
 import { DistillMark } from "@/components/DistillMark";
 import { requireUser } from "@/server/session";
+import { SignOutButton } from "@/components/SignOutButton";
 
 export default async function Start() {
   const user = await requireUser("/start");
@@ -26,6 +29,8 @@ export default async function Start() {
           <p className="font-bold text-paper">Invited by someone?</p>
           <p className="mt-1">Open the invite link they sent you. It brings you straight into their group.</p>
         </div>
+        <p className="mt-2 text-center text-[13px] text-sand">Already in a group? You may be signed in with a different Google account.</p>
+        <SignOutButton email={user.email} tone="dark" />
       </div>
     </main>
   );

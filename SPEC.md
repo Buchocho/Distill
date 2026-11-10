@@ -40,6 +40,7 @@ Term: a period in the app is stored as a ledger in the database.
 1a. A member can sign out on the Invite people screen, which also holds their name in Distill (added 10 Nov 2026). Signing out ends the session on that device only; nothing in the group changes. Signing in always shows Google's account chooser, so a person can sign out and straight back in with another Google account.
 1b. Privacy and Terms pages are public (no sign in) and linked from Sign in (added 10 Nov 2026, build step 7). They are needed to take Google sign in out of testing mode. Contact: the project's FEUP address.
 2. The group creator is a member. Anyone with the invite link who signs in becomes a member.
+2a. Members see each other's name and Google email on Invite people, so they can tell which account joined (decided 10 Nov 2026). The Start screen shows which account is signed in, with Sign out.
 2b. The group chooses a currency when it is created (default euro). It is display only: amounts are shown in that currency and nothing is converted. Only currencies with two decimal places are offered, so money stays in whole cents. The currency cannot be changed after the group is created.
 2c. Dates follow the local date of the device doing the action (for example creating a group or scanning a receipt), not the server's date. No time zone is stored.
 3. Every member has the same rights. There is no admin.

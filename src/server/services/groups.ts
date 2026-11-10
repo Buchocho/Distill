@@ -107,7 +107,7 @@ export async function isMember(userId: string, groupId: string): Promise<boolean
  *
  * A non member gets "not found" rather than "not allowed", so the app does not reveal that
  * a group exists (architecture rule 4). Every screen inside a group starts by calling this.
- * Members are listed in the order they joined.
+ * Members are listed in the order they joined, with name and Google email.
  */
 export async function getGroupForMember(userId: string, groupId: string) {
   // Membership check first: nothing about the group is read until this passes.
@@ -117,7 +117,9 @@ export async function getGroupForMember(userId: string, groupId: string) {
 
   const [group] = await db.select().from(groups).where(eq(groups.id, groupId));
   const members = await db
-    .select({ id: users.id, name: users.displayName })
+    // The email is shown to other members on Invite people so they can tell which Google account
+    // joined (SPEC.md rule 2a, decided 10 Nov 2026).
+    .select({ id: users.id, name: users.displayName, email: users.email })
     .from(groupMembers)
     .innerJoin(users, eq(users.id, groupMembers.userId))
     .where(eq(groupMembers.groupId, groupId))

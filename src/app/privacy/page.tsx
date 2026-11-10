@@ -32,7 +32,7 @@ export default function Privacy() {
           <li>Receipt photos you take or choose, and what is read from them: store, date, receipt number, items and prices.</li>
           <li>Categories, sharing rules, balances, agreements and payments you record, with who did what and when.</li>
         </ul>
-        <p className="mt-2">Everything you add is seen by the other members of that group, and only by them.</p>
+        <p className="mt-2">Your name and email, and everything you add, are seen by the other members of that group, and only by them.</p>
       </section>
       <section>
         <h2>Why</h2>

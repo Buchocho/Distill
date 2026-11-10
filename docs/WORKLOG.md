@@ -240,3 +240,10 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Stuck readings: a reading that runs past the server's 60 second limit is cut off before it can mark the receipt failed, so it stayed "reading" and the screen waited forever. Now each reading records when it started (migration 0012); a receipt still "reading" 90 seconds later is shown as failed, with Retry, on the receipt and in the Receipts list. Receipts already stuck have no start time and show as failed at once. The reading screen reloads its state when the status changes.
 - Not legal advice: the privacy text was written for a student project and should be read by Maduabuchi; whether Google may use photos sent on the free Gemini quota depends on the Gemini API terms for the EEA, so the page points to those terms rather than promising either way.
 - Verified: type check, lint, unit tests, end to end tests (new: Privacy and Terms open signed out), build.
+
+## 2026-11-10: which account is signed in
+
+- Found by Maduabuchi while checking sign in for others: signing in with Izu's account landed on Start ("create a group"), although Izu is in the group. Opening the invite link with that account showed Butch and Izu already in the group, so the account picked was a different Google account from the one Izu joined with (each Google account is its own Distill user). Not a bug in the routing, but nothing on screen showed which account was in use, and Start had no way out.
+- Prompt: "on the invites page under members, I want to see the emails for the people signing in ... in lighter fonts".
+- Changed: Invite people lists each member's Google email under their name, in grey (rule 2a; the Privacy page now says members see each other's name and email). Start shows "Signed in with Google as ..." with Sign out and a hint that they may be using a different account. Sign out moved to `src/components/SignOutButton.tsx` with a dark version for Start.
+- Verified: type check, lint, unit tests, end to end tests, build.
