@@ -14,7 +14,8 @@
  *   a warning for the same store, date and total (rule 9c);
  * - see each item's discount, for information only: the price shown is already what was paid (rule 6);
  * - see the sum check: whether the items add up to the printed total, and the difference (rule 8);
- * - see, when tax was already inside the item prices, that it is not added again (rule 6a);
+ * - see, when tax was already inside the item prices, that it is not added again (rule 6a), and
+ *   that tax added on top will be spread over the items by price when saving (rule 6b);
  * - see which values the reading was unsure of, fill in prices it could not read, and use a
  *   suggested price worked out from the total when only one price is in doubt (rule 8a, approved
  *   design Review receipt v4, 10 Nov 2026);
@@ -28,7 +29,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { currencyAffix, formatCents, formatMoney, parseAmount } from "@/domain/money";
-import { findDuplicate, suggestPrice, sumCheck, type ReadingFlag } from "@/domain/receipts";
+import { findDuplicate, isTaxLine, suggestPrice, sumCheck, type ReadingFlag } from "@/domain/receipts";
 import { dateLooksWrong, deviceToday, longDate } from "@/domain/dates";
 import { DeleteReceipt } from "./DeleteReceipt";
 
@@ -159,6 +160,10 @@ export function ReviewForm(props: {
   const anyDoubt = dateDoubt || totalDoubt || rows.some((r) => r.flag !== null && !touched[r.key]);
   const missingCount = prices.filter((p) => p === null).length;
   const suggestion = suggestPrice(prices, rows.map((r) => r.flag), totalCents);
+  // A tax line here is tax added on top: on save it is spread over the items by price (rule 6b).
+  const rowCategory = (r: Row) =>
+    r.choice.startsWith("p:") ? r.choice.slice(2) : props.categories.find((c) => `c:${c.id}` === r.choice)?.name ?? null;
+  const hasTaxLine = rows.some((r) => isTaxLine({ name: r.name, category: rowCategory(r) }));
 
   /** Changes one line of the form. */
   function update(key: string, change: Partial<Row>) {
@@ -342,6 +347,11 @@ export function ReviewForm(props: {
           );
         })}
       </ul>
+      {hasTaxLine && (
+        <p className="mx-1 text-[13px] text-sand">
+          Tax added on top is spread over the items by price when you save, so each item&apos;s tax follows its rule.
+        </p>
+      )}
       {props.taxIncludedCents !== null && (
         <p className="mx-1 text-[13px] text-sand">
           Tax of {formatMoney(props.taxIncludedCents, props.currency)} is already in these prices, so it is not added again.

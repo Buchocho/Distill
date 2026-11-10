@@ -17,7 +17,7 @@
  * Pure functions. Tests: tests/unit/receipts.test.ts, with sample readings in tests/fixtures.
  */
 
-import { parseAmount } from "./money";
+import { parseAmount, splitCents } from "./money";
 
 /** Longest item name kept. Receipt lines are short; anything longer is cut, not refused. */
 export const ITEM_NAME_MAX = 80;
@@ -335,4 +335,27 @@ export function shownStatus<S extends string>(status: S, readingStartedAt: Date 
   if (status !== "reading") return status;
   if (!readingStartedAt || now.getTime() - readingStartedAt.getTime() > READING_GIVE_UP_MS) return "failed";
   return status;
+}
+
+/**
+ * Spreads tax added on top over the receipt's items in proportion to their prices (SPEC.md rule
+ * 6b, decided by Maduabuchi on 10 Nov 2026), so each item's tax follows that item's sharing rule,
+ * the same as when the shop puts the tax inside the prices. Tax lines are removed; each other item
+ * gets its share added to its price, using the same largest remainder split as everything else,
+ * so the receipt total does not change by a cent. Only items with a positive price carry tax (a
+ * voucher does not). With no tax line, or nothing to carry it, the items are returned unchanged.
+ */
+export function spreadTax<T extends { priceCents: number }>(
+  items: readonly T[],
+  isTax: (item: T) => boolean,
+): { items: (T & { taxShareCents: number })[]; taxCents: number } {
+  const tax = items.filter(isTax);
+  const rest = items.filter((i) => !isTax(i));
+  const taxCents = tax.reduce((n, i) => n + i.priceCents, 0);
+  const weights = rest.map((i) => Math.max(i.priceCents, 0));
+  if (tax.length === 0 || taxCents === 0 || weights.every((w) => w === 0)) {
+    return { items: items.map((i) => ({ ...i, taxShareCents: 0 })), taxCents: 0 };
+  }
+  const shares = splitCents(taxCents, weights);
+  return { items: rest.map((i, k) => ({ ...i, priceCents: i.priceCents + shares[k], taxShareCents: shares[k] })), taxCents };
 }

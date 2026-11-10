@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import continente from "../fixtures/reading-continente.json";
 import usReceipt from "../fixtures/reading-us-tax-discount.json";
 import { parseAmount } from "@/domain/money";
-import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, reconcileTax, shownStatus, storeKey, suggestPrice, sumCheck, validateReview } from "@/domain/receipts";
+import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, reconcileTax, shownStatus, spreadTax, storeKey, suggestPrice, sumCheck, validateReview } from "@/domain/receipts";
 
 describe("parseAmount", () => {
   it("reads both decimal styles", () => {
@@ -227,5 +227,23 @@ describe("tax inside the prices (rule 6a)", () => {
     const r = reconcileTax([item("FOUNDERS FAVOU", 910000), item("PLAIN WAFFLE", 90000)], 1000000, 888889, 111111, true);
     expect(r.taxIncludedCents).toBe(111111);
     expect(r.items).toHaveLength(2);
+  });
+});
+
+describe("spreadTax (rule 6b)", () => {
+  const isTax = (i: { name: string }) => i.name === "Sales tax";
+  it("spreads tax added on top over the items by price, keeping the total to the cent", () => {
+    const r = spreadTax([{ name: "Shampoo", priceCents: 2000 }, { name: "Food", priceCents: 2000 }, { name: "Sales tax", priceCents: 320 }], isTax);
+    expect(r.items.map((i) => [i.name, i.priceCents, i.taxShareCents])).toEqual([["Shampoo", 2160, 160], ["Food", 2160, 160]]);
+    expect(r.taxCents).toBe(320);
+  });
+  it("rounds by largest remainder and leaves a voucher without tax", () => {
+    const r = spreadTax([{ name: "A", priceCents: 100 }, { name: "B", priceCents: 200 }, { name: "Voucher", priceCents: -50 }, { name: "Sales tax", priceCents: 10 }], isTax);
+    expect(r.items.map((i) => i.taxShareCents)).toEqual([3, 7, 0]);
+    expect(r.items.reduce((n, i) => n + i.priceCents, 0)).toBe(260);
+  });
+  it("changes nothing without a tax line", () => {
+    const r = spreadTax([{ name: "A", priceCents: 100 }], isTax);
+    expect(r.items[0]).toEqual({ name: "A", priceCents: 100, taxShareCents: 0 });
   });
 });

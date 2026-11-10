@@ -307,3 +307,9 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Cause: a group stayed listed while any unsettled period overlapped the membership, including the open period, whether or not it involved the person.
 - Changed: a group someone left stays listed, and opens, only while a period not yet settled involves them (agreed: the frozen amounts name them; open or closed: they paid for an item, or an item was bought while they were a member). Otherwise it drops off and its pages say Not found, like any group they are not in. The invite link is hidden from people who left; the Group screen tells them they left and where to settle.
 - Verified: type check, lint, unit tests, end to end tests, build.
+
+## 2026-11-10: tax added on top spread over the items
+
+- Asked by Maduabuchi how included tax is split: with each item, by its rule. I pointed out that tax added on top was still one Tax item with one rule, so the same shopping split differently depending on how the shop printed the receipt (example: Izu paying tax on Butch's own shampoo). Options: keep, or spread on top tax over the items by price. My recommendation was to wait until after the demo; he chose: "Spread it across the items proportionally". This reverses his earlier choice of tax as its own item.
+- Built: `spreadTax` (largest remainder, by positive price, vouchers carry none, total unchanged to the cent); on save the tax lines are removed and each item's price includes its share (`items.tax_share_cents`, `receipts.tax_added_cents`, migration 0016); a Tax category is no longer created by saving. Review screen: a line saying tax will be spread on save; saved receipt: "Includes x tax" per item and a note with the total spread. Receipts saved before keep their Tax item. Rule 6b.
+- Verified: type check, lint, unit tests (new: even spread, largest remainder with a voucher, no tax), end to end tests, build.

@@ -197,6 +197,8 @@ export const receipts = pgTable(
     // Tax already inside the item prices, printed on the receipt for information (SPEC.md rule 6a).
     // Never an item and never added again; null when tax is added on top or there is none.
     taxIncludedCents: integer("tax_included_cents"),
+    // Tax that was added on top and spread over the items when saving (SPEC.md rule 6b); null if none.
+    taxAddedCents: integer("tax_added_cents"),
     dateUnclear: boolean("date_unclear").notNull().default(false),
     // When the current reading started. A reading still going long after this was cut off by the
     // server time limit, so the receipt is shown as failed with Retry (SPEC.md rule 10).
@@ -248,6 +250,9 @@ export const items = pgTable(
     // digits were hard to read, "missing" when they could not be read at all (price_cents is then
     // 0 and the review screen shows an empty price that must be filled before saving).
     readingFlag: text("reading_flag", { enum: ["unclear", "missing"] }),
+    // This item's share of tax added on top, already included in price_cents (SPEC.md rule 6b).
+    // Shown as "incl. tax"; 0 when the receipt had no tax on top.
+    taxShareCents: integer("tax_share_cents").notNull().default(0),
     // Null when set by the reading step.
     updatedBy: uuid("updated_by").references(() => users.id),
     // A leftover item removed by its payer in a closed period (SPEC.md rule 20). Kept, not erased,

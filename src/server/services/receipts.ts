@@ -24,7 +24,7 @@ import "server-only";
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/server/db/client";
 import { categories, categoryChanges, groups, items, ledgers, receiptPhotos, receipts, users } from "@/server/db/schema";
-import { categoryKey, findDuplicate, matchCategory, parseReading, type ReviewItem, shownStatus, validateReview } from "@/domain/receipts";
+import { categoryKey, findDuplicate, isTaxLine, matchCategory, parseReading, type ReviewItem, shownStatus, spreadTax, validateReview } from "@/domain/receipts";
 import { readReceiptPhotos } from "@/server/integrations/gemini";
 import { createUploadLink, deletePhotos, downloadPhoto, photoPath, viewLink } from "@/server/integrations/storage";
 import { assertCurrentMember, assertMember, getGroupForMember, UUID } from "./groups";
@@ -351,9 +351,19 @@ export async function saveReceipt(userId: string, receiptId: string, input: Save
       .returning({ id: receipts.id });
     if (locked.length === 0) throw new ServiceError("invalid", "This receipt was already saved.");
 
+    // Tax added on top is spread over the items by price, so it follows each item's rule (rule 6b).
+    const groupCats = await tx.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.groupId, receipt.groupId));
+    const catName = (item: (typeof input.items)[number]) =>
+      item.proposedCategory ?? groupCats.find((c) => c.id === item.categoryId)?.name ?? null;
+    const spread = spreadTax(input.items, (item) => isTaxLine({ name: item.name, category: catName(item) }));
+    if (spread.taxCents !== 0) {
+      await tx.update(receipts).set({ taxAddedCents: spread.taxCents }).where(eq(receipts.id, receiptId));
+    }
+
     // Proposed categories become real ones (rule 7). Same name ignoring capitals reuses the existing one.
+    // Only for items that stay: a tax line spread over the items does not make a Tax category.
     const idByKey = new Map<string, string>();
-    for (const name of new Set(input.items.map((i) => i.proposedCategory?.trim()).filter((n): n is string => Boolean(n)))) {
+    for (const name of new Set(spread.items.map((i) => i.proposedCategory?.trim()).filter((n): n is string => Boolean(n)))) {
       const key = categoryKey(name);
       if (idByKey.has(key)) continue;
       const [existing] = await tx
@@ -374,11 +384,12 @@ export async function saveReceipt(userId: string, receiptId: string, input: Save
 
     await tx.delete(items).where(eq(items.receiptId, receiptId));
     await tx.insert(items).values(
-      input.items.map((item, i) => ({
+      spread.items.map((item, i) => ({
         receiptId,
         position: i + 1,
         name: item.name.trim(),
         priceCents: item.priceCents,
+        taxShareCents: item.taxShareCents,
         discountCents: item.discountCents,
         categoryId: item.categoryId ?? (item.proposedCategory ? idByKey.get(categoryKey(item.proposedCategory)) ?? null : null),
         proposedCategory: null,

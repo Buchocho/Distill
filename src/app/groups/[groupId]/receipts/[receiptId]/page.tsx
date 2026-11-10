@@ -112,6 +112,9 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
                     {item.discountCents !== null && (
                       <span className="self-end text-[13px] font-semibold text-sand">Discount {formatMoney(item.discountCents, currency)} (already in the price)</span>
                     )}
+                    {item.taxShareCents > 0 && (
+                      <span className="self-end text-[13px] font-semibold text-sand">Includes {formatMoney(item.taxShareCents, currency)} tax</span>
+                    )}
                     {changes.length > 0 && (
                       <ul aria-label={`Changes to ${item.name}`} className="flex flex-col gap-0.5 text-[13px] italic text-sand">
                         {changes.map((c, i) => (
@@ -123,6 +126,12 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
                 );
               })}
             </ul>
+            {receipt.taxAddedCents !== null && (
+              <p className="mx-1 text-[13px] text-sand">Tax of {formatMoney(receipt.taxAddedCents, currency)} was added on top. It is spread over the items by price, so each item&apos;s tax follows its rule.</p>
+            )}
+            {receipt.taxIncludedCents !== null && (
+              <p className="mx-1 text-[13px] text-sand">Tax of {formatMoney(receipt.taxIncludedCents, currency)} is already in these prices.</p>
+            )}
           </>
         )}
       </div>
