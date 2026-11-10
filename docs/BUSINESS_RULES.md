@@ -46,7 +46,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 13 | Any member changes a saved item's category while the period is open; name and price are fixed after saving; items follow their category's rule | Built | `changeItemCategory` in `src/server/services/categories.ts`, `src/components/ItemCategoryPicker.tsx` |
 | 13a | A rule change applies to every item in the open period | Built: the balance is worked out from the current rules each time. Closed periods are kept separately in step 5 | `src/server/services/balance.ts` |
 | 14 | Every item change is logged and shown | Built (category changes, the only change allowed after saving) | `changeItemCategory`, `itemHistory`, `receipts/[receiptId]/page.tsx` |
-| 14a | Category creation and rule changes are logged and shown | Built | `saveReceipt`, `createCategory`, `setRule`, `categoryHistory`, `categories/history/page.tsx` |
+| 14a | Category creation and rule changes are logged and shown; categories can be created at review, with Add category, or from any item's dropdown | Built | `saveReceipt`, `createCategory`, `src/components/ItemCategoryPicker.tsx`, `setRule`, `categoryHistory`, `categories/history/page.tsx` |
 | 15 | Shares in cents, largest remainder rounding, always adds up to the price | Built and used by the balance | `src/domain/money.ts` (`splitCents`), `src/domain/balance.ts` |
 
 ## Balance (build step 3)

@@ -119,7 +119,7 @@ Screen numbers match SPEC.md section 5.
 | `/groups/<id>/invite` | `groups/[groupId]/invite/page.tsx`, `invite/CopyLink.tsx`, `invite/DisplayNameForm.tsx`, `invite/CloseRuleForm.tsx` | Invite link, members, "Your name in Distill", "Accounts close" | Built |
 | `/groups/<id>/receipts` | `groups/[groupId]/receipts/page.tsx`, `receipts/ScanPanel.tsx` | 2, Receipts: take a photo or choose a file, paid by, recent receipts with status | Built (one photo per receipt; more in step 4) |
 | `/groups/<id>/receipts/<receiptId>` | `receipts/[receiptId]/page.tsx`, `ReadingStep.tsx`, `ReviewForm.tsx`, `DeleteReceipt.tsx` | 3, Review receipt: reading, Retry, review and save (layout from mockup v3), delete before saving, saved view | Built. On a saved receipt any member can change an item's category; changes shown under the item |
-| `/groups/<id>/categories` | `groups/[groupId]/categories/page.tsx`, `categories/AddCategory.tsx` | 4, Categories: needs sorting flag, categories with rules, History, Add category | Built |
+| `/groups/<id>/categories` | `groups/[groupId]/categories/page.tsx`, `categories/AddCategory.tsx` | 4, Categories: needs sorting flag, Add category (above the list), categories with rules, History | Built |
 | `/groups/<id>/categories/<categoryId>` | `categories/[categoryId]/page.tsx`, `RuleForm.tsx` | 4b, Sharing rule: Everyone equal, Whoever paid, One person, Custom | Built |
 | `/groups/<id>/categories/history` | `categories/history/page.tsx` | 4c, Category history | Built |
 | `/groups/<id>/categories/sort` | `categories/sort/page.tsx` | Needs sorting: items without a category, categories without a rule | Built |
@@ -172,7 +172,7 @@ Full detail in [API.md](API.md). Each file is a thin wrapper that calls a servic
 |---|---|
 | `TabScreen.tsx` | Layout for the first screen of each tab. |
 | `SubScreen.tsx` | Layout for an inner screen: Back, title, tab colour. |
-| `ItemCategoryPicker.tsx` | Change a saved item's category, dark or light. |
+| `ItemCategoryPicker.tsx` | Change a saved item's category, dark or light, including "New category..." to create one on the spot. |
 | `RemoveItem.tsx` | Remove a leftover item from a closed period, with an in-app confirm. |
 | `DeviceDate.tsx` | Puts the device's date in a cookie on every page (rule 2c). |
 | `TabBar.tsx` | Bottom tab bar: Receipts, Categories, Balance. |

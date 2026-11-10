@@ -2,7 +2,8 @@
  * Screen 4, Categories tab. Route: /groups/<id>/categories. Story US3.
  * Every category with its sharing rule in words, categories without a rule first; one "needs
  * sorting" flag when at least one item is unsorted or in a category without a rule (SPEC.md rules
- * 12 and 17; one flag rather than one per item, decided 9 Nov 2026); History; Add category.
+ * 12 and 17; one flag rather than one per item, decided 9 Nov 2026); History; Add category, above
+ * the list so it is always in reach.
  * Orange, like the rest of the Categories journey (approved design, CategoriesOrange).
  */
 
@@ -22,7 +23,8 @@ export default async function Categories({ params }: { params: Promise<{ groupId
   await groupOr404(user.id, groupId);
   const { categories, needsSorting } = await listCategories(user.id, groupId);
 
-  // The return draws the needs sorting flag, the list of categories and Add category.
+  // The return draws the needs sorting flag, then Add category, then the categories. Add category
+  // sits above the list so it stays in reach however many categories there are (10 Nov 2026).
   return (
     <TabScreen groupId={groupId} tab="categories" label="CATEGORIES" title="Who shares what"
       action={
@@ -42,6 +44,8 @@ export default async function Categories({ params }: { params: Promise<{ groupId
         </Link>
       )}
 
+      <AddCategory groupId={groupId} />
+
       {categories.length === 0 ? (
         <div className="rounded-2xl bg-white p-5 text-center text-ink">
           <p className="font-bold">No categories yet</p>
@@ -59,7 +63,6 @@ export default async function Categories({ params }: { params: Promise<{ groupId
           ))}
         </ul>
       )}
-      <AddCategory groupId={groupId} />
     </TabScreen>
   );
 }

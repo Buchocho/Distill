@@ -68,7 +68,7 @@ export default async function ClosePeriod({ params }: { params: Promise<{ groupI
                   </div>
                   <span className="text-[13px] text-grey-600">{i.storeName ?? "Receipt"}</span>
                   <div className="flex flex-wrap items-start gap-2">
-                    <ItemCategoryPicker itemId={i.id} itemName={i.name} categoryId={null} categories={p.categories} tone="light" />
+                    <ItemCategoryPicker groupId={groupId} itemId={i.id} itemName={i.name} categoryId={null} categories={p.categories} tone="light" />
                     {i.payerId === user.id && <RemoveItem itemId={i.id} itemName={i.name} />}
                   </div>
                 </li>

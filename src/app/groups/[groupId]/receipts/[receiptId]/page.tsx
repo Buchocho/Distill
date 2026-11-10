@@ -100,7 +100,7 @@ export default async function ReviewReceipt({ params }: { params: Promise<{ grou
                     <span className={`text-base font-bold ${item.deletedAt ? "text-sand line-through" : ""}`}>{item.name}</span>
                     <div className="flex items-center gap-3">
                       {canChange ? (
-                        <ItemCategoryPicker itemId={item.id} itemName={item.name} categoryId={item.categoryId} categories={data.categories} tone="dark" />
+                        <ItemCategoryPicker groupId={groupId} itemId={item.id} itemName={item.name} categoryId={item.categoryId} categories={data.categories} tone="dark" />
                       ) : (
                         <span className="flex-1 text-[15px] text-sand">{item.deletedAt ? "Removed" : categoryName}</span>
                       )}

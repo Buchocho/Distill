@@ -63,7 +63,7 @@ export default async function Sort({ params }: { params: Promise<{ groupId: stri
                   <span className="font-extrabold tabular-nums">{formatMoney(i.priceCents, group.currency)}</span>
                 </div>
                 <span className="text-[13px] text-grey-600">{i.storeName ?? "Receipt"}</span>
-                <ItemCategoryPicker itemId={i.id} itemName={i.name} categoryId={null} categories={categories} tone="light" />
+                <ItemCategoryPicker groupId={groupId} itemId={i.id} itemName={i.name} categoryId={null} categories={categories} tone="light" />
               </li>
             ))}
           </ul>

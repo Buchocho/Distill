@@ -162,3 +162,10 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Verified: type check, lint, 83 unit tests (new: period stages, period for today, Agree check), end to end tests (signed out), build. Not verifiable here: a real period closing; to test by hand, the close date must pass (for example set "Every week" on today's weekday and wait a day, or a day of the month).
 - Left open: Home does not yet mention a closed period waiting for agreement.
 
+## 2026-11-10: two fixes found while testing step 5
+
+- Found by Maduabuchi: an item sorted after saving (Needs sorting screen) could only go into an existing category; new categories could only be made while scanning or from the Categories tab. And with more than about 10 categories, Add category was pushed off the bottom of the screen.
+- Prompts: "You should be able to create a category when you are trying to assign categories"; "move that button ... to just above the categories".
+- Changed: the item dropdown used on the Needs sorting screen, saved receipts and the closed period screen has "New category...", which creates the category (or reuses one with the same name) and moves the item into it; the new category starts with no rule, so it then shows as needing one. Add category moved above the category list, under the needs sorting flag.
+- Verified: type check, lint, unit tests, end to end tests, build.
+
