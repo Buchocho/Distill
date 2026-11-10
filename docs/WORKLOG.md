@@ -209,3 +209,17 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Found by Maduabuchi after testing payments with Izu (all step 6 tests passed): Past periods showed November as Settled and "You are owed 1,10 €" at the same time. "You can't be saying you are owed and settled at the same time."
 - Changed: `positionWords` and `debtWords` in `src/domain/periods.ts` give the past tense once a period is settled: "You were owed", "You owed", "Izu owed you". Used on the Past periods list and on the period screen (big figure and each line). Open, closed and agreed periods keep the present tense.
 - Verified: type check, lint, 100 unit tests (new: both tenses), end to end tests, build.
+
+## 2026-11-10: sign out
+
+- Found by Maduabuchi: there was no way to sign out. He suggested the Invite people screen. I agreed with one caveat: the screen is named for inviting, so sign out is not where someone would first look; it is still the right place, because it already holds the person's own settings (their name in Distill) and the avatar on Home opens it.
+- Prompt: "we didn't create a way to sign out. I believe we can easily house that in the Invite people page".
+- Built: `SignOutButton` at the bottom of Invite people, under Go to Home, with "Signed in with Google as ..." above it; ends the Supabase session in the browser and replaces the page with Sign in. SPEC rule 1a added. No API route: signing out ends the browser session; API callers with a token simply stop sending it.
+- Verified: type check, lint, unit tests, end to end tests, build.
+
+## 2026-11-10: close date applies now, periods named by their dates
+
+- Found by Maduabuchi: changing when accounts close only applied from the next period, so he could not close November out on 11 Nov. And with weekly closes several periods end in the same month, so naming every period by its end month ("November") cannot work.
+- Agreed after discussion ("Yes to both"): a rule change applies now, the open period ending on the new rule's first close date from today (today counts, never in the past), with no separate one-off date picker; periods are named automatically from their dates, not typed. Weakness I raised: any member can move the close date, again and again (no admin). Mitigation: the setting shows who changed it last and when.
+- Built: `endAfterRuleChange` in `src/domain/ledgers.ts`; `setCloseRule` moves the open period's end and records who and when (migration 0011); the Accounts close form shows "This period will now end on 11 Nov 2026" before saving and "Last changed by Izu on 10 Nov 2026". `periodLabel` in `src/domain/periods.ts`: "October" for a whole calendar month, otherwise "4–10 Nov" or "11 Oct – 10 Nov", year added when not this year. Used on Home (header and Balance line), the Balance header, Past periods, the period screen and its breakdown, and Payments. This also fixes monthly periods closing on a day other than the last, which were named by their end month only.
+- Verified: type check, lint, 104 unit tests (new: period names, new end after a rule change), end to end tests, build.

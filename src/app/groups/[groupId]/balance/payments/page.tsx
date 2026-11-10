@@ -16,12 +16,11 @@ import { listPayments } from "@/server/services/payments";
 import { ServiceError } from "@/server/services/errors";
 import { formatCents } from "@/domain/money";
 import { longDate } from "@/domain/dates";
+import { periodLabel } from "@/domain/periods";
 import { PaymentActions } from "./PaymentActions";
 
 export const dynamic = "force-dynamic";
 
-/** The month a period belongs to, by its last day, for example "October". */
-const monthName = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleString("en-US", { month: "long", timeZone: "UTC" });
 
 export default async function Payments({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
@@ -49,7 +48,7 @@ export default async function Payments({ params }: { params: Promise<{ groupId: 
         <span className={`text-lg font-extrabold tabular-nums ${p.status === "declined" || p.status === "cancelled" ? "text-grey-600 line-through" : ""}`}>{formatCents(p.amountCents, data.currency)}</span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="flex-1 text-[13px] text-grey-600">{longDate(p.paidOn)} · for {monthName(p.endsOn)}</span>
+        <span className="flex-1 text-[13px] text-grey-600">{longDate(p.paidOn)} · for {periodLabel(p.startsOn, p.endsOn, data.year)}</span>
         <span className={`inline-flex h-[26px] items-center rounded-full px-2.5 text-xs font-bold ${pill(p).cls}`}>{pill(p).text}</span>
       </div>
       {p.status === "waiting" && p.to === user.id && (

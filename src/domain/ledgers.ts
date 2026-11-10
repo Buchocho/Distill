@@ -107,8 +107,8 @@ export function firstLedger(setting: CloseSetting, todayIso: string): LedgerRang
 
 /**
  * The period that follows one ending on a given date: starts the next day (SPEC.md rule 19).
- * Used when a period closes. A change to the close rule only affects periods made after it
- * (SPEC.md rule 18), because the rule is read here when the next period is made.
+ * Used when a period closes. The rule is read here when the next period is made; a change to
+ * the rule also moves the open period's end at once (endAfterRuleChange, SPEC.md rule 18).
  */
 export function nextLedger(setting: CloseSetting, previousEndsOn: string): LedgerRange {
   const startsOn = format(addDays(parse(previousEndsOn), 1));
@@ -134,4 +134,13 @@ export function describeClose(setting: CloseSetting): string {
  */
 export function daysUntil(todayIso: string, endsOnIso: string): number {
   return Math.max(0, Math.round((parse(endsOnIso).getTime() - parse(todayIso).getTime()) / 86_400_000));
+}
+
+/**
+ * The open period's new end date after the close rule changes (SPEC.md rule 18, decided
+ * 10 Nov 2026): the change applies now, so the period ends on the first close date of the new
+ * rule from today (today counts). Never before the period started, never in the past.
+ */
+export function endAfterRuleChange(setting: CloseSetting, startsOn: string, todayIso: string): string {
+  return nextCloseDate(setting, todayIso > startsOn ? todayIso : startsOn);
 }

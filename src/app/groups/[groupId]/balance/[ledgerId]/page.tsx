@@ -31,7 +31,8 @@ import { periodPayments } from "@/server/services/payments";
 import { ServiceError } from "@/server/services/errors";
 import { formatCents, formatMoney } from "@/domain/money";
 import { longDate } from "@/domain/dates";
-import { debtWords, positionWords } from "@/domain/periods";
+import { debtWords, periodLabel, positionWords } from "@/domain/periods";
+import { requestToday } from "@/server/services/periodClock";
 import { AgreeButton } from "./AgreeButton";
 import { Breakdown } from "./Breakdown";
 import { RecordPayment } from "./RecordPayment";
@@ -39,8 +40,6 @@ import { PaymentActions } from "../payments/PaymentActions";
 
 export const dynamic = "force-dynamic";
 
-/** The month a period belongs to, by its last day, for example "October". */
-const monthName = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleString("en-US", { month: "long", timeZone: "UTC" });
 
 export default async function ClosePeriod({ params, searchParams }: {
   params: Promise<{ groupId: string; ledgerId: string }>;
@@ -54,6 +53,8 @@ export default async function ClosePeriod({ params, searchParams }: {
     throw e;
   });
   if (p.ledger.groupId !== groupId) notFound();
+  // The period's name from its dates ("October", "4–10 Nov"), decided 10 Nov 2026.
+  const name = periodLabel(p.ledger.startsOn, p.ledger.endsOn, Number((await requestToday()).slice(0, 4)));
   const paid = await periodPayments(user.id, ledgerId);
   /** Paid, waiting and left on one amount owed, once the period is agreed (rule 26). */
   const progress = (l: (typeof p.lines)[number]) => paid.debts.find((d) => d.from === l.from && d.to === l.to);
@@ -71,7 +72,7 @@ export default async function ClosePeriod({ params, searchParams }: {
 
   // The return draws the status banner, leftovers, the amounts, who agreed, and Agree.
   return (
-    <SubScreen groupId={groupId} tab="balance" backHref={`/groups/${groupId}/balance`} backLabel="Back to balance" title={monthName(p.ledger.endsOn)}>
+    <SubScreen groupId={groupId} tab="balance" backHref={`/groups/${groupId}/balance`} backLabel="Back to balance" title={name}>
       <p className={`rounded-2xl px-4 py-3 text-sm font-bold ${p.stage === "closed" ? "bg-orange-tint" : p.stage === "open" ? "bg-paper" : "bg-green-tint text-green"}`}>
         {p.stage === "open"
           ? `Open until ${longDate(p.ledger.endsOn)}. Amounts change as receipts come in.`
@@ -162,7 +163,7 @@ export default async function ClosePeriod({ params, searchParams }: {
       </section>
 
       <Breakdown items={p.items} members={p.members} personId={personId} viewerId={user.id} currency={p.currency}
-        monthLabel={monthName(p.ledger.endsOn)} basePath={`/groups/${groupId}/balance/${p.ledger.id}`} />
+        monthLabel={name} basePath={`/groups/${groupId}/balance/${p.ledger.id}`} />
 
       {p.stage !== "open" && (
       <section className="flex flex-col gap-2">

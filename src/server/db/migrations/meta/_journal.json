@@ -78,6 +78,13 @@
       "when": 1794326897708,
       "tag": "0010_payment_removed",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794328864655,
+      "tag": "0011_close_rule_changed",
+      "breakpoints": true
     }
   ]
 }

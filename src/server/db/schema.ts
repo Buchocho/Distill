@@ -55,6 +55,9 @@ export const groups = pgTable(
     name: text("name").notNull(),
     closeRule: text("close_rule", { enum: ["month_end", "month_day", "weekly"] }).notNull(),
     closeDay: smallint("close_day"),
+    // Who last changed when accounts close, and when, shown under the setting (SPEC.md rule 18).
+    closeRuleChangedBy: uuid("close_rule_changed_by").references(() => users.id),
+    closeRuleChangedAt: timestamp("close_rule_changed_at", { withTimezone: true }),
     currency: text("currency").notNull().default("EUR"),
     inviteToken: text("invite_token").notNull().unique(),
     createdBy: uuid("created_by").notNull().references(() => users.id),

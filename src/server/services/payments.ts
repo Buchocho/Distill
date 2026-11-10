@@ -18,7 +18,7 @@ import { db } from "@/server/db/client";
 import { ledgers, payments } from "@/server/db/schema";
 import { checkPayment, debtStatus, isSettled, yearTotals } from "@/domain/payments";
 import { isIsoDate } from "@/domain/receipts";
-import { periodStage } from "@/domain/periods";
+import { periodLabel, periodStage } from "@/domain/periods";
 import { daysUntil } from "@/domain/ledgers";
 import type { BalanceSituation } from "@/domain/home";
 import { listClosedPeriods } from "./periods";
@@ -67,6 +67,7 @@ export async function listPayments(userId: string, groupId: string) {
     ? await db.select().from(payments).where(inArray(payments.ledgerId, ledgerIds)).orderBy(desc(payments.paidOn), desc(payments.createdAt))
     : [];
   const endsOn = (id: string) => groupLedgers.find((l) => l.id === id)?.endsOn ?? "";
+  const startsOn = (id: string) => groupLedgers.find((l) => l.id === id)?.startsOn ?? "";
 
   const year = Number((await requestToday()).slice(0, 4));
   return {
@@ -75,6 +76,7 @@ export async function listPayments(userId: string, groupId: string) {
     payments: all.map((p) => ({
       id: p.id,
       ledgerId: p.ledgerId,
+      startsOn: startsOn(p.ledgerId),
       endsOn: endsOn(p.ledgerId),
       from: p.fromUser,
       to: p.toUser,
@@ -230,26 +232,24 @@ export async function balanceSituation(userId: string, groupId: string): Promise
   const closed = await listClosedPeriods(userId, groupId);
   const notAgreed = closed.filter((c) => c.stage === "closed" && !c.iAgreed).sort((a, b) => a.endsOn.localeCompare(b.endsOn))[0];
 
-  let toPay: BalanceSituation["toPay"] = null;
+  let toPay: { to: string; month: typeof groupLedgers[number] } | null = null;
   for (const l of byOldest.filter((x) => periodStage(x) === "agreed")) {
     const debts = debtStatus(l.frozenLines ?? [], all.filter((p) => p.ledgerId === l.id && !p.removedAt).map(fact));
     const mine = debts.find((d) => d.from === userId && d.capCents > 0);
     if (mine) {
-      toPay = { to: first(mine.to), month: monthName(l.endsOn) };
+      toPay = { to: first(mine.to), month: l };
       break;
     }
   }
   const today = await requestToday();
+  // Periods are named from their dates ("October", "4–10 Nov"), decided 10 Nov 2026.
+  const thisYear = Number(today.slice(0, 4));
+  const nameOf = (l: { startsOn: string; endsOn: string } | undefined) => (l ? periodLabel(l.startsOn, l.endsOn, thisYear) : "a past period");
   return {
     confirmFrom,
-    declined: declinedRow ? { by: first(declinedRow.toUser), month: monthName(ledgerOf(declinedRow.ledgerId)?.endsOn ?? today) } : null,
-    toAgree: notAgreed ? monthName(notAgreed.endsOn) : null,
-    toPay,
-    closes: openLedger ? { month: monthName(openLedger.endsOn), daysLeft: daysUntil(today, openLedger.endsOn) } : null,
+    declined: declinedRow ? { by: first(declinedRow.toUser), month: nameOf(ledgerOf(declinedRow.ledgerId)) } : null,
+    toAgree: notAgreed ? nameOf(notAgreed) : null,
+    toPay: toPay ? { to: toPay.to, month: nameOf(toPay.month) } : null,
+    closes: openLedger ? { month: nameOf(openLedger), daysLeft: daysUntil(today, openLedger.endsOn) } : null,
   };
-}
-
-/** The month a period belongs to, by its last day, for example "October". */
-function monthName(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
 }

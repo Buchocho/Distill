@@ -26,6 +26,8 @@ One row per signed-in person, created on first Google sign in. The id is the Sup
 | name | text | not null |
 | close_rule | text | not null, one of `month_end`, `month_day`, `weekly` |
 | close_day | smallint | null for `month_end`; 1 to 28 for `month_day`; 0 to 6 (Monday = 0) for `weekly` |
+| close_rule_changed_by | uuid | FK users.id; who last changed when accounts close, shown under the setting (migration 0011) |
+| close_rule_changed_at | timestamptz | when that was |
 | currency | text | not null, default `EUR`; three capital letters (check `groups_currency_code`); allowed codes listed in `src/domain/currencies.ts`. Display only (SPEC.md rule 2b) |
 | invite_token | text | unique, not null; can be regenerated |
 | created_by | uuid | FK users.id |

@@ -16,6 +16,8 @@ import { Icon } from "@/components/Icon";
 import { requireUser } from "@/server/session";
 import { groupOr404 } from "@/server/pageData";
 import { balanceLine, needsAction } from "@/domain/home";
+import { periodLabel } from "@/domain/periods";
+import { requestToday } from "@/server/services/periodClock";
 import { listReceipts } from "@/server/services/receipts";
 import { countToSort } from "@/server/services/categories";
 import { balanceSituation } from "@/server/services/payments";
@@ -40,7 +42,8 @@ export default async function Home({ params }: { params: Promise<{ groupId: stri
   const situation = await balanceSituation(user.id, groupId);
   const balanceText = balanceLine(situation);
   const balanceUrgent = needsAction(situation);
-  const month = openLedger ? new Date(`${openLedger.endsOn}T00:00:00Z`).toLocaleString("en-GB", { month: "long", timeZone: "UTC" }) : "";
+  // The open period's name from its dates ("November", "4–10 Nov"), with the device's year.
+  const month = openLedger ? periodLabel(openLedger.startsOn, openLedger.endsOn, Number((await requestToday()).slice(0, 4))) : "";
   const pill = "mt-1.5 inline-flex h-10 items-center gap-2 self-start rounded-full px-4 text-sm font-extrabold";
   const section = "relative flex min-h-[230px] flex-1 overflow-hidden rounded-t-[28px] pb-11 pl-5 pr-4 pt-5 no-underline";
 

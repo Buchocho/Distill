@@ -19,7 +19,8 @@ import { countToConfirm } from "@/server/services/payments";
 import { Icon } from "@/components/Icon";
 import { formatCents, formatMoney } from "@/domain/money";
 import { longDate } from "@/domain/dates";
-import { positionWords } from "@/domain/periods";
+import { periodLabel, positionWords } from "@/domain/periods";
+import { requestToday } from "@/server/services/periodClock";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +32,10 @@ export default async function Balance({ params }: { params: Promise<{ groupId: s
   const closed = await listClosedPeriods(user.id, groupId);
   const toConfirm = await countToConfirm(user.id, groupId);
   const showPayments = toConfirm > 0 || closed.some((c) => c.stage !== "closed");
-  const monthOf = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleString("en-US", { month: "long", timeZone: "UTC" });
+  // Periods are named from their dates ("October", "4–10 Nov"), with the device's year (rule 2c).
+  const thisYear = Number((await requestToday()).slice(0, 4));
   const month = b.openLedger
-    ? new Date(`${b.openLedger.endsOn}T00:00:00Z`).toLocaleString("en-US", { month: "long", timeZone: "UTC" }).toUpperCase()
+    ? periodLabel(b.openLedger.startsOn, b.openLedger.endsOn, thisYear).toUpperCase()
     : "";
   const title = b.myNet > 0 ? "You are owed" : b.myNet < 0 ? "You owe" : "You are all square";
   const leftOut = b.unsortedCount + b.noRuleCount;
@@ -121,7 +123,7 @@ export default async function Balance({ params }: { params: Promise<{ groupId: s
                 <li key={c.id}>
                   <Link href={`/groups/${groupId}/balance/${c.id}`} className="flex min-h-16 items-center gap-3 border-b border-grey-100 text-ink no-underline">
                     <span className="flex flex-1 flex-col gap-0.5">
-                      <span className="font-bold">{monthOf(c.endsOn)}{new Date(`${c.endsOn}T00:00:00Z`).getUTCFullYear() !== new Date().getUTCFullYear() ? ` ${c.endsOn.slice(0, 4)}` : ""}</span>
+                      <span className="font-bold">{periodLabel(c.startsOn, c.endsOn, thisYear)}</span>
                       <span className="text-[13px] text-grey-600">{amount}</span>
                     </span>
                     <span className={`inline-flex h-[26px] items-center rounded-full px-2.5 text-xs font-bold ${pill.cls}`}>{pill.text}</span>

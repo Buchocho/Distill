@@ -1,6 +1,6 @@
 /** Tests for src/domain/periods.ts (SPEC.md rules 18 to 23). */
 import { describe, expect, it } from "vitest";
-import { agreeBlockedBy, debtWords, periodForToday, periodStage, positionWords } from "@/domain/periods";
+import { agreeBlockedBy, debtWords, periodForToday, periodLabel, periodStage, positionWords } from "@/domain/periods";
 
 const monthEnd = { rule: "month_end" as const, day: null };
 
@@ -59,5 +59,22 @@ describe("positionWords and debtWords", () => {
     expect(debtWords(izu, me, "me", "settled")).toBe("Izu owed you");
     expect(debtWords(me, izu, "me", "settled")).toBe("You owed Izu");
     expect(debtWords(izu, sam, "me", "settled")).toBe("Izu owed Sam");
+  });
+});
+
+describe("periodLabel", () => {
+  it("names a whole calendar month by the month", () => {
+    expect(periodLabel("2026-10-01", "2026-10-31", 2026)).toBe("October");
+    expect(periodLabel("2026-02-01", "2026-02-28", 2026)).toBe("February");
+    expect(periodLabel("2025-10-01", "2025-10-31", 2026)).toBe("October 2025");
+  });
+
+  it("names any other period by its dates", () => {
+    expect(periodLabel("2026-11-04", "2026-11-10", 2026)).toBe("4–10 Nov");
+    expect(periodLabel("2026-10-11", "2026-11-10", 2026)).toBe("11 Oct – 10 Nov");
+    expect(periodLabel("2026-10-26", "2026-10-31", 2026)).toBe("26–31 Oct");
+    expect(periodLabel("2026-11-10", "2026-11-10", 2026)).toBe("10 Nov");
+    expect(periodLabel("2025-11-04", "2025-11-10", 2026)).toBe("4–10 Nov 2025");
+    expect(periodLabel("2026-12-28", "2027-01-03", 2026)).toBe("28 Dec 2026 – 3 Jan 2027");
   });
 });

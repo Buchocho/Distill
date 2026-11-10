@@ -18,7 +18,8 @@ import { agreements, categories, groups, ledgers } from "@/server/db/schema";
 import { computeBalance, netFor, type BalanceLine } from "@/domain/balance";
 import { agreeBlockedBy, periodStage } from "@/domain/periods";
 import type { Rule } from "@/domain/rules";
-import { type CloseSetting, validateCloseSetting } from "@/domain/ledgers";
+import { type CloseSetting, endAfterRuleChange, validateCloseSetting } from "@/domain/ledgers";
+import { requestToday } from "./periodClock";
 import { assertMember, getGroupForMember, UUID } from "./groups";
 import { ledgerItems, rulesForGroup } from "./categories";
 import { ServiceError } from "./errors";
@@ -164,14 +165,26 @@ export async function agree(userId: string, ledgerId: string) {
 }
 
 /**
- * Changes when the group's accounts close (SPEC.md rule 18). Any member can do it. The open period
- * keeps its end date; the new rule applies from the next period, because the next period is made
- * from the rule at that moment (src/domain/periods.ts).
+ * Changes when the group's accounts close (SPEC.md rule 18). Any member can do it; who changed it
+ * and when is kept and shown under the setting, since there is no admin (rule 3). The change
+ * applies now: the open period's end moves to the new rule's first close date from today
+ * (endAfterRuleChange in src/domain/ledgers.ts). Later periods follow the rule as they are made.
  */
 export async function setCloseRule(userId: string, groupId: string, setting: CloseSetting) {
   await assertMember(userId, groupId);
   const error = validateCloseSetting(setting);
   if (error) throw new ServiceError("invalid", "Check the close date.", { close: error });
-  await db.update(groups).set({ closeRule: setting.rule, closeDay: setting.day }).where(eq(groups.id, groupId));
-  return { closeRule: setting.rule, closeDay: setting.day };
+  await db
+    .update(groups)
+    .set({ closeRule: setting.rule, closeDay: setting.day, closeRuleChangedBy: userId, closeRuleChangedAt: new Date() })
+    .where(eq(groups.id, groupId));
+  // The change applies now: the open period ends on the new rule's first close date from the
+  // device's today (rule 18, decided 10 Nov 2026). Never in the past, so nothing closes backwards.
+  const [open] = await db.select().from(ledgers).where(and(eq(ledgers.groupId, groupId), eq(ledgers.status, "open")));
+  let endsOn: string | null = null;
+  if (open) {
+    endsOn = endAfterRuleChange(setting, open.startsOn, await requestToday());
+    await db.update(ledgers).set({ endsOn }).where(eq(ledgers.id, open.id));
+  }
+  return { closeRule: setting.rule, closeDay: setting.day, endsOn };
 }

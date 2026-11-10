@@ -3,7 +3,8 @@
  * Documented in docs/API.md.
  * GET: the group with its members and open period. Closes the open period first if it has ended.
  * PATCH: change when accounts close. Body { closeRule, closeDay } as for creating a group. Applies
- * from the next period (SPEC.md rule 18).
+ * now: the open period ends on the new rule's first close date from today; returns `endsOn`
+ * (SPEC.md rule 18).
  */
 
 import { readJson, withUser } from "@/server/api";

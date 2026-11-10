@@ -77,3 +77,28 @@ export function debtWords(from: { id: string; name: string }, to: { id: string; 
   if (from.id === readerId) return `You ${verb} ${to.name}`;
   return `${from.name} ${verb} ${to.name}`;
 }
+
+/** Short month names for period labels. */
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const LONG_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/**
+ * A period's name, from its dates (decided 10 Nov 2026). A period that is exactly one calendar
+ * month is named by the month ("October"); any other period by its range ("4–10 Nov",
+ * "11 Oct – 10 Nov"), so weekly periods in the same month never share a name. The year is added
+ * when the period is not in `thisYear` or spans two years.
+ */
+export function periodLabel(startsOn: string, endsOn: string, thisYear: number): string {
+  const [sy, sm, sd] = startsOn.split("-").map(Number);
+  const [ey, em, ed] = endsOn.split("-").map(Number);
+  // Day 0 of the next month is the last day of this month.
+  const lastDay = new Date(Date.UTC(ey, em, 0)).getUTCDate();
+  if (sy === ey && sm === em && sd === 1 && ed === lastDay) {
+    return `${LONG_MONTHS[em - 1]}${ey !== thisYear ? ` ${ey}` : ""}`;
+  }
+  if (sy !== ey) return `${sd} ${SHORT_MONTHS[sm - 1]} ${sy} – ${ed} ${SHORT_MONTHS[em - 1]} ${ey}`;
+  const year = ey !== thisYear ? ` ${ey}` : "";
+  if (startsOn === endsOn) return `${ed} ${SHORT_MONTHS[em - 1]}${year}`;
+  if (sm === em) return `${sd}–${ed} ${SHORT_MONTHS[em - 1]}${year}`;
+  return `${sd} ${SHORT_MONTHS[sm - 1]} – ${ed} ${SHORT_MONTHS[em - 1]}${year}`;
+}

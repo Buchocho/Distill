@@ -37,6 +37,7 @@ Term: a period in the app is stored as a ledger in the database.
 
 **Groups and members**
 1. Signing in uses a Google account. The Google name is shown at first; a user can change the name they are shown as (1 to 30 characters), once for all their groups, and signing in again does not overwrite it.
+1a. A member can sign out on the Invite people screen, which also holds their name in Distill (added 10 Nov 2026). Signing out ends the session on that device only; nothing in the group changes.
 2. The group creator is a member. Anyone with the invite link who signs in becomes a member.
 2b. The group chooses a currency when it is created (default euro). It is display only: amounts are shown in that currency and nothing is converted. Only currencies with two decimal places are offered, so money stays in whole cents. The currency cannot be changed after the group is created.
 2c. Dates follow the local date of the device doing the action (for example creating a group or scanning a receipt), not the server's date. No time zone is stored.
@@ -70,8 +71,9 @@ Term: a period in the app is stored as a ledger in the database.
 17a. The Balance tab opens on the open period. A closed period that still needs agreement is shown as one card linking to it. There is no list of all past periods in this version.
 
 **Periods and closing**
-18. The group chooses the close rule: last day of the month, a day of the month (1 to 28), or a day of the week. Any member can change it on the members screen; the change applies from the next period.
+18. The group chooses the close rule: last day of the month, a day of the month (1 to 28), or a day of the week. Any member can change it on the members screen. Decided 10 Nov 2026: the change applies now; the open period ends on the new rule's first close date from today (today counts, never a date in the past), and later periods follow the rule. The screen shows the new end date before saving, and who last changed the setting and when.
 19. A period runs from its start date to its end date inclusive. After the end date passes, it closes and the next period opens the following day (US6). Closing is checked whenever group data is loaded, using the device's date (rule 2c). Periods in which nobody used the app are skipped.
+19a. A period is named from its dates (decided 10 Nov 2026): a period that is exactly one calendar month by the month ("October"), any other period by its range ("4–10 Nov", "11 Oct – 10 Nov"), with the year when it is not the current year. The name is used everywhere a period is shown.
 20. A closed period takes no new receipts and no edits, with two exceptions: its unsorted items can be given a category (any member) or removed (only the person who paid for that receipt; logged), and rules can be set for categories that have none (US7).
 21. The Agree button for a period is active only when that period has no unsorted items and every category used in it has a rule (US7).
 22. Each member agrees to their own amount. Until everyone has agreed, the period's amounts follow the current rules, and any change that can move them (sorting or removing a leftover item, setting or changing a rule) clears all agreements for the period (US8).

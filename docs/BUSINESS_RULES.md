@@ -16,6 +16,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
 | 1 | Sign in with Google; a person can change the name they are shown as | Built (restored 9 Nov at Maduabuchi's request) | `src/server/auth.ts`, `src/app/login`, `src/server/services/users.ts` (`ensureUser`, `setDisplayName`), `src/domain/users.ts`, `invite/DisplayNameForm.tsx`, `src/server/session.ts` and `src/server/api.ts` (use the stored name) |
+| 1a | Sign out on the Invite people screen, this device only | Built | `invite/SignOutButton.tsx` (Supabase sign out in the browser) |
 | 2 | The creator is a member; anyone with the invite link who signs in joins | Built | `src/server/services/groups.ts` (`createGroup`, `joinByToken`), `src/server/session.ts` (returns to the link after sign in) |
 | 2b | Group currency chosen at creation, cannot be changed, display only, two decimal currencies only | Built for creation and the API. Amounts on screens use it from step 2, through `formatMoney`. | `src/domain/currencies.ts`, `src/domain/money.ts` (`formatMoney`), `src/domain/groups.ts`, `groups_currency_code` in `src/server/db/schema.ts`, `src/app/groups/new/NewGroupForm.tsx` |
 | 2c | Dates follow the device's local date | Built for group creation (first period). Receipts send it from step 2; closing uses it from step 5. | `src/domain/groups.ts` (`isValidLocalDate`), `src/app/actions.ts`, `src/app/api/v1/groups/route.ts`, `src/app/groups/new/NewGroupForm.tsx` |
@@ -61,7 +62,8 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 
 | Rule | In short | Status | Enforced in |
 |---|---|---|---|
-| 18 | The group chooses and can change the close rule; a change applies from the next period | Built | `src/domain/ledgers.ts`, `setCloseRule` in `src/server/services/periods.ts`, `invite/CloseRuleForm.tsx` |
+| 18 | The group chooses and can change the close rule; a change applies now (open period ends on the new rule's first close date from today); who changed it last is shown | Built | `src/domain/ledgers.ts` (`endAfterRuleChange`), `setCloseRule` in `src/server/services/periods.ts`, `groups.close_rule_changed_by` and `_at`, `invite/CloseRuleForm.tsx` |
+| 19a | Periods are named from their dates: a whole month by the month, otherwise the range | Built | `periodLabel` in `src/domain/periods.ts`; Home, Balance, period screen, Payments, Home's Balance line |
 | 19 | A period closes after its end date and the next opens; checked when group data loads, by the device's date | Built | `src/domain/periods.ts` (`periodForToday`), `src/server/services/periodClock.ts`, `src/components/DeviceDate.tsx` |
 | 20 | A closed period takes no new receipts or edits, except sorting leftovers (any member), removing them (payer only), and setting rules | Built | `changeItemCategory`, `deleteItem` in `src/server/services/categories.ts`, `balance/[ledgerId]/page.tsx` |
 | 21 | Agree only when nothing is unsorted and every used category has a rule | Built | `src/domain/periods.ts` (`agreeBlockedBy`), `agree` in `src/server/services/periods.ts`, `AgreeButton.tsx` |

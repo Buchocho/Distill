@@ -3,7 +3,8 @@
  * Shows the group's invite link with Share and Copy, and the member list. Opened right after a
  * group is created (title "Group created") and from the initial on Home (title "Invite people").
  * Also where a person changes the name they are shown as (DisplayNameForm, SPEC.md rule 1) and
- * where the group changes when accounts close (CloseRuleForm, rule 18).
+ * where the group changes when accounts close (CloseRuleForm, rule 18), and Sign out at the bottom
+ * (SignOutButton, rule 1a).
  * The link is built from the address the app is running at, so it works on any deploy.
  */
 
@@ -15,6 +16,7 @@ import { groupOr404 } from "@/server/pageData";
 import { CopyLink } from "./CopyLink";
 import { DisplayNameForm } from "./DisplayNameForm";
 import { CloseRuleForm } from "./CloseRuleForm";
+import { SignOutButton } from "./SignOutButton";
 import { longDate } from "@/domain/dates";
 
 export default async function Invite({ params, searchParams }: {
@@ -49,8 +51,12 @@ export default async function Invite({ params, searchParams }: {
           </ul>
         </div>
         <DisplayNameForm current={user.name} />
-        <CloseRuleForm groupId={groupId} rule={group.closeRule} day={group.closeDay} currentEnd={openLedger ? longDate(openLedger.endsOn) : null} />
+        <CloseRuleForm groupId={groupId} rule={group.closeRule} day={group.closeDay}
+          currentEnd={openLedger ? longDate(openLedger.endsOn) : null} currentStart={openLedger?.startsOn ?? null}
+          changedBy={group.closeRuleChangedBy ? (members.find((m) => m.id === group.closeRuleChangedBy)?.name.split(" ")[0] ?? null) : null}
+          changedOn={group.closeRuleChangedAt ? longDate(group.closeRuleChangedAt.toISOString().slice(0, 10)) : null} />
         <Link href={`/groups/${groupId}`} className="mt-auto flex min-h-13 items-center justify-center rounded-xl border-[1.5px] border-ink bg-white font-extrabold text-ink no-underline">Go to Home</Link>
+        <SignOutButton email={user.email} />
       </div>
     </main>
   );

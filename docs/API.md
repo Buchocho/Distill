@@ -25,7 +25,7 @@ Authentication: the browser session cookie, or `Authorization: Bearer <Supabase 
 | PUT | /categories/{categoryId}/rule | Set the rule. Body `{ "kind": "everyone" \| "payer" \| "shares", "shares": [{ "userId", "bp" }] }`; `bp` is basis points (10000 = 100%), used only for `shares`, totalling 10000. Logged. |
 | PATCH | /items/{itemId} | Move a saved item to another category, or to unsorted with `null`. Body `{ "categoryId" }`. Any item in the open period; only an unsorted item in a closed period not yet agreed. Logged. |
 | DELETE | /items/{itemId} | Remove a leftover unsorted item from a closed period not yet agreed. Only the receipt's payer (403 otherwise). Logged. |
-| PATCH | /groups/{groupId} | Change when accounts close. Body `{ "closeRule", "closeDay" }`. Applies from the next period. |
+| PATCH | /groups/{groupId} | Change when accounts close. Body `{ "closeRule", "closeDay" }`. Applies now: the open period ends on the new rule's first close date from today. Returns `endsOn`, the open period's new end. |
 | GET | /groups/{groupId}/periods | Past (closed) periods, newest first, up to 24: `stage` (`closed`, `agreed`, `settled`), `myNet`, `iAgreed`, `agreedCount`, `memberCount`. |
 | GET | /periods/{ledgerId} | One period, open or closed: `stage`, `lines`, `myNet`, `items` (each with category, price, payer, date, store and rule, for the breakdown), `unsorted`, `noRule`, `members` with `agreed`, `agreeBlockedBy`. |
 | POST | /periods/{ledgerId}/agree | Agree to your amount. Refused (400) while items are left to sort. Returns the `stage`; `agreed` when the last member agreed and the amounts were frozen (`settled` at once when nothing is owed). |

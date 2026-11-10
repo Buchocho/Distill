@@ -1,7 +1,7 @@
 // Unit tests for src/domain/ledgers.ts: close dates and period ranges (SPEC.md rules 18, 19).
 
 import { describe, expect, it } from "vitest";
-import { firstLedger, nextCloseDate, nextLedger, validateCloseSetting } from "@/domain/ledgers";
+import { endAfterRuleChange, firstLedger, nextCloseDate, nextLedger, validateCloseSetting } from "@/domain/ledgers";
 
 describe("nextCloseDate", () => {
   it("month_end gives the last day of the month", () => {
@@ -71,5 +71,19 @@ describe("describeClose and daysUntil", () => {
   it("counts days and never goes below zero", () => {
     expect(daysUntil("2026-11-03", "2026-11-30")).toBe(27);
     expect(daysUntil("2026-11-30", "2026-11-03")).toBe(0);
+  });
+});
+
+describe("endAfterRuleChange", () => {
+  it("ends the open period on the first close date of the new rule from today", () => {
+    // Tuesday 10 Nov 2026: weekly on Wednesday ends tomorrow; day 11 ends tomorrow too.
+    expect(endAfterRuleChange({ rule: "weekly", day: 2 }, "2026-11-01", "2026-11-10")).toBe("2026-11-11");
+    expect(endAfterRuleChange({ rule: "month_day", day: 11 }, "2026-11-01", "2026-11-10")).toBe("2026-11-11");
+    expect(endAfterRuleChange({ rule: "month_end", day: null }, "2026-11-01", "2026-11-10")).toBe("2026-11-30");
+  });
+
+  it("can end today, but never in the past", () => {
+    expect(endAfterRuleChange({ rule: "weekly", day: 1 }, "2026-11-01", "2026-11-10")).toBe("2026-11-10");
+    expect(endAfterRuleChange({ rule: "month_day", day: 5 }, "2026-11-01", "2026-11-10")).toBe("2026-12-05");
   });
 });
