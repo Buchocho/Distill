@@ -66,7 +66,8 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 20 | A closed period takes no new receipts or edits, except sorting leftovers (any member), removing them (payer only), and setting rules | Built | `changeItemCategory`, `deleteItem` in `src/server/services/categories.ts`, `balance/[ledgerId]/page.tsx` |
 | 21 | Agree only when nothing is unsorted and every used category has a rule | Built | `src/domain/periods.ts` (`agreeBlockedBy`), `agree` in `src/server/services/periods.ts`, `AgreeButton.tsx` |
 | 22 | Each member agrees to their amount; any change before everyone agrees clears agreements | Built | `agree`, `clearOpenAgreements` (called by `setRule`, `changeItemCategory`, `deleteItem`) |
-| 22a | Two stage settling: amounts frozen when the last member agrees; settled when all paid | Stage 1 built; stage 2 in step 6 | `agree` in `src/server/services/periods.ts`, `ledgers.frozen_lines` |
+| 22a | Two stage settling: amounts frozen when the last member agrees; settled when all paid | Stage 1 built; stage 2 in step 6 | `agree` in `src/server/services/periods.ts`, `ledgers.frozen_lines`, `ledgers.frozen_rules` |
+| 23a | Every period has a breakdown by category, per person, that matches its amount; past periods are listed | Built | `src/domain/breakdown.ts`, `balance/[ledgerId]/Breakdown.tsx`, `getPeriod` and `listClosedPeriods` in `src/server/services/periods.ts`, `balance/page.tsx` |
 | 23 | The next period opens on time whether or not anyone agreed | Built | `ensurePeriods` in `src/server/services/periodClock.ts` |
 
 ## Payments (build step 6)

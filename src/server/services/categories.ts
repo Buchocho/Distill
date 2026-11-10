@@ -71,6 +71,8 @@ export async function ledgerItems(ledgerId: string) {
       receiptId: receipts.id,
       storeName: receipts.storeName,
       payerId: receipts.paidBy,
+      purchaseDate: receipts.purchaseDate,
+      savedAt: receipts.savedAt,
     })
     .from(items)
     .innerJoin(receipts, eq(receipts.id, items.receiptId))

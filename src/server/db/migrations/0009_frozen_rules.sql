@@ -1,0 +1,1 @@
+ALTER TABLE "ledgers" ADD COLUMN "frozen_rules" jsonb;

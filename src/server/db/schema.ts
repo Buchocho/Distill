@@ -102,6 +102,9 @@ export const ledgers = pgTable(
     agreedAt: timestamp("agreed_at", { withTimezone: true }),
     // The balance lines at the moment everyone agreed: [{ from, to, cents }] (src/domain/balance.ts).
     frozenLines: jsonb("frozen_lines").$type<{ from: string; to: string; cents: number }[]>(),
+    // The sharing rules at the moment everyone agreed, by category id, so the period's breakdown
+    // keeps matching its frozen amounts after rules change (SPEC.md rule 22a).
+    frozenRules: jsonb("frozen_rules").$type<Record<string, { kind: "everyone" | "payer" | "shares"; shares: { userId: string; bp: number }[] } | null>>(),
     // Stage 2: set when every amount owed in the period is confirmed paid (step 6). Then read only.
     settledAt: timestamp("settled_at", { withTimezone: true }),
   },

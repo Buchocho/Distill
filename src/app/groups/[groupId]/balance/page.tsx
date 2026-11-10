@@ -3,7 +3,8 @@
  * The person's own position in large type, who owes whom (netted to one line per pair), the
  * period's close date and receipt count, and what is left out of the balance with a link to sort
  * it (SPEC.md rules 15 to 17). White (approved design, BalanceWhite).
- * Below, one card per closed period not yet settled, leading to Close the period (step 5).
+ * "See the breakdown" opens the open period's category by category statement, and Past periods
+ * lists every closed period with the reader's amount and status (approved 10 Nov 2026).
  * PARTLY BUILT: Payments come in step 6.
  */
 
@@ -83,22 +84,39 @@ export default async function Balance({ params }: { params: Promise<{ groupId: s
         </div>
       )}
 
-      {closed.map((c) => (
-        <Link key={c.id} href={`/groups/${groupId}/balance/${c.id}`}
-          className="flex min-h-[68px] items-center gap-3 rounded-2xl border-[1.5px] border-ink px-4 text-ink no-underline">
-          <div className="flex flex-1 flex-col gap-0.5">
-            <span className="font-extrabold">{monthOf(c.endsOn)} {c.stage === "agreed" ? "is agreed" : "is closed"}</span>
-            <span className="text-[13px] text-grey-600">
-              {c.stage === "agreed"
-                ? "Everyone agreed. Payments come next."
-                : c.iAgreed
-                  ? `You agreed. Waiting for ${c.memberCount - c.agreedCount} more.`
-                  : "Check your amount and agree"}
-            </span>
-          </div>
-          <Icon name="arrow" size={20} strokeWidth={2.5} />
+      {b.openLedger && (
+        <Link href={`/groups/${groupId}/balance/${b.openLedger.id}`} className="inline-flex min-h-10 self-start items-center px-1 text-[15px] font-bold text-ink underline underline-offset-2">
+          See the breakdown
         </Link>
-      ))}
+      )}
+
+      {closed.length > 0 && (
+        <section aria-labelledby="past" className="flex flex-col gap-2">
+          <h2 id="past" className="mx-1 mt-2 text-xs font-bold tracking-[1.4px] text-grey-600">PAST PERIODS</h2>
+          <ul className="border-t border-grey-100">
+            {closed.map((c) => {
+              const pill =
+                c.stage === "settled" ? { text: "Settled", cls: "bg-green text-white" }
+                : c.stage === "agreed" ? { text: "Agreed", cls: "bg-grey-100 text-ink" }
+                : c.iAgreed ? { text: "Waiting", cls: "bg-grey-100 text-ink" }
+                : { text: "Agree", cls: "bg-orange text-ink" };
+              const amount = c.myNet > 0 ? `You are owed ${formatMoney(c.myNet, b.currency)}` : c.myNet < 0 ? `You owe ${formatMoney(-c.myNet, b.currency)}` : "All square";
+              return (
+                <li key={c.id}>
+                  <Link href={`/groups/${groupId}/balance/${c.id}`} className="flex min-h-16 items-center gap-3 border-b border-grey-100 text-ink no-underline">
+                    <span className="flex flex-1 flex-col gap-0.5">
+                      <span className="font-bold">{monthOf(c.endsOn)}{new Date(`${c.endsOn}T00:00:00Z`).getUTCFullYear() !== new Date().getUTCFullYear() ? ` ${c.endsOn.slice(0, 4)}` : ""}</span>
+                      <span className="text-[13px] text-grey-600">{amount}</span>
+                    </span>
+                    <span className={`inline-flex h-[26px] items-center rounded-full px-2.5 text-xs font-bold ${pill.cls}`}>{pill.text}</span>
+                    <Icon name="arrow" size={18} strokeWidth={2.5} />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
     </TabScreen>
   );
 }

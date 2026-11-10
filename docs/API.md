@@ -26,8 +26,8 @@ Authentication: the browser session cookie, or `Authorization: Bearer <Supabase 
 | PATCH | /items/{itemId} | Move a saved item to another category, or to unsorted with `null`. Body `{ "categoryId" }`. Any item in the open period; only an unsorted item in a closed period not yet agreed. Logged. |
 | DELETE | /items/{itemId} | Remove a leftover unsorted item from a closed period not yet agreed. Only the receipt's payer (403 otherwise). Logged. |
 | PATCH | /groups/{groupId} | Change when accounts close. Body `{ "closeRule", "closeDay" }`. Applies from the next period. |
-| GET | /groups/{groupId}/periods | Closed periods not yet settled: `stage` (`closed` or `agreed`), `iAgreed`, `agreedCount`, `memberCount`. |
-| GET | /periods/{ledgerId} | One period: `stage`, `lines`, `myNet`, `unsorted`, `noRule`, `members` with `agreed`, `agreeBlockedBy`. |
+| GET | /groups/{groupId}/periods | Past (closed) periods, newest first, up to 24: `stage` (`closed`, `agreed`, `settled`), `myNet`, `iAgreed`, `agreedCount`, `memberCount`. |
+| GET | /periods/{ledgerId} | One period, open or closed: `stage`, `lines`, `myNet`, `items` (each with category, price, payer, date, store and rule, for the breakdown), `unsorted`, `noRule`, `members` with `agreed`, `agreeBlockedBy`. |
 | POST | /periods/{ledgerId}/agree | Agree to your amount. Refused (400) while items are left to sort. Returns the `stage`; `agreed` when the last member agreed and the amounts were frozen. |
 | POST | /receipts/{receiptId}/read | Read the photo with Gemini. Optional body `{ "localDate": "YYYY-MM-DD" }`, the caller's date, used to read dates printed year first. Returns `{ "status": "ready" }` or `{ "status": "failed" }`. Calling it again is Retry. Can take up to a minute. Not allowed once the receipt is saved. |
 | GET | /receipts/{receiptId} | The receipt, its items (with `discountCents`, and `categoryId` or `proposedCategory`), the group's categories and members, the group `currency`, `photoCount`, and `saved` (the group's other saved receipts: store, date, total, receipt number, who paid) for duplicate checking. Members only. |

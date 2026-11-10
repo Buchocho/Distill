@@ -176,3 +176,11 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Changed: links to a rule from the closed period screen and from Needs sorting add `?from=` with the page to return to; the rule screen's Back and Save go there (only paths inside the same group are accepted), otherwise to Categories.
 - Verified: type check, lint, unit tests, end to end tests, build.
 
+## 2026-11-10: period breakdown and past periods
+
+- Found by Maduabuchi while testing step 5: the closed period asked him to agree to 0,79 € with no way to see where it came from. He asked for a breakdown before agreeing, and a list of every past period on the Balance tab, mockup first.
+- Design iterations on the Distill screens canvas: a receipt by receipt version was rejected ("why would somebody want to look at it as receipts"); a category version with paid and share per card was cut down; approved version: per category, the person's share as the large figure, "Bought N times · total", and the split in words ("Split 50/50 with Izu", "Izu pays 100%", "You 20% · Izu 80%", "Each pays for their own · you bought 1 of 3"); purchases and who paid on tap; totals paid, share, owed; a You / Izu switch. His examples drove the wording: a category he buys for Izu shows 0,00 € with "Izu pays 100%". I kept "Each pays for their own" for mixed Whoever paid categories, because "You pay 100%" would be wrong when both bought.
+- Prompts: "I need a breakdown page here in balance"; "you've missed the point ... category by category"; "I don't like the you paid and your share"; "That largest figure there should be my share"; "Approved, move on".
+- Built: `src/domain/breakdown.ts` (same arithmetic as the balance, tested to reconcile with it); breakdown on the period screen, now also for the open period ("See the breakdown"); Past periods list on Balance with amount and status (Agree, Waiting, Agreed, Settled); rules frozen with the amounts when everyone agrees (migration 0009), so a past breakdown keeps matching.
+- Verified: type check, lint, 88 unit tests (new: breakdown shares, ordering, left out items, reconciliation with the balance, split wording from both sides), end to end tests, build, and a browser render of the breakdown with sample data.
+

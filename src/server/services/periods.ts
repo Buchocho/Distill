@@ -17,6 +17,7 @@ import { db } from "@/server/db/client";
 import { agreements, categories, groups, ledgers } from "@/server/db/schema";
 import { computeBalance, netFor, type BalanceLine } from "@/domain/balance";
 import { agreeBlockedBy, periodStage } from "@/domain/periods";
+import type { Rule } from "@/domain/rules";
 import { type CloseSetting, validateCloseSetting } from "@/domain/ledgers";
 import { assertMember, getGroupForMember, UUID } from "./groups";
 import { ledgerItems, rulesForGroup } from "./categories";
@@ -34,33 +35,49 @@ async function ledgerForMember(userId: string, ledgerId: string) {
 }
 
 /**
- * A period's balance: frozen lines once everyone agreed, otherwise worked out from its items and
- * the current rules, with the items left out (SPEC.md rules 15 to 17, 22a).
+ * A period's items and rules, and its balance. Once everyone agreed, the frozen lines and frozen
+ * rules are used, so later rule changes do not touch it (SPEC.md rule 22a); before that, the current
+ * rules. Items left out of the balance (unsorted, no rule) are returned for sorting (rules 17, 20).
  */
 async function periodBalance(ledger: typeof ledgers.$inferSelect, memberIds: string[]) {
   const periodItems = await ledgerItems(ledger.id);
-  const rules = await rulesForGroup(ledger.groupId);
+  const current = await rulesForGroup(ledger.groupId);
+  const ruleOf = (categoryId: string | null): Rule | null => {
+    if (!categoryId) return null;
+    if (ledger.frozenRules) return (ledger.frozenRules[categoryId] as Rule | null | undefined) ?? null;
+    return current.get(categoryId) ?? null;
+  };
   const live = computeBalance(
-    periodItems.map((i) => ({ priceCents: i.priceCents, payerId: i.payerId, categoryId: i.categoryId, rule: i.categoryId ? rules.get(i.categoryId) ?? null : null })),
+    periodItems.map((i) => ({ priceCents: i.priceCents, payerId: i.payerId, categoryId: i.categoryId, rule: ruleOf(i.categoryId) })),
     memberIds,
   );
   const lines: BalanceLine[] = ledger.frozenLines ?? live.lines;
-  const noRuleCategories = [...new Set(periodItems.filter((i) => i.categoryId && rules.get(i.categoryId) === null).map((i) => i.categoryId as string))];
-  return { lines, unsorted: periodItems.filter((i) => i.categoryId === null), noRuleCount: live.noRuleCount, noRuleCategories };
+  const noRuleCategories = [...new Set(periodItems.filter((i) => i.categoryId && ruleOf(i.categoryId) === null).map((i) => i.categoryId as string))];
+  return {
+    lines,
+    items: periodItems.map((i) => ({ ...i, rule: ruleOf(i.categoryId) })),
+    unsorted: periodItems.filter((i) => i.categoryId === null),
+    noRuleCount: live.noRuleCount,
+    noRuleCategories,
+    // The rules in force for this period's categories, to freeze when everyone agrees.
+    rulesUsed: Object.fromEntries([...new Set(periodItems.map((i) => i.categoryId).filter((c): c is string => c !== null))].map((c) => [c, ruleOf(c)])),
+  };
 }
 
 /**
- * The group's closed periods that are not settled, newest first, for the Balance tab: each with its
- * stage, whether the user has agreed, and how many members have (stories US7, US8).
+ * The group's past periods, newest first, for the Past periods list on the Balance tab (approved
+ * 10 Nov 2026): each with its stage, the user's own amount, whether the user has agreed, and how
+ * many members have (stories US7, US8). Goes back two years.
  */
 export async function listClosedPeriods(userId: string, groupId: string) {
   const { members } = await getGroupForMember(userId, groupId);
+  const memberIds = members.map((m) => m.id);
   const closed = await db
     .select()
     .from(ledgers)
-    .where(and(eq(ledgers.groupId, groupId), eq(ledgers.status, "closed"), isNull(ledgers.settledAt)))
+    .where(and(eq(ledgers.groupId, groupId), eq(ledgers.status, "closed")))
     .orderBy(desc(ledgers.endsOn))
-    .limit(12);
+    .limit(24);
   const result = [];
   for (const l of closed) {
     const agreed = await db.select({ userId: agreements.userId }).from(agreements).where(eq(agreements.ledgerId, l.id));
@@ -69,6 +86,7 @@ export async function listClosedPeriods(userId: string, groupId: string) {
       startsOn: l.startsOn,
       endsOn: l.endsOn,
       stage: periodStage(l),
+      myNet: netFor(userId, (await periodBalance(l, memberIds)).lines),
       iAgreed: agreed.some((a) => a.userId === userId),
       agreedCount: agreed.length,
       memberCount: members.length,
@@ -78,9 +96,10 @@ export async function listClosedPeriods(userId: string, groupId: string) {
 }
 
 /**
- * Everything the Close the period screen (screen 5) needs: the period and its stage, the balance
- * lines with names, the user's own amount, leftover items to sort or remove, categories without a
- * rule, who has agreed, and whether Agree is open (SPEC.md rules 20 to 22).
+ * Everything the period screen (screen 5) needs, for the open period or a closed one: the period
+ * and its stage, the balance lines with names, the user's own amount, the items with their rules
+ * for the breakdown, leftover items to sort or remove, categories without a rule, who has agreed,
+ * and whether Agree is open (SPEC.md rules 20 to 22).
  */
 export async function getPeriod(userId: string, ledgerId: string) {
   const ledger = await ledgerForMember(userId, ledgerId);
@@ -96,6 +115,16 @@ export async function getPeriod(userId: string, ledgerId: string) {
     currency: group.currency,
     lines: balance.lines.map((l) => ({ ...l, fromName: nameOf(l.from), toName: nameOf(l.to) })),
     myNet: netFor(userId, balance.lines),
+    items: balance.items.map((i) => ({
+      categoryId: i.categoryId,
+      categoryName: cats.find((c) => c.id === i.categoryId)?.name ?? null,
+      priceCents: i.priceCents,
+      payerId: i.payerId,
+      // The printed date, or the day it was saved when no date was read.
+      date: i.purchaseDate ?? i.savedAt?.toISOString().slice(0, 10) ?? ledger.endsOn,
+      storeName: i.storeName,
+      rule: i.rule,
+    })),
     unsorted: stage === "closed" ? balance.unsorted : [],
     noRule: stage === "closed" ? cats.filter((c) => balance.noRuleCategories.includes(c.id)) : [],
     categories: cats,
@@ -122,10 +151,11 @@ export async function agree(userId: string, ledgerId: string) {
   await db.insert(agreements).values({ ledgerId, userId }).onConflictDoNothing();
   const agreed = await db.select({ userId: agreements.userId }).from(agreements).where(eq(agreements.ledgerId, ledgerId));
   if (memberIds.every((id) => agreed.some((a) => a.userId === id))) {
-    // Everyone agreed: freeze the amounts as they are now. Only if not frozen already by another request.
+    // Everyone agreed: freeze the amounts and the rules behind them, so the breakdown keeps matching.
+    // Only if not frozen already by another request.
     await db
       .update(ledgers)
-      .set({ agreedAt: new Date(), frozenLines: balance.lines })
+      .set({ agreedAt: new Date(), frozenLines: balance.lines, frozenRules: balance.rulesUsed })
       .where(and(eq(ledgers.id, ledgerId), isNull(ledgers.agreedAt)));
     return { stage: "agreed" as const };
   }

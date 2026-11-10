@@ -77,6 +77,7 @@ Term: a period in the app is stored as a ledger in the database.
 22. Each member agrees to their own amount. Until everyone has agreed, the period's amounts follow the current rules, and any change that can move them (sorting or removing a leftover item, setting or changing a rule) clears all agreements for the period (US8).
 22a. Settling has two stages (agreed 10 Nov 2026). Stage 1: when the last member agrees, the period's amounts are frozen; later rule changes do not touch it. Stage 2: when every amount owed is confirmed paid (rule 25), the period is settled and read only.
 23. The next period opens on time whether or not anyone agreed.
+23a. Every period, open or closed, has a breakdown a member can check before agreeing (approved design 10 Nov 2026): for each category, the person's share as the main figure, how many times it was bought and the total, and how it was split in words; each purchase and who paid it on tap; and totals (paid, share, owed) that match the period's amount. Any member's statement can be viewed. The Balance tab lists all past periods with the reader's amount and status.
 
 **Payments**
 24. Either the payer or the receiver records a payment against a ledger: who paid, who received, amount, date.

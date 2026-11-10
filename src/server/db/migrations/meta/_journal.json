@@ -64,6 +64,13 @@
       "when": 1794310752313,
       "tag": "0008_period_stages",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794317330959,
+      "tag": "0009_frozen_rules",
+      "breakpoints": true
     }
   ]
 }

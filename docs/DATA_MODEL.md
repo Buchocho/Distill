@@ -40,7 +40,7 @@ One row per signed-in person, created on first Google sign in. The id is the Sup
 
 ### ledgers
 
-`agreed_at` timestamptz and `frozen_lines` jsonb (`[{from, to, cents}]`): set when the last member agrees; the period's amounts are frozen there (SPEC.md rule 22a, stage 1). `settled_at` timestamptz: set when every amount is confirmed paid (stage 2, step 6).
+`agreed_at` timestamptz and `frozen_lines` jsonb (`[{from, to, cents}]`): set when the last member agrees; the period's amounts are frozen there (SPEC.md rule 22a, stage 1). `frozen_rules` jsonb (category id to rule): the rules in force when everyone agreed, so the breakdown keeps matching the frozen amounts. `settled_at` timestamptz: set when every amount is confirmed paid (stage 2, step 6).
 
 Shown in the app as a period. One group has many ledgers; at most one is open.
 
