@@ -362,3 +362,12 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Prompt: "For these, I would like you to just create some mock-ups so that I can look at them and maybe give feedback and we can start iterating on that."
 - No code changed. Mockups made on a design canvas, following the tokens in `src/app/globals.css`: Sign in on ink with the product shown as a tagged receipt; the Group screen with an ink header, one invite card, roomier member rows, name and close date as list rows, and leave and sign out set apart; the Receipts tab with the scan card, a NEEDS YOU section above RECENT, and rows carrying the payer and the total.
 - Added to step 7 as work waiting on his feedback. Nothing is built until he picks what to keep.
+
+## 2026-11-16: branded loading screens (Distill by Atheria)
+
+- Goal: replace the plain "Loading..." text and the receipt reading spinner with the branded Distill-by-Atheria mark and animated orange bar, matching the design mockups.
+- Prompt: "I want you to use the loading screen in between pages... Including it should also be included in when we are uploading a receipt and it's taking some time to be read."
+- Decision on the fade-in: Butch said most screens load fast, so the loading screen should appear only for slow loads and not have a delay. Removed the 0.25s fade-in from the mockup.
+- Built: `src/app/loading.tsx` now shows the Distill wordmark (54px), animated orange underline bar (same `underline` keyframe the app already uses), and "by Atheria" with the Atheria wordmark image. `ReadingStep.tsx` now shows the same mark at 44px instead of the dark card with a CSS spinner, with the "Reading your receipt" text and Delete link below. The failure state (Retry and Delete) is unchanged.
+- Added `public/atheria-wordmark.png` (cropped from the logo pack) as a static asset.
+- Verified: type check, lint, 135 unit tests, 8 end to end tests. To check by hand: navigate between pages and watch for the branded loading screen on slow connections; upload a receipt and see the animated mark while it reads.

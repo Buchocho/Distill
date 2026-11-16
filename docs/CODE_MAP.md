@@ -1,7 +1,7 @@
 # Distill: code map
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 16 Nov 2026, step 7 (`sumBlock`, `validateCorrections`, `keepCorrections`, Agree waits for receipts in review).
+Last updated: 16 Nov 2026, step 7 (branded loading screens, `sumBlock`, `validateCorrections`, `keepCorrections`, Agree waits for receipts in review).
 
 This document lists every file in the repository, what it holds and the main functions in it. Use it to find where something lives before changing it. For why a rule exists, see [BUSINESS_RULES.md](BUSINESS_RULES.md). For the tables, see [DATA_MODEL.md](DATA_MODEL.md).
 
@@ -125,7 +125,7 @@ Screen numbers match SPEC.md section 5.
 | `/groups/<id>` | `groups/[groupId]/page.tsx` | 0c, Home | Built. Large group name with its arrow opens Your groups, period under it. All three status lines are live; Balance shows what is waiting before the close date |
 | `/groups/<id>/invite` | `groups/[groupId]/invite/page.tsx`, `invite/CopyLink.tsx`, `invite/DisplayNameForm.tsx`, `invite/CloseRuleForm.tsx`, `invite/MemberActions.tsx` | Group (was Invite people): invite link, members, "Your name in Distill", "Accounts close" (applies now, shows the new end and who changed it last), Sign out. Members show their Google email; Remove and Leave with a confirmation panel; people who left listed in grey | Built |
 | `/groups/<id>/receipts` | `groups/[groupId]/receipts/page.tsx`, `receipts/ScanPanel.tsx` | 2, Receipts: take a photo or choose a file, paid by, recent receipts with status | Built (one photo per receipt; more in step 4) |
-| `/groups/<id>/receipts/<receiptId>` | `receipts/[receiptId]/page.tsx`, `ReadingStep.tsx`, `ReviewForm.tsx`, `DeleteReceipt.tsx` | 3, Review receipt: reading, Retry, review and save (layout from mockup v3), delete before saving, saved view | Built. On a saved receipt any member can change an item's category; changes shown under the item |
+| `/groups/<id>/receipts/<receiptId>` | `receipts/[receiptId]/page.tsx`, `ReadingStep.tsx`, `ReviewForm.tsx`, `DeleteReceipt.tsx` | 3, Review receipt: reading (branded Distill-by-Atheria mark with animated bar, replaces spinner), Retry, review and save (layout from mockup v3), delete before saving, saved view | Built. On a saved receipt any member can change an item's category; changes shown under the item |
 | `/groups/<id>/categories` | `groups/[groupId]/categories/page.tsx`, `categories/AddCategory.tsx` | 4, Categories: needs sorting flag, Add category (above the list), categories with rules, History | Built |
 | `/groups/<id>/categories/<categoryId>` | `categories/[categoryId]/page.tsx`, `RuleForm.tsx` | 4b, Sharing rule: Everyone equal, Whoever paid, One person, Custom | Built |
 | `/groups/<id>/categories/history` | `categories/history/page.tsx` | 4c, Category history | Built |
@@ -141,7 +141,7 @@ Shared screen files:
 |---|---|
 | `actions.ts` | What happens when a form is submitted: `createGroupAction`, `joinGroupAction`. |
 | `layout.tsx` | The frame around every screen: font, phone width, page title. |
-| `loading.tsx`, `error.tsx`, `not-found.tsx` | Loading, error with retry, and not found screens. |
+| `loading.tsx`, `error.tsx`, `not-found.tsx` | Loading (branded Distill-by-Atheria mark with animated orange bar), error with retry, and not found screens. |
 | `globals.css` | Colours, font and the Home animations. |
 
 ## src/app/api: API for other applications
@@ -195,6 +195,12 @@ Full detail in [API.md](API.md). Each file is a thin wrapper that calls a servic
 | `DistillMark.tsx` | The Distill wordmark, also the link back to Home. |
 | `Icon.tsx` | Line icons. |
 | `Figures.tsx` | Animated stick figures on Home. |
+
+## public (static assets)
+
+| File | What it holds |
+|---|---|
+| `atheria-wordmark.png` | Atheria wordmark (paper-coloured text, orange asterisk, transparent background). Used on the loading and reading screens. |
 
 ## tests
 
