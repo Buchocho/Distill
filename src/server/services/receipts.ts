@@ -328,6 +328,8 @@ export interface SaveReceiptInput {
  * it already exists) and each creation is logged (rule 14a); the items are replaced with the
  * reviewed ones; the receipt is marked saved, which locks its photos (rule 9a).
  * Items with no category are saved as unsorted: saving is never blocked by them (rule 9).
+ * A receipt whose items do not add up to its printed total is refused (rule 8): it stays unsaved,
+ * with its photo, outside the period's accounts until the payer corrects it.
  * A receipt can be saved once; changes after that are item edits (step 3).
  */
 export async function saveReceipt(userId: string, receiptId: string, input: SaveReceiptInput) {
@@ -337,7 +339,6 @@ export async function saveReceipt(userId: string, receiptId: string, input: Save
   await assertCurrentMember(userId, receipt.groupId);
   if (receipt.status !== "ready") throw new ServiceError("invalid", "This receipt cannot be saved now.");
   const errors = validateReview(input);
-  if (input.totalCents !== null && !Number.isInteger(input.totalCents)) errors.totalCents = "Check the total.";
   if (input.receiptNumber !== null && input.receiptNumber.trim().length > 60) errors.receiptNumber = "Check the receipt number.";
   // The same store and receipt number is already saved: refuse, whatever the screen showed (rule 9c).
   const duplicate = findDuplicate(

@@ -1,7 +1,7 @@
 # Distill: business rules register
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 10 Nov 2026, build step 7 (rows brought up to date with SPEC.md after the 6 to 10 Nov changes).
+Last updated: 16 Nov 2026, build step 7 (rule 8: a receipt is saved only when it adds up).
 
 Each business rule in SPEC.md section 4, whether it is built, and the files that enforce it. Rule numbers are the SPEC.md numbers, so a code comment that says "SPEC.md rule 15" points to the same row here.
 
@@ -38,8 +38,8 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 6a | Tax inside the item prices is not an item and is never added again; the receipt's sums decide | Built | `reconcileTax` and `isTaxLine` in `src/domain/receipts.ts`, instructions in `src/server/integrations/gemini.ts`, `receipts.tax_included_cents`, `ReviewForm.tsx` |
 | 6b | Tax added on top is spread over the items by price on save, so it follows each item's rule | Built | `spreadTax` in `src/domain/receipts.ts`, `saveReceipt` in `src/server/services/receipts.ts`, `items.tax_share_cents`, `receipts.tax_added_cents`, review and saved receipt screens |
 | 7 | Items get a category at product type level; new ones are created when the receipt is saved | Built: the level is set in the Gemini instructions (`src/server/integrations/gemini.ts`); matched ignoring capitals, otherwise kept as `items.proposed_category` until save; a new name can also be typed | `src/domain/receipts.ts` (`matchCategory`), `saveReceipt`, `ReviewForm.tsx`, `categories_name_per_group` and `items_one_category` in `src/server/db/schema.ts` |
-| 8 | Review shows items total against printed total; names and prices editable | Built | `src/domain/receipts.ts` (`sumCheck`), `ReviewForm.tsx` |
-| 8a | Never make up a number: unsure values marked, unreadable prices left empty, a suggested price from the total for the one in doubt, Save blocked only while a price is empty | Built | `parseReading` and `suggestPrice` in `src/domain/receipts.ts`, instructions and answer format in `src/server/integrations/gemini.ts`, `items.reading_flag`, `receipts.total_unclear` and `date_unclear`, `ReviewForm.tsx` |
+| 8 | Review shows items total against printed total; names, prices and total editable; a receipt is saved only when the items add up to the total exactly, and needs a total (changed 16 Nov) | Built: Save is closed on the screen and the API refuses the same receipts; the receipt stays unsaved, out of the accounts | `src/domain/receipts.ts` (`sumCheck`, `sumBlock`, `validateReview`), `saveReceipt` in `src/server/services/receipts.ts`, `ReviewForm.tsx` |
+| 8a | Never make up a number: unsure values marked, unreadable prices left empty, a suggested price from the total for the one in doubt, Save blocked while a price is empty (and by rule 8) | Built | `parseReading` and `suggestPrice` in `src/domain/receipts.ts`, instructions and answer format in `src/server/integrations/gemini.ts`, `items.reading_flag`, `receipts.total_unclear` and `date_unclear`, `ReviewForm.tsx` |
 | 9 | Saving is never blocked by unsorted items | Built: Leave unsorted in the category dropdown; unsorted count on Receipts and Home | `src/domain/receipts.ts` (`validateReview`), `saveReceipt`, `ReviewForm.tsx` |
 | 9a | Any number of photos; locked once saved | Partly built: one photo per receipt; saved receipts cannot be read or saved again. More photos are step 4, moved after steps 5 to 7 on 10 Nov | `src/server/services/receipts.ts`, `src/server/db/schema.ts` |
 | 9b | An unsaved receipt can be deleted with its photo; a saved one cannot | Built | `deleteReceipt` in `src/server/services/receipts.ts`, `DeleteReceipt.tsx`, `src/server/integrations/storage.ts` (`deletePhotos`) |
@@ -111,3 +111,5 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 - Rule 24: if the payer never records a payment, the person owed cannot mark it paid. Accepted (10 Nov).
 - Rule 18: any member can move the close date, again and again; the screen shows who changed it last. Accepted (10 Nov).
 - Rule 8a: the model's own "unsure" flag is not reliable; the sum check and the suggested price are the backstop.
+- Rule 8: a receipt that correctly does not add up (a charge or discount the reading leaves out, a line that cannot be read at all) can only be saved by changing a number until it matches, and the accounts cannot tell that number from a read one. None found in testing; to be handled when one is (16 Nov).
+- Rule 8: corrections on the review screen are kept only when the receipt is saved; leaving the screen before the sums match loses them.

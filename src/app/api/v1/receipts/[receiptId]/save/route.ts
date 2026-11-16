@@ -2,6 +2,7 @@
  * POST /api/v1/receipts/{receiptId}/save: save a reviewed receipt (SPEC.md rules 7 to 9, stories
  * US2 and US5). Body: { storeName, receiptNumber, purchaseDate, totalCents, items: [{ name, priceCents,
  * discountCents, categoryId, proposedCategory }] }. discountCents is information only (rule 6).
+ * Refused if the items do not add up to totalCents, or there is no total (rule 8).
  * Refused if the same store and receipt number is already saved in the group (rule 9c). Items may have no category. Members only. Documented in docs/API.md.
  */
 

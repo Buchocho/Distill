@@ -13,15 +13,19 @@
  * - see when the receipt is already saved: blocked for the same store and receipt number,
  *   a warning for the same store, date and total (rule 9c);
  * - see each item's discount, for information only: the price shown is already what was paid (rule 6);
- * - see the sum check: whether the items add up to the printed total, and the difference (rule 8);
+ * - see the sum check: whether the items add up to the printed total, and the difference; Save
+ *   stays closed until they match, so a misread number never reaches the accounts (rule 8,
+ *   changed 16 Nov 2026);
  * - see, when tax was already inside the item prices, that it is not added again (rule 6a), and
  *   that tax added on top will be spread over the items by price when saving (rule 6b);
  * - see which values the reading was unsure of, fill in prices it could not read, and use a
  *   suggested price worked out from the total when only one price is in doubt (rule 8a, approved
  *   design Review receipt v4, 10 Nov 2026);
  * - delete the receipt instead of saving it (rule 9b).
- * Save is never blocked by unsorted items, a sum difference or a value marked unsure; the person
- * decides. It is blocked while a price is empty, so no price is ever saved that nobody entered.
+ * Save is never blocked by unsorted items or a value marked unsure. It is blocked while a price
+ * is empty, so no price is ever saved that nobody entered, and while the items do not add up to
+ * the printed total or the total is empty (rule 8). Until then the receipt stays in the list as
+ * "Review and save", outside the period's accounts.
  * Amounts are typed and shown in the group's currency style (rule 2b).
  */
 
@@ -29,7 +33,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { currencyAffix, formatCents, formatMoney, parseAmount } from "@/domain/money";
-import { findDuplicate, isTaxLine, suggestPrice, sumCheck, type ReadingFlag } from "@/domain/receipts";
+import { findDuplicate, isTaxLine, suggestPrice, sumBlock, sumCheck, type ReadingFlag } from "@/domain/receipts";
 import { dateLooksWrong, deviceToday, longDate } from "@/domain/dates";
 import { DeleteReceipt } from "./DeleteReceipt";
 
@@ -159,6 +163,8 @@ export function ReviewForm(props: {
   const totalDoubt = props.totalUnclear && !touched.total;
   const anyDoubt = dateDoubt || totalDoubt || rows.some((r) => r.flag !== null && !touched[r.key]);
   const missingCount = prices.filter((p) => p === null).length;
+  // Save stays closed until the items add up to the printed total (rule 8). Missing prices have their own message.
+  const sumStop = missingCount > 0 ? null : sumBlock(prices.filter((p): p is number => p !== null), totalCents);
   const suggestion = suggestPrice(prices, rows.map((r) => r.flag), totalCents);
   // A tax line here is tax added on top: on save it is spread over the items by price (rule 6b).
   const rowCategory = (r: Row) =>
@@ -367,7 +373,7 @@ export function ReviewForm(props: {
               Items add up to {formatMoney(check.itemsCents, props.currency)}
             </>
           ) : check.differenceCents === null ? (
-            <span className="text-sand">Items come to {formatMoney(check.itemsCents, props.currency)}. Add the printed total to check it.</span>
+            <span className="text-orange">Items come to {formatMoney(check.itemsCents, props.currency)}. Add the printed total to check it.</span>
           ) : (
             <span className="text-orange">
               Items come to {formatMoney(check.itemsCents, props.currency)}, {formatMoney(Math.abs(check.differenceCents), props.currency)}{" "}
@@ -379,12 +385,18 @@ export function ReviewForm(props: {
         {errors.form && <p role="alert" className="px-1 text-sm font-semibold text-orange">{errors.form}{errors.items ? ` ${errors.items}` : ""}</p>}
         <div className="flex flex-wrap gap-2.5">
           <DeleteReceipt receiptId={props.receiptId} groupId={props.groupId} compact />
-          <button type="button" onClick={() => void save()} disabled={saving || blocked || missingCount > 0}
+          <button type="button" onClick={() => void save()} disabled={saving || blocked || missingCount > 0 || sumStop !== null}
             className="min-h-13 flex-1 rounded-xl bg-orange text-base font-extrabold text-ink disabled:opacity-40">
             {saving ? "Saving..." : duplicate?.kind === "warn" ? "Save anyway" : "Save receipt"}
           </button>
         </div>
         {missingCount > 0 && <p className="text-center text-[13px] text-sand">Enter the missing price{missingCount === 1 ? "" : "s"} to save.</p>}
+        {sumStop === "mismatch" && (
+          <p className="text-center text-[13px] text-sand">
+            Correct the prices or the total until they match. The receipt stays here, out of the balance, until you save it.
+          </p>
+        )}
+        {sumStop === "no-total" && <p className="text-center text-[13px] text-sand">Enter the printed total to save.</p>}
       </div>
     </>
   );

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import continente from "../fixtures/reading-continente.json";
 import usReceipt from "../fixtures/reading-us-tax-discount.json";
 import { parseAmount } from "@/domain/money";
-import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, readingBlockedBy, reconcileTax, shownStatus, spreadTax, storeKey, suggestPrice, sumCheck, validateReview } from "@/domain/receipts";
+import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, readingBlockedBy, reconcileTax, shownStatus, spreadTax, storeKey, suggestPrice, sumBlock, sumCheck, validateReview } from "@/domain/receipts";
 
 describe("parseAmount", () => {
   it("reads both decimal styles", () => {
@@ -68,6 +68,23 @@ describe("sumCheck", () => {
   });
 });
 
+describe("sumBlock", () => {
+  it("lets a receipt through only when the items add up to the total exactly", () => {
+    expect(sumBlock([149, 329, 812], 1290)).toBeNull();
+    expect(sumBlock([149, 329, 811], 1290)).toBe("mismatch");
+    expect(sumBlock([149, 329, 813], 1290)).toBe("mismatch");
+  });
+  it("counts a voucher as a negative line", () => {
+    expect(sumBlock([1000, -500], 500)).toBeNull();
+  });
+  it("blocks when there is no total to check against", () => {
+    expect(sumBlock([100, 200], null)).toBe("no-total");
+  });
+  it("has no rounding trouble, because amounts are whole cents", () => {
+    expect(sumBlock([10, 20], 30)).toBeNull();
+  });
+});
+
 describe("matchCategory", () => {
   const cats = [{ id: "c1", name: "Eggs" }, { id: "c2", name: "Milk" }];
   it("matches ignoring capitals and spaces", () => {
@@ -84,12 +101,18 @@ describe("matchCategory", () => {
 describe("validateReview", () => {
   const item = { name: "Bread", priceCents: 149, discountCents: null, categoryId: null, proposedCategory: null };
   it("allows unsorted items", () => {
-    expect(validateReview({ storeName: "Lidl", purchaseDate: null, items: [item] })).toEqual({});
+    expect(validateReview({ storeName: "Lidl", purchaseDate: null, totalCents: 149, items: [item] })).toEqual({});
+  });
+  it("refuses a receipt whose items do not add up to the total, or with no total", () => {
+    expect(validateReview({ storeName: "Lidl", purchaseDate: null, totalCents: 150, items: [item] }).totalCents).toMatch(/do not add up/);
+    expect(validateReview({ storeName: "Lidl", purchaseDate: null, totalCents: null, items: [item] }).totalCents).toMatch(/Add the printed total/);
+    expect(validateReview({ storeName: "Lidl", purchaseDate: null, totalCents: 14.9, items: [item] }).totalCents).toBe("Check the total.");
   });
   it("flags empty names, bad dates and two categories on one line", () => {
     const e = validateReview({
       storeName: "Lidl",
       purchaseDate: "2026-02-30",
+      totalCents: 447,
       items: [{ ...item, name: " " }, { ...item, categoryId: "c1", proposedCategory: "New" }, { ...item, discountCents: -5 }],
     });
     expect(e["item.2"]).toBeDefined();
@@ -98,7 +121,7 @@ describe("validateReview", () => {
     expect(e["item.1"]).toBeDefined();
   });
   it("needs at least one item", () => {
-    expect(validateReview({ storeName: "", purchaseDate: null, items: [] }).items).toBeDefined();
+    expect(validateReview({ storeName: "", purchaseDate: null, totalCents: null, items: [] }).items).toBeDefined();
   });
 });
 

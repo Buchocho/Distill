@@ -330,3 +330,14 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - BUSINESS_RULES.md: stale "from step 2 / step 5" statuses on 2b, 2c, 5, 13a, 17a, A3, A6, A7 corrected; rule 6 row no longer says tax lines are items; rows put in rule order; Points to watch lists the accepted weaknesses from 6 to 10 Nov.
 - CODE_MAP.md: table count 14, stale "planned, not yet created" line removed, three test files and four functions added.
 - Verified: every rule number in SPEC.md has a row in BUSINESS_RULES.md; every file in `src` and `tests` and every exported function in `src/domain` and `src/server/services` is named in CODE_MAP.md. No code changed.
+
+## 2026-11-16: a receipt is saved only when it adds up
+
+- Goal: stop a misread number from reaching the accounts. Asked by Maduabuchi on 13 Nov: when the items do not add up to the total, the person must correct it before saving; the receipt stays on file but is not added to the accounts.
+- Discussed first. I raised receipts that do not add up for a correct reason (charges or discounts left out of the reading) and lines that cannot be read at all; these were assumptions, not checked against Distill's receipts. His decision: every receipt tested so far adds up, so build the block now and adapt when a case is found. No rounding tolerance: amounts are whole cents, so the match is exact. The delivery date moved to 23 Nov, 08:00.
+- Prompts: "We need to add a blocker of sorts in the process of adding a receipt"; "All the receipts we've tested with have added up, so let's implement now and if we uncover edgecases that don't match we will adapt."
+- Built: `sumBlock` in `src/domain/receipts.ts`; `validateReview` now takes the total and refuses a receipt that does not add up or has no total, so `saveReceipt` and the API refuse it too; `ReviewForm` keeps Save closed and says what to do. No table change: an unsaved receipt already stays as "Review and save" with its photo and is not in the balance. Rule 8 rewritten, 8a adjusted; BUSINESS_RULES, CODE_MAP and API.md updated. Due date corrected in SPEC.md and CLAUDE.md.
+- Decided by me, to confirm: a receipt with an empty total cannot be saved either. Otherwise clearing the total would get round the check.
+- No mockup: Save disabled and one line of text on the approved Review v4 screen.
+- Verified: type check, lint, unit tests (new: exact match, one cent off either way, voucher line, no total, refused by `validateReview`), end to end tests, build. To check by hand on a phone: change one price on a receipt, Save is closed and the message shows; correct it, Save opens; clear the total, Save is closed.
+- Left open: a receipt that correctly does not add up; corrections are lost if the screen is left before saving.

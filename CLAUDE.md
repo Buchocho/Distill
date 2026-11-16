@@ -4,7 +4,7 @@ Read this file, SPEC.md, docs/ARCHITECTURE.md, docs/DATA_MODEL.md, docs/CODE_MAP
 
 ## What this project is
 
-Distill, a mobile-first web app for splitting shared grocery receipts. MVP for the Information Systems Architecture course at FEUP, due 15 Nov 2026. SPEC.md is the source of truth for what to build.
+Distill, a mobile-first web app for splitting shared grocery receipts. MVP for the Information Systems Architecture course at FEUP, due 23 Nov 2026 at 08:00 (moved from 15 Nov). SPEC.md is the source of truth for what to build.
 
 ## Scope
 

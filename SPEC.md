@@ -1,9 +1,9 @@
 # Distill: build specification (SPEC.md)
 
 Author: Maduabuchi Ogugua Dibiaezue
-Course: Information Systems Architecture, Assignment 2 (MVP), due 15 Nov 2026
+Course: Information Systems Architecture, Assignment 2 (MVP), due 23 Nov 2026 at 08:00 (moved from 15 Nov)
 Source: the approved Assignment 1 specification (Distill, 14 slides), plus the changes listed in section 7.
-Status: living document. First written 25 Oct 2026; last updated 10 Nov 2026. Rules added or changed after the approved specification carry the date they were decided.
+Status: living document. First written 25 Oct 2026; last updated 16 Nov 2026. Rules added or changed after the approved specification carry the date they were decided.
 
 ## 1. Product in one paragraph
 
@@ -56,8 +56,8 @@ Term: a period in the app is stored as a ledger in the database.
 6a. Tax is an item only when it is added on top of the item prices. When the item prices already include it (the items alone add up to the payable total, with the tax printed only to show how much of it was tax), the tax is not an item: it is shown on the review screen as "already in these prices" and never added again. The receipt's own sums decide; when a price is missing or misread, the reading's own answer does (added 10 Nov 2026, found by a beta tester on a Nigerian receipt).
 6b. Tax added on top of the item prices is spread over the items in proportion to their prices when the receipt is saved, so each item's tax follows that item's sharing rule, the same as tax inside the prices (decided 10 Nov 2026, replacing tax as a separate item). Rounding uses the largest remainder method, so the total does not change; a voucher carries no tax. Each saved item shows "Includes x tax" and the receipt says how much tax was spread.
 7. Each item is given a category from the group's list. Categories are at the level of the product type (Cola, Orange juice, Apple juice, Milk, Oat milk), never a shop aisle (Soft drinks, Dairy) and never a brand or pack size, because the sharing rule is set per category and products one person buys only for themselves need their own category. If none fits, the reading step may propose a new category name. A proposed category is created only when the receipt is saved; saving counts as confirming it. After that it is reused for later receipts. If the reading step cannot choose, the item is unsorted.
-8. The review screen shows the sum check: items total against printed total, and the difference if they do not match. The user can edit names and prices before saving.
-8a. The reading never makes up a number (added 10 Nov 2026, found by a beta tester on a faded receipt). For each price, the total and the date it says whether it was unsure; a price it cannot read is left empty. The review screen marks unsure values in orange with a notice at the top, shows empty prices as empty, and when exactly one price is in doubt and the total is known, offers the price that makes the items match the total, which the person can use. Saving is blocked only while a price is empty.
+8. The review screen shows the sum check: items total against printed total, and the difference if they do not match. The user can edit names, prices and the total. A receipt is saved only when its items add up to the printed total exactly, in cents; a receipt with no total cannot be saved either, since there is nothing to check against. Until it is corrected the receipt stays in the list as "Review and save" with its photo, and is not part of the period's accounts. The same check is applied by the API. (Changed 16 Nov 2026 from "the screen shows the difference and the person decides": a difference means a number was read wrong, and a wrong number would be split between people. Every receipt tested so far adds up; a receipt that correctly does not add up will be handled when one is found.)
+8a. The reading never makes up a number (added 10 Nov 2026, found by a beta tester on a faded receipt). For each price, the total and the date it says whether it was unsure; a price it cannot read is left empty. The review screen marks unsure values in orange with a notice at the top, shows empty prices as empty, and when exactly one price is in doubt and the total is known, offers the price that makes the items match the total, which the person can use. Saving is blocked while a price is empty, and by rule 8 while the items do not add up to the total.
 9. Saving is never blocked by unsorted items (US5).
 9a. A receipt can have any number of photos. Once it is saved into the ledger, no photos can be added or removed.
 9b. A receipt that is not saved yet can be deleted with its photo, after a confirm step. A saved receipt cannot be deleted.
@@ -152,6 +152,7 @@ Other changes, 6 to 10 Nov 2026 (each is in section 4 with its date):
 | A group has a currency, chosen once, display only | 2b | The app will be used outside Europe (US, Canada, Nigeria) |
 | Dates follow the device's local date | 2c | Keeps late night receipts in the right period without storing time zones |
 | The person scanning is always the payer | 4 | Nobody can record a purchase as someone else's |
+| A receipt is saved only when its items add up to the printed total (16 Nov) | 8 | A misread number must be corrected before it is split between people |
 | New rule kind "Whoever paid" | 11 | Each person pays for their own items without a rule per person |
 | Item discounts are information only; tax inside prices is not added again; tax on top is spread over the items | 6, 6a, 6b | The split stays the same however the shop prints the receipt |
 | The reading never makes up a number | 8a | A faded receipt produced an invented price |

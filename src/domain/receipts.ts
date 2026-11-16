@@ -2,8 +2,9 @@
  * Receipt rules: what a reading must contain, the sum check, and matching items to categories.
  *
  * What it holds: the check on Gemini's answer (parseReading), the "items add up to the total"
- * check shown on the review screen (sumCheck), how a category name from the reading is matched
- * to the group's list (matchCategory), and the check on a receipt before it is saved
+ * check shown on the review screen (sumCheck), the block on saving a receipt that does not add
+ * up (sumBlock), how a category name from the reading is matched to the group's list
+ * (matchCategory), and the check on a receipt before it is saved
  * (validateReview), and duplicate checking (receiptNumberKey, findDuplicate).
  *
  * Why it matters: the reading step is the part of Distill most likely to be wrong. Gemini's answer
@@ -194,6 +195,19 @@ export function sumCheck(itemPricesCents: readonly number[], totalCents: number 
   return { itemsCents, differenceCents: totalCents === null ? null : itemsCents - totalCents };
 }
 
+/**
+ * Why a receipt cannot be saved yet because of its sum (SPEC.md rule 8, changed 16 Nov 2026).
+ * A receipt goes into the period's accounts only when its items add up to its printed total
+ * exactly, in cents: a difference means a number was read or typed wrong, and a wrong number
+ * would be split between people. "no-total": the total is empty, so there is nothing to check
+ * against. "mismatch": items and total differ. Null: the receipt adds up. Used by the review
+ * screen to close Save and by validateReview, so the API refuses the same receipts.
+ */
+export function sumBlock(itemPricesCents: readonly number[], totalCents: number | null): "no-total" | "mismatch" | null {
+  const { differenceCents } = sumCheck(itemPricesCents, totalCents);
+  return differenceCents === null ? "no-total" : differenceCents === 0 ? null : "mismatch";
+}
+
 /** Category names are matched ignoring capitals and extra spaces, the same as the database rule (SPEC.md rule 7). */
 export function categoryKey(name: string): string {
   return name.trim().replace(/\s+/g, " ").toLowerCase();
@@ -225,12 +239,13 @@ export interface ReviewItem {
 
 /**
  * Checks a receipt before it is saved (SPEC.md rules 8 and 9). Returns one message per problem,
- * keyed "storeName", "purchaseDate", "items", or "item.<n>" for line n (from 0); empty when fine.
+ * keyed "storeName", "purchaseDate", "totalCents", "items", or "item.<n>" for line n (from 0);
+ * empty when fine.
  * An item with no category is fine: saving is never blocked by unsorted items (rule 9, US5).
- * A total that does not match the items is not an error either: the screen shows the difference
- * and the person decides (rule 8).
+ * The items must add up to the printed total (rule 8): a receipt that does not add up, or has no
+ * total, is refused and stays unsaved, out of the accounts, until the person corrects it.
  */
-export function validateReview(input: { storeName: string; purchaseDate: string | null; items: readonly ReviewItem[] }) {
+export function validateReview(input: { storeName: string; purchaseDate: string | null; totalCents: number | null; items: readonly ReviewItem[] }) {
   const errors: Record<string, string> = {};
   if (input.storeName.trim().length > 60) errors.storeName = "Keep the store name under 60 characters.";
   if (input.purchaseDate !== null && !isIsoDate(input.purchaseDate)) errors.purchaseDate = "Check the date.";
@@ -246,6 +261,13 @@ export function validateReview(input: { storeName: string; purchaseDate: string 
       errors[`item.${i}`] = `Category names are 1 to ${CATEGORY_NAME_MAX} characters.`;
     }
   });
+  // Only when every price is a usable number: a bad price already has its own message.
+  if (input.totalCents !== null && !Number.isInteger(input.totalCents)) errors.totalCents = "Check the total.";
+  else if (input.items.length > 0 && input.items.every((i) => Number.isInteger(i.priceCents))) {
+    const block = sumBlock(input.items.map((i) => i.priceCents), input.totalCents);
+    if (block === "no-total") errors.totalCents = "Add the printed total.";
+    if (block === "mismatch") errors.totalCents = "The items do not add up to the total. Correct the prices or the total.";
+  }
   return errors;
 }
 
