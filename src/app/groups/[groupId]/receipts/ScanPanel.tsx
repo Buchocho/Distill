@@ -1,16 +1,18 @@
 "use client";
 
 /**
- * The scan part of the Receipts screen (screen 2): Take a photo, or choose a file.
+ * The scan card on the Receipts screen (screen 2): dark card with a camera icon,
+ * a headline, the orange "Take a photo" button and an underlined "choose a file" link.
  * A member scans only their own receipts, so the payer is always the person scanning (SPEC.md
  * rule 4). Someone holding another member's receipt sends them a photo to upload.
  * Runs in the browser.
  *
  * What happens on a photo: it is shrunk (src/lib/photos.ts), the receipt is started through the
  * API (which checks membership and picks the open period, SPEC.md rules 4 and 5), the photo is
- * uploaded straight to storage with the one time link (architecture rule 6), and the review screen
+ * uploaded straight to storage with the one-time link (architecture rule 6), and the review screen
  * opens, where the reading runs. Each stage shows what is happening, and any failure says what to do.
  * Story US2.
+ * Approved design: canvas "Receipts.dc.html", 16 Nov 2026.
  */
 
 import { useRouter } from "next/navigation";
@@ -19,7 +21,7 @@ import { Icon } from "@/components/Icon";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { PHOTO_BUCKET, PhotoError, preparePhoto } from "@/lib/photos";
 
-/** The Take a photo button and the choose a file link. The receipt is paid by the person scanning (rule 4). */
+/** The scan card: dark-card bg, camera icon square, headline, photo button and file link. */
 export function ScanPanel({ groupId }: { groupId: string }) {
   const router = useRouter();
   const camera = useRef<HTMLInputElement>(null);
@@ -55,26 +57,38 @@ export function ScanPanel({ groupId }: { groupId: string }) {
   }
 
   const busy = stage !== "idle";
-  // The return draws the orange Take a photo area, then the file link and "Paid by you" on one line.
+  const label = stage === "preparing" ? "Preparing photo..." : stage === "uploading" ? "Uploading..." : "Take a photo";
+
   return (
-    <div className="flex flex-col gap-3">
-      <button type="button" disabled={busy} onClick={() => camera.current?.click()}
-        className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-[20px] bg-orange text-lg font-extrabold text-ink disabled:opacity-70">
-        <Icon name="camera" size={34} />
-        {stage === "preparing" ? "Preparing photo..." : stage === "uploading" ? "Uploading..." : "Take a photo"}
-      </button>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col items-center gap-3.5 rounded-[20px] bg-dark-card px-4 pb-5 pt-5">
+        {/* Camera icon in a rounded square */}
+        <span className="grid size-14 place-items-center rounded-2xl bg-dark-line">
+          <Icon name="camera" size={28} />
+        </span>
+
+        <span className="text-[15px] font-bold text-paper">Bought something? Scan it.</span>
+
+        {/* Orange photo button */}
+        <button type="button" disabled={busy} onClick={() => camera.current?.click()}
+          className="min-h-11 w-full rounded-[14px] bg-orange text-[15px] font-extrabold text-ink disabled:opacity-70">
+          {label}
+        </button>
+
+        {/* File picker link */}
+        <button type="button" disabled={busy} onClick={() => picker.current?.click()}
+          className="text-sm font-semibold text-sand underline">
+          or choose a file
+        </button>
+      </div>
+
+      {/* Hidden file inputs: camera capture and gallery/file picker */}
       <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden"
         onChange={(e) => onPhoto(e.target.files?.[0])} aria-label="Take a photo of the receipt" />
       <input ref={picker} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" className="hidden"
         onChange={(e) => onPhoto(e.target.files?.[0])} aria-label="Choose a photo of the receipt" />
 
-      <div className="flex items-center gap-2.5 px-1">
-        <button type="button" disabled={busy} onClick={() => picker.current?.click()}
-          className="min-h-11 text-[15px] font-semibold text-paper underline">or choose a file</button>
-        <span className="flex-1" />
-        <span className="text-sm text-sand">Paid by you</span>
-      </div>
-      {error && <p role="alert" className="rounded-xl bg-red-tint p-3 text-sm font-semibold text-red">{error}</p>}
+      {error && <p role="alert" className="rounded-xl bg-red/10 p-3 text-sm font-semibold text-red">{error}</p>}
     </div>
   );
 }

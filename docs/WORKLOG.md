@@ -371,3 +371,29 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Built: `src/app/loading.tsx` now shows the Distill wordmark (54px), animated orange underline bar (same `underline` keyframe the app already uses), and "by Atheria" with the Atheria wordmark image. `ReadingStep.tsx` now shows the same mark at 44px instead of the dark card with a CSS spinner, with the "Reading your receipt" text and Delete link below. The failure state (Retry and Delete) is unchanged.
 - Added `public/atheria-wordmark.png` (cropped from the logo pack) as a static asset.
 - Verified: type check, lint, 135 unit tests, 8 end to end tests. To check by hand: navigate between pages and watch for the branded loading screen on slow connections; upload a receipt and see the animated mark while it reads.
+
+## 2026-11-16: screen redesigns (sign in, group, receipts tab)
+
+- Goal: implement the three approved mockup redesigns from the design canvases.
+- Prompt: "I chose sign in D. I approved the group page. I approved the receipts page."
+
+### Sign in (option D)
+- `src/app/login/page.tsx`: full rewrite. Ink background, 72px Distill wordmark with animated bar, "by Atheria" with wordmark image, tagline, receipt illustration with clipPath torn edge, three step pills, white "Continue with Google" button, privacy and terms links.
+- `src/app/login/SignInButton.tsx`: white bg, rounded-[14px], removed border.
+
+### Group page
+- `src/app/groups/[groupId]/invite/page.tsx`: full rewrite. Ink rounded header with back arrow, "GROUP" label, group name, avatar stack (cycling orange/paper/sand), member count and period. Paper body with InviteCard, members card, settings card, leave and sign out row.
+- `src/app/groups/[groupId]/invite/InviteCard.tsx`: new component. Orange-tint card with headline, URL in white pill, Share (navigator.share) and Copy buttons.
+- `src/app/groups/[groupId]/invite/DisplayNameForm.tsx`: rewrite. Collapsed row (label + current name + orange chevron) expanding to inline form on tap.
+- `src/app/groups/[groupId]/invite/CloseRuleForm.tsx`: rewrite. Same collapsed/expanded pattern with ruleLabel helper.
+- `src/app/groups/[groupId]/invite/MemberActions.tsx`: Remove and Leave changed to plain red text (no border or background).
+- `src/components/SignOutButton.tsx`: right-aligned, Sign out button above email in smaller text.
+
+### Receipts tab
+- `src/app/groups/[groupId]/receipts/page.tsx`: full rewrite. Custom dark header (not TabScreen) with small DistillMark, "RECEIPTS" label, group name, period, avatar button. Receipts split into "NEEDS YOU" (orange label, count badge, orange left border rows with action badges) and "RECENT" (payer avatar circle with initial, store, date with "you" for own receipts, amount, status badge). Bottom tab bar.
+- `src/app/groups/[groupId]/receipts/ScanPanel.tsx`: redesigned as dark-card with camera icon in rounded square, "Bought something? Scan it." headline, orange photo button, underlined file link.
+- `src/server/services/receipts.ts`: added `paidBy` to `listReceipts` select query so receipts page can show "you" vs payer name.
+
+### Verification
+- Type check: clean. Lint: clean. Unit tests: 135 passed. End to end tests not run (no visual changes to test logic).
+- To check by hand: open sign in page (should see receipt illustration and step pills); open group page (ink header, collapsible settings rows, avatar stack); open receipts tab (scan card, needs-you section above recent, payer avatars).

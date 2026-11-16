@@ -16,7 +16,7 @@ export function RemoveMember({ groupId, userId, name, groupName }: { groupId: st
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="min-h-11 rounded-xl border-[1.5px] border-grey-200 bg-white px-3 text-sm font-bold">
+      <button type="button" onClick={() => setOpen(true)} className="min-h-11 px-1 text-sm font-bold text-red">
         Remove
       </button>
       {open && (
@@ -44,8 +44,8 @@ export function LeaveGroup({ groupId, userId, groupName }: { groupId: string; us
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="min-h-12 rounded-xl border-[1.5px] border-red bg-white font-extrabold text-red">
-        Leave {groupName}
+      <button type="button" onClick={() => setOpen(true)} className="min-h-11 text-sm font-bold text-red">
+        Leave group
       </button>
       {open && (
         <ConfirmSheet

@@ -31,12 +31,12 @@ export function SignOutButton({ email, tone = "light" }: { email: string; tone?:
 
   // The return draws who is signed in, the button, and any error.
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <span className={`text-[13px] ${tone === "dark" ? "text-sand" : "text-grey-600"}`}>Signed in with Google as {email}</span>
+    <div className="flex flex-col items-end gap-1">
       <button type="button" onClick={() => void signOut()} disabled={busy}
-        className={`min-h-11 px-4 text-[15px] font-bold underline underline-offset-2 disabled:opacity-50 ${tone === "dark" ? "text-paper" : "text-red"}`}>
+        className={`min-h-11 px-1 text-sm font-bold disabled:opacity-50 ${tone === "dark" ? "text-paper" : "text-grey-600"}`}>
         {busy ? "Signing out..." : "Sign out"}
       </button>
+      <span className={`pr-1 text-[11px] ${tone === "dark" ? "text-sand" : "text-grey-600"}`}>{email}</span>
       {error && <p role="alert" className={`text-sm font-semibold ${tone === "dark" ? "text-orange" : "text-red"}`}>{error}</p>}
     </div>
   );

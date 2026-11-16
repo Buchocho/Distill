@@ -37,7 +37,7 @@ export function SignInButton({ next }: { next: string }) {
         type="button"
         onClick={signIn}
         disabled={busy}
-        className="flex min-h-13 items-center justify-center gap-2.5 rounded-xl border-[1.5px] border-ink bg-white text-base font-bold text-ink disabled:opacity-60"
+        className="flex min-h-13 items-center justify-center gap-2.5 rounded-[14px] bg-white text-base font-extrabold text-ink disabled:opacity-60"
       >
         <Icon name="user" />
         {busy ? "Opening Google..." : "Continue with Google"}

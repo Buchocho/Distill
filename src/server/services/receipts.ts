@@ -75,6 +75,7 @@ export async function listReceipts(userId: string, groupId: string) {
       storeName: receipts.storeName,
       purchaseDate: receipts.purchaseDate,
       totalCents: receipts.totalCents,
+      paidBy: receipts.paidBy,
       paidByName: users.displayName,
       createdAt: receipts.createdAt,
       unsortedCount: unsorted,

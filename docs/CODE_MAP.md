@@ -1,7 +1,7 @@
 # Distill: code map
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 16 Nov 2026, step 7 (branded loading screens, `sumBlock`, `validateCorrections`, `keepCorrections`, Agree waits for receipts in review).
+Last updated: 16 Nov 2026, step 7 (screen redesigns: sign in, group, receipts tab; branded loading screens, `sumBlock`, `validateCorrections`, `keepCorrections`, Agree waits for receipts in review).
 
 This document lists every file in the repository, what it holds and the main functions in it. Use it to find where something lives before changing it. For why a rule exists, see [BUSINESS_RULES.md](BUSINESS_RULES.md). For the tables, see [DATA_MODEL.md](DATA_MODEL.md).
 
@@ -123,8 +123,8 @@ Screen numbers match SPEC.md section 5.
 | `/join/<code>` | `join/[token]/page.tsx` | 0b, Join a group | Built |
 | `/groups/new` | `groups/new/page.tsx`, `groups/new/NewGroupForm.tsx` | 1, New group; Back to Your groups, or Start when in no group | Built |
 | `/groups/<id>` | `groups/[groupId]/page.tsx` | 0c, Home | Built. Large group name with its arrow opens Your groups, period under it. All three status lines are live; Balance shows what is waiting before the close date |
-| `/groups/<id>/invite` | `groups/[groupId]/invite/page.tsx`, `invite/CopyLink.tsx`, `invite/DisplayNameForm.tsx`, `invite/CloseRuleForm.tsx`, `invite/MemberActions.tsx` | Group (was Invite people): invite link, members, "Your name in Distill", "Accounts close" (applies now, shows the new end and who changed it last), Sign out. Members show their Google email; Remove and Leave with a confirmation panel; people who left listed in grey | Built |
-| `/groups/<id>/receipts` | `groups/[groupId]/receipts/page.tsx`, `receipts/ScanPanel.tsx` | 2, Receipts: take a photo or choose a file, paid by, recent receipts with status | Built (one photo per receipt; more in step 4) |
+| `/groups/<id>/invite` | `groups/[groupId]/invite/page.tsx`, `invite/InviteCard.tsx`, `invite/CopyLink.tsx`, `invite/DisplayNameForm.tsx`, `invite/CloseRuleForm.tsx`, `invite/MemberActions.tsx` | Group: ink header with group name, avatar stack and member count; invite card (orange-tint with Share and Copy); members in a white card; settings as collapsible rows (name and close date expand to inline edit on tap); leave group and sign out at the bottom. Members show their Google email; Remove and Leave with a confirmation panel; people who left listed in grey | Built |
+| `/groups/<id>/receipts` | `groups/[groupId]/receipts/page.tsx`, `receipts/ScanPanel.tsx` | 2, Receipts: custom dark header (Distill mark, group name, period, avatar link), dark-card scan card with camera icon and photo button, "NEEDS YOU" section (action receipts with orange left border), "RECENT" section (payer avatar, store, date, amount, status badge), bottom tab bar | Built (one photo per receipt; more in step 4) |
 | `/groups/<id>/receipts/<receiptId>` | `receipts/[receiptId]/page.tsx`, `ReadingStep.tsx`, `ReviewForm.tsx`, `DeleteReceipt.tsx` | 3, Review receipt: reading (branded Distill-by-Atheria mark with animated bar, replaces spinner), Retry, review and save (layout from mockup v3), delete before saving, saved view | Built. On a saved receipt any member can change an item's category; changes shown under the item |
 | `/groups/<id>/categories` | `groups/[groupId]/categories/page.tsx`, `categories/AddCategory.tsx` | 4, Categories: needs sorting flag, Add category (above the list), categories with rules, History | Built |
 | `/groups/<id>/categories/<categoryId>` | `categories/[categoryId]/page.tsx`, `RuleForm.tsx` | 4b, Sharing rule: Everyone equal, Whoever paid, One person, Custom | Built |
@@ -187,7 +187,7 @@ Full detail in [API.md](API.md). Each file is a thin wrapper that calls a servic
 | `TabScreen.tsx` | Layout for the first screen of each tab. |
 | `SubScreen.tsx` | Layout for an inner screen: Back, title, tab colour. |
 | `LegalPage.tsx` | Layout for the public Privacy and Terms pages. |
-| `SignOutButton.tsx` | "Signed in with Google as ..." and Sign out, on Invite people and Start. |
+| `SignOutButton.tsx` | Sign out button with email below, right-aligned. Used on Group and Start screens. |
 | `ItemCategoryPicker.tsx` | Change a saved item's category, dark or light, including "New category..." to create one on the spot. |
 | `RemoveItem.tsx` | Remove a leftover item from a closed period, with an in-app confirm. |
 | `DeviceDate.tsx` | Puts the device's date in a cookie on every page (rule 2c). |
