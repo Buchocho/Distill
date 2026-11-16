@@ -355,3 +355,10 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 ## 2026-11-16: record corrected, Google sign in is published
 
 - Maduabuchi published the Google consent screen himself after the 10 Nov session, following the steps given there, so sign in has been out of testing mode since then: anyone can sign in, not only listed test users. Nothing in the repository was updated at the time, so the step 7 line still listed it as outstanding and I repeated that as current. Step 7 corrected; the 1 Nov entry stands as the history.
+
+## 2026-11-16: three screens added to the list for redesign
+
+- Raised by Maduabuchi after the deploy: Sign in is too plain for anyone outside the group to see, the Group screen (reached from the initial on Home) is under designed and does not match the other screens, and the Receipts tab could look better.
+- Prompt: "For these, I would like you to just create some mock-ups so that I can look at them and maybe give feedback and we can start iterating on that."
+- No code changed. Mockups made on a design canvas, following the tokens in `src/app/globals.css`: Sign in on ink with the product shown as a tagged receipt; the Group screen with an ink header, one invite card, roomier member rows, name and close date as list rows, and leave and sign out set apart; the Receipts tab with the scan card, a NEEDS YOU section above RECENT, and rows carrying the payer and the total.
+- Added to step 7 as work waiting on his feedback. Nothing is built until he picks what to keep.
