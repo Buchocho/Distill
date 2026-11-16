@@ -139,7 +139,7 @@ Each step works end to end, with tests, before the next starts. A step is done o
 | 4 | Multi photo receipts (section 7). Moved after steps 5 to 7 on 10 Nov; built only if time is left | 4 Nov | Not built; dropping it was proposed on 10 Nov, not decided |
 | 5 | US6, US7, US8: close rule, closing, sorting leftovers, agree | 6 Nov | Built 10 Nov; tested by hand with step 6, no separate pass recorded |
 | 6 | US9: payments | 8 Nov | Passed 10 Nov |
-| 7 | Remaining tests, UX review by the LLM against the Assignment 1 mockups, manual check of every screen, privacy page and Google sign in published (out of testing mode), data tables PDF, screenshots, demo script and rehearsal | 9 to 15 Nov | In progress. Done: Privacy and Terms, stuck readings, reading limits. Left: Google sign in out of testing mode, demo data, signed in tests, design review, screen check, data tables PDF, screenshots, demo script and rehearsal |
+| 7 | Remaining tests, UX review by the LLM against the Assignment 1 mockups, manual check of every screen, privacy page and Google sign in published (out of testing mode), data tables PDF, screenshots, demo script and rehearsal | 9 to 15 Nov | In progress. Done: Privacy and Terms, Google sign in published and out of testing mode (by Maduabuchi, Nov 2026, so anyone can sign in), stuck readings, reading limits, receipts must add up (rule 8), corrections kept (8b), Agree waits for every receipt (21a). Left: demo data, signed in tests, design review, screen check, data tables PDF, screenshots, demo script and rehearsal |
 
 ## 7. Change from the approved specification
 
