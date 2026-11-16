@@ -30,11 +30,15 @@ describe("periodForToday", () => {
 });
 
 describe("agreeBlockedBy", () => {
-  it("allows agreeing when everything is sorted", () => {
-    expect(agreeBlockedBy(0, 0)).toBeNull();
+  it("allows agreeing when every receipt is saved and everything is sorted", () => {
+    expect(agreeBlockedBy(0, 0, 0)).toBeNull();
   });
   it("says what is left", () => {
-    expect(agreeBlockedBy(2, 1)).toContain("2 items to sort, 1 item without a rule");
+    expect(agreeBlockedBy(2, 1, 0)).toContain("2 items to sort, 1 item without a rule");
+  });
+  it("closes Agree while a receipt is still in review, even with nothing to sort (rule 21a)", () => {
+    expect(agreeBlockedBy(0, 0, 1)).toContain("1 receipt still in review");
+    expect(agreeBlockedBy(1, 0, 2)).toContain("2 receipts still in review, 1 item to sort");
   });
 });
 

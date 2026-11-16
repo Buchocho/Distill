@@ -43,16 +43,20 @@ export function periodForToday(openEndsOn: string, today: string, setting: Close
 }
 
 /**
- * Whether a closed period can be agreed (SPEC.md rule 21): no unsorted items and every category
- * used in it has a rule. Returns a reason when it cannot, for the screen.
+ * Why Agree is closed for a period, or null when it is open (SPEC.md rules 21 and 21a).
+ * A period is agreed only when it is complete: every receipt in it saved into the accounts
+ * (rule 21a, added 16 Nov 2026), every item sorted into a category, and every category used in it
+ * carrying a rule. A receipt left in review holds money the amounts do not include, so agreeing
+ * before it is saved would freeze a figure everyone knows is wrong.
  */
-export function agreeBlockedBy(unsortedCount: number, noRuleCount: number): string | null {
-  if (unsortedCount === 0 && noRuleCount === 0) return null;
+export function agreeBlockedBy(unsortedCount: number, noRuleCount: number, receiptsInReview: number): string | null {
+  if (unsortedCount === 0 && noRuleCount === 0 && receiptsInReview === 0) return null;
   const parts = [
+    receiptsInReview > 0 ? `${receiptsInReview} receipt${receiptsInReview === 1 ? "" : "s"} still in review` : null,
     unsortedCount > 0 ? `${unsortedCount} item${unsortedCount === 1 ? "" : "s"} to sort` : null,
     noRuleCount > 0 ? `${noRuleCount} item${noRuleCount === 1 ? "" : "s"} without a rule` : null,
   ].filter(Boolean);
-  return `Agree opens when there are no items left to sort (${parts.join(", ")}).`;
+  return `Agree opens when every receipt is saved and nothing is left to sort (${parts.join(", ")}).`;
 }
 
 /**

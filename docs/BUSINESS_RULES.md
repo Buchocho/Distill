@@ -1,7 +1,7 @@
 # Distill: business rules register
 
 Author: Maduabuchi Ogugua Dibiaezue
-Last updated: 16 Nov 2026, build step 7 (rule 8: a receipt is saved only when it adds up).
+Last updated: 16 Nov 2026, build step 7 (rules 8, 8b and 21a: a receipt is saved only when it adds up, corrections are kept, Agree waits for every receipt).
 
 Each business rule in SPEC.md section 4, whether it is built, and the files that enforce it. Rule numbers are the SPEC.md numbers, so a code comment that says "SPEC.md rule 15" points to the same row here.
 
@@ -40,6 +40,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 7 | Items get a category at product type level; new ones are created when the receipt is saved | Built: the level is set in the Gemini instructions (`src/server/integrations/gemini.ts`); matched ignoring capitals, otherwise kept as `items.proposed_category` until save; a new name can also be typed | `src/domain/receipts.ts` (`matchCategory`), `saveReceipt`, `ReviewForm.tsx`, `categories_name_per_group` and `items_one_category` in `src/server/db/schema.ts` |
 | 8 | Review shows items total against printed total; names, prices and total editable; a receipt is saved only when the items add up to the total exactly, and needs a total (changed 16 Nov) | Built: Save is closed on the screen and the API refuses the same receipts; the receipt stays unsaved, out of the accounts | `src/domain/receipts.ts` (`sumCheck`, `sumBlock`, `validateReview`), `saveReceipt` in `src/server/services/receipts.ts`, `ReviewForm.tsx` |
 | 8a | Never make up a number: unsure values marked, unreadable prices left empty, a suggested price from the total for the one in doubt, Save blocked while a price is empty (and by rule 8) | Built | `parseReading` and `suggestPrice` in `src/domain/receipts.ts`, instructions and answer format in `src/server/integrations/gemini.ts`, `items.reading_flag`, `receipts.total_unclear` and `date_unclear`, `ReviewForm.tsx` |
+| 8b | Corrections on a receipt in review are kept as they are made, on the receipt, and come back on any device; not in the accounts until saved; payer only | Built: kept about a second after typing stops and when the screen is hidden | `validateCorrections` in `src/domain/receipts.ts`, `keepCorrections` in `src/server/services/receipts.ts`, `PATCH /api/v1/receipts/{id}/review`, `ReviewForm.tsx` |
 | 9 | Saving is never blocked by unsorted items | Built: Leave unsorted in the category dropdown; unsorted count on Receipts and Home | `src/domain/receipts.ts` (`validateReview`), `saveReceipt`, `ReviewForm.tsx` |
 | 9a | Any number of photos; locked once saved | Partly built: one photo per receipt; saved receipts cannot be read or saved again. More photos are step 4, moved after steps 5 to 7 on 10 Nov | `src/server/services/receipts.ts`, `src/server/db/schema.ts` |
 | 9b | An unsaved receipt can be deleted with its photo; a saved one cannot | Built | `deleteReceipt` in `src/server/services/receipts.ts`, `DeleteReceipt.tsx`, `src/server/integrations/storage.ts` (`deletePhotos`) |
@@ -76,6 +77,7 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 | 19a | Periods are named from their dates: a whole month by the month, otherwise the range | Built | `periodLabel` in `src/domain/periods.ts`; Home, Balance, period screen, Payments, Home's Balance line |
 | 20 | A closed period takes no new receipts or edits, except sorting leftovers (any member), removing them (payer only), and setting rules | Built | `changeItemCategory`, `deleteItem` in `src/server/services/categories.ts`, `balance/[ledgerId]/page.tsx` |
 | 21 | Agree only when nothing is unsorted and every used category has a rule | Built | `src/domain/periods.ts` (`agreeBlockedBy`), `agree` in `src/server/services/periods.ts`, `AgreeButton.tsx` |
+| 21a | Agree is closed while any receipt in the period is still in review; the period screen lists them | Built: the screen and `agree` both apply it; a receipt whose photo never finished uploading is left out | `agreeBlockedBy` in `src/domain/periods.ts`, `periodBalance`, `getPeriod` and `agree` in `src/server/services/periods.ts`, `balance/[ledgerId]/page.tsx` |
 | 22 | Each member agrees to their amount; any change before everyone agrees clears agreements | Built | `agree`, `clearOpenAgreements` (called by `setRule`, `changeItemCategory`, `deleteItem`) |
 | 22a | Two stage settling: amounts frozen when the last member agrees; settled when all paid | Built | `agree` in `src/server/services/periods.ts` (stage 1, and settled at once when nothing is owed), `positionWords` and `debtWords` in `src/domain/periods.ts` (settled periods worded in the past), `settleIfPaid` in `src/server/services/payments.ts` with `isSettled` in `src/domain/payments.ts` (stage 2), `ledgers.frozen_lines`, `ledgers.frozen_rules`, `ledgers.settled_at` |
 | 23a | Every period has a breakdown by category, per person, that matches its amount; past periods are listed | Built | `src/domain/breakdown.ts`, `balance/[ledgerId]/Breakdown.tsx`, `getPeriod` and `listClosedPeriods` in `src/server/services/periods.ts`, `balance/page.tsx` |
@@ -112,4 +114,6 @@ Status: **Built** (works and is tested or checked by hand), **Partly built** (so
 - Rule 18: any member can move the close date, again and again; the screen shows who changed it last. Accepted (10 Nov).
 - Rule 8a: the model's own "unsure" flag is not reliable; the sum check and the suggested price are the backstop.
 - Rule 8: a receipt that correctly does not add up (a charge or discount the reading leaves out, a line that cannot be read at all) can only be saved by changing a number until it matches, and the accounts cannot tell that number from a read one. None found in testing; to be handled when one is (16 Nov).
-- Rule 8: corrections on the review screen are kept only when the receipt is saved; leaving the screen before the sums match loses them.
+- Rule 8b: a price half typed when the corrections are kept comes back as the number the box showed, not empty: "1,2" returns as 1,20.
+- Rule 21a: one person's unfinished receipt holds up the whole group's settle up until they save or delete it. Accepted as the point of the rule (16 Nov).
+- Rule 21a: a receipt whose photo never finished uploading does not block Agree and is not listed anywhere; it stays in the period unseen.

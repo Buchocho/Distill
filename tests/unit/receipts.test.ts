@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import continente from "../fixtures/reading-continente.json";
 import usReceipt from "../fixtures/reading-us-tax-discount.json";
 import { parseAmount } from "@/domain/money";
-import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, readingBlockedBy, reconcileTax, shownStatus, spreadTax, storeKey, suggestPrice, sumBlock, sumCheck, validateReview } from "@/domain/receipts";
+import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, readingBlockedBy, reconcileTax, shownStatus, spreadTax, storeKey, suggestPrice, sumBlock, sumCheck, validateCorrections, validateReview } from "@/domain/receipts";
 
 describe("parseAmount", () => {
   it("reads both decimal styles", () => {
@@ -122,6 +122,26 @@ describe("validateReview", () => {
   });
   it("needs at least one item", () => {
     expect(validateReview({ storeName: "", purchaseDate: null, totalCents: null, items: [] }).items).toBeDefined();
+  });
+});
+
+describe("validateCorrections", () => {
+  const line = { name: "Bread", priceCents: 149, discountCents: null, categoryId: null, proposedCategory: null };
+  it("keeps a half corrected receipt: no total, an empty price, items that do not add up", () => {
+    expect(validateCorrections({ storeName: "Lidl", purchaseDate: null, totalCents: null, items: [line, { ...line, priceCents: null }] })).toEqual({});
+    expect(validateCorrections({ storeName: "Lidl", purchaseDate: null, totalCents: 9999, items: [line] })).toEqual({});
+  });
+  it("still refuses what could not be shown again or saved later", () => {
+    const e = validateCorrections({
+      storeName: "Lidl",
+      purchaseDate: "2026-02-30",
+      totalCents: 1.5,
+      items: [{ ...line, name: " " }, { ...line, categoryId: "c1", proposedCategory: "New" }],
+    });
+    expect(e.purchaseDate).toBeDefined();
+    expect(e.totalCents).toBe("Check the total.");
+    expect(e["item.0"]).toBeDefined();
+    expect(e["item.1"]).toBeDefined();
   });
 });
 

@@ -5,7 +5,8 @@
  * check shown on the review screen (sumCheck), the block on saving a receipt that does not add
  * up (sumBlock), how a category name from the reading is matched to the group's list
  * (matchCategory), and the check on a receipt before it is saved
- * (validateReview), and duplicate checking (receiptNumberKey, findDuplicate).
+ * (validateReview), the looser check on corrections kept while it is still in review
+ * (validateCorrections), and duplicate checking (receiptNumberKey, findDuplicate).
  *
  * Why it matters: the reading step is the part of Distill most likely to be wrong. Gemini's answer
  * is never trusted as it comes: anything malformed is dropped or refused here, prices become whole
@@ -237,23 +238,35 @@ export interface ReviewItem {
   proposedCategory: string | null;
 }
 
+/** One line of the review form while it is still being corrected (rule 8b): the price may be empty. */
+export interface CorrectionItem {
+  name: string;
+  /** Null while the person has not filled this price in yet. */
+  priceCents: number | null;
+  discountCents: number | null;
+  categoryId: string | null;
+  proposedCategory: string | null;
+}
+
 /**
- * Checks a receipt before it is saved (SPEC.md rules 8 and 9). Returns one message per problem,
- * keyed "storeName", "purchaseDate", "totalCents", "items", or "item.<n>" for line n (from 0);
- * empty when fine.
- * An item with no category is fine: saving is never blocked by unsorted items (rule 9, US5).
- * The items must add up to the printed total (rule 8): a receipt that does not add up, or has no
- * total, is refused and stays unsaved, out of the accounts, until the person corrects it.
+ * The checks both saving and keeping corrections share: the store name, the date, and each line's
+ * name, price, discount and category. Kept in one place so a correction that is kept can always be
+ * saved later. requirePrice is true when saving, where every price must be a real number (rule 8a).
  */
-export function validateReview(input: { storeName: string; purchaseDate: string | null; totalCents: number | null; items: readonly ReviewItem[] }) {
+function fieldErrors(
+  input: { storeName: string; purchaseDate: string | null; items: readonly CorrectionItem[] },
+  requirePrice: boolean,
+): Record<string, string> {
   const errors: Record<string, string> = {};
   if (input.storeName.trim().length > 60) errors.storeName = "Keep the store name under 60 characters.";
   if (input.purchaseDate !== null && !isIsoDate(input.purchaseDate)) errors.purchaseDate = "Check the date.";
-  if (input.items.length === 0) errors.items = "A receipt needs at least one item.";
   if (input.items.length > MAX_ITEMS) errors.items = `A receipt can have at most ${MAX_ITEMS} items.`;
   input.items.forEach((item, i) => {
     if (item.name.trim().length === 0) errors[`item.${i}`] = "Give the item a name.";
     else if (item.name.trim().length > ITEM_NAME_MAX) errors[`item.${i}`] = `Keep the name under ${ITEM_NAME_MAX} characters.`;
+    else if (item.priceCents === null) {
+      if (requirePrice) errors[`item.${i}`] = "Check the price.";
+    }
     else if (!Number.isInteger(item.priceCents) || Math.abs(item.priceCents) > 100_000_000) errors[`item.${i}`] = "Check the price.";
     else if (item.discountCents !== null && (!Number.isInteger(item.discountCents) || item.discountCents <= 0)) errors[`item.${i}`] = "Check the discount.";
     else if (item.categoryId !== null && item.proposedCategory !== null) errors[`item.${i}`] = "Choose one category.";
@@ -261,6 +274,37 @@ export function validateReview(input: { storeName: string; purchaseDate: string 
       errors[`item.${i}`] = `Category names are 1 to ${CATEGORY_NAME_MAX} characters.`;
     }
   });
+  return errors;
+}
+
+/**
+ * Checks corrections before they are kept on a receipt still in review (SPEC.md rule 8b, added
+ * 16 Nov 2026). Looser than validateReview on purpose: a half corrected receipt is exactly what
+ * this keeps, so an empty price, a missing total and items that do not add up are all allowed.
+ * Only values that could not be shown again, or could not later be saved, are refused.
+ */
+export function validateCorrections(input: {
+  storeName: string;
+  purchaseDate: string | null;
+  totalCents: number | null;
+  items: readonly CorrectionItem[];
+}) {
+  const errors = fieldErrors(input, false);
+  if (input.totalCents !== null && !Number.isInteger(input.totalCents)) errors.totalCents = "Check the total.";
+  return errors;
+}
+
+/**
+ * Checks a receipt before it is saved into the accounts (SPEC.md rules 8 and 9). Returns one
+ * message per problem, keyed "storeName", "purchaseDate", "totalCents", "items", or "item.<n>" for
+ * line n (from 0); empty when fine.
+ * An item with no category is fine: saving is never blocked by unsorted items (rule 9, US5).
+ * The items must add up to the printed total (rule 8): a receipt that does not add up, or has no
+ * total, is refused and stays in review, out of the accounts, until the person corrects it.
+ */
+export function validateReview(input: { storeName: string; purchaseDate: string | null; totalCents: number | null; items: readonly ReviewItem[] }) {
+  const errors = fieldErrors(input, true);
+  if (input.items.length === 0) errors.items = "A receipt needs at least one item.";
   // Only when every price is a usable number: a bad price already has its own message.
   if (input.totalCents !== null && !Number.isInteger(input.totalCents)) errors.totalCents = "Check the total.";
   else if (input.items.length > 0 && input.items.every((i) => Number.isInteger(i.priceCents))) {

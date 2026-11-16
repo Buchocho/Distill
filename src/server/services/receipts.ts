@@ -24,7 +24,7 @@ import "server-only";
 import { and, asc, count, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/server/db/client";
 import { categories, categoryChanges, groups, items, ledgers, readings, receiptPhotos, receipts, users } from "@/server/db/schema";
-import { categoryKey, findDuplicate, isTaxLine, readingBlockedBy, matchCategory, parseReading, type ReviewItem, shownStatus, spreadTax, validateReview } from "@/domain/receipts";
+import { categoryKey, findDuplicate, isTaxLine, readingBlockedBy, matchCategory, parseReading, type ReviewItem, shownStatus, spreadTax, validateCorrections, validateReview } from "@/domain/receipts";
 import { GeminiBusyError, readReceiptPhotos } from "@/server/integrations/gemini";
 import { createUploadLink, deletePhotos, downloadPhoto, photoPath, viewLink } from "@/server/integrations/storage";
 import { assertCurrentMember, assertMember, getGroupForMember, UUID } from "./groups";
@@ -310,6 +310,96 @@ export async function deleteReceipt(userId: string, receiptId: string): Promise<
   // Photos and items are removed with the receipt (cascade in the database).
   await db.delete(receipts).where(and(eq(receipts.id, receiptId), ne(receipts.status, "saved")));
   await deletePhotos(photos.map((p) => p.storagePath)).catch((error) => console.error("Photo delete failed", receiptId, error));
+}
+
+/** One line as the review screen sends it while correcting (rule 8b). A null price is an empty box. */
+export interface CorrectionInput {
+  id: string;
+  name: string;
+  priceCents: number | null;
+  discountCents: number | null;
+  categoryId: string | null;
+  proposedCategory: string | null;
+  /** True while the reading's own doubt about this price still stands (rule 8a). */
+  unclear: boolean;
+}
+
+/** What the review screen sends as the person corrects a receipt, before Save (rule 8b). */
+export interface CorrectionsInput {
+  storeName: string;
+  receiptNumber: string | null;
+  purchaseDate: string | null;
+  totalCents: number | null;
+  totalUnclear: boolean;
+  dateUnclear: boolean;
+  items: CorrectionInput[];
+}
+
+/**
+ * Keeps the corrections made so far on a receipt still in review (SPEC.md rule 8b, added
+ * 16 Nov 2026, after rule 8 began refusing receipts that do not add up).
+ *
+ * Why it exists: correcting a receipt is now the only way into the accounts, and the work used to
+ * live only in the phone's memory. A call, a closed tab or a flat battery meant starting again
+ * from the reading. The corrections are written to the receipt itself, where the review screen
+ * finds them again on any device.
+ *
+ * It cannot touch the accounts: every query behind the balance and the category counts takes only
+ * receipts with status "saved" (src/server/services/categories.ts), and this refuses any receipt
+ * that is not still "ready". Only the payer can correct their own receipt (rule 4).
+ * An empty price is kept the same way the reading leaves one it could not read: zero with the flag
+ * "missing", so the box comes back empty rather than showing a number nobody typed (rule 8a).
+ */
+export async function keepCorrections(userId: string, receiptId: string, input: CorrectionsInput) {
+  const receipt = await receiptForMember(userId, receiptId);
+  assertOwnReceipt(receipt, userId);
+  await assertCurrentMember(userId, receipt.groupId);
+  if (receipt.status !== "ready") throw new ServiceError("invalid", "This receipt is no longer being reviewed.");
+  const errors = validateCorrections(input);
+  if (input.receiptNumber !== null && input.receiptNumber.trim().length > 60) errors.receiptNumber = "Check the receipt number.";
+  const chosenIds = [...new Set(input.items.map((i) => i.categoryId).filter((id): id is string => id !== null))];
+  if (chosenIds.length > 0) {
+    if (chosenIds.some((id) => !UUID.test(id))) errors.items = "A chosen category no longer exists.";
+    else {
+      const [{ n }] = await db
+        .select({ n: count() })
+        .from(categories)
+        .where(and(eq(categories.groupId, receipt.groupId), inArray(categories.id, chosenIds)));
+      if (n !== chosenIds.length) errors.items = "A chosen category no longer exists.";
+    }
+  }
+  if (input.items.some((i) => !UUID.test(i.id))) errors.items = "This receipt has changed. Open it again.";
+  if (Object.keys(errors).length > 0) throw new ServiceError("invalid", "Check the receipt.", errors);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(receipts)
+      .set({
+        storeName: input.storeName.trim() || null,
+        receiptNumber: input.receiptNumber?.trim() || null,
+        purchaseDate: input.purchaseDate,
+        totalCents: input.totalCents,
+        // A value the person has checked loses its mark for good, on this device and any other.
+        totalUnclear: input.totalUnclear,
+        dateUnclear: input.dateUnclear,
+      })
+      .where(and(eq(receipts.id, receiptId), eq(receipts.status, "ready")));
+    // The lines are the ones the reading made: corrected in place, so their ids and order hold.
+    for (const item of input.items) {
+      await tx
+        .update(items)
+        .set({
+          name: item.name.trim(),
+          priceCents: item.priceCents ?? 0,
+          discountCents: item.discountCents,
+          categoryId: item.categoryId,
+          proposedCategory: item.categoryId === null ? item.proposedCategory : null,
+          readingFlag: item.priceCents === null ? "missing" : item.unclear ? "unclear" : null,
+        })
+        .where(and(eq(items.id, item.id), eq(items.receiptId, receiptId)));
+    }
+  });
+  return { receiptId, keptAt: new Date().toISOString() };
 }
 
 /** What the review screen sends when Save receipt is tapped. */

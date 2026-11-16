@@ -26,6 +26,7 @@ test("the receipt API refuses callers who are not signed in", async ({ request }
     ["POST", `/api/v1/groups/${GROUP}/receipts`],
     ["POST", `/api/v1/receipts/${RECEIPT}/read`],
     ["POST", `/api/v1/receipts/${RECEIPT}/save`],
+    ["PATCH", `/api/v1/receipts/${RECEIPT}/review`],
     ["DELETE", `/api/v1/receipts/${RECEIPT}`],
     ["GET", `/api/v1/receipts/${RECEIPT}/photos/1`],
     ["PATCH", `/api/v1/me`],

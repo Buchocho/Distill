@@ -12,9 +12,9 @@
  */
 
 import "server-only";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/server/db/client";
-import { agreements, categories, groups, ledgers } from "@/server/db/schema";
+import { agreements, categories, groups, ledgers, receipts, users } from "@/server/db/schema";
 import { computeBalance, netFor, type BalanceLine } from "@/domain/balance";
 import { agreeBlockedBy, periodStage } from "@/domain/periods";
 import type { Rule } from "@/domain/rules";
@@ -40,6 +40,8 @@ async function ledgerForMember(userId: string, ledgerId: string) {
  * A period's items and rules, and its balance. Once everyone agreed, the frozen lines and frozen
  * rules are used, so later rule changes do not touch it (SPEC.md rule 22a); before that, the current
  * rules. Items left out of the balance (unsorted, no rule) are returned for sorting (rules 17, 20).
+ * The receipts still in review are returned too: they hold money the amounts do not include, so
+ * they close Agree until they are saved or deleted (rule 21a).
  */
 async function periodBalance(ledger: typeof ledgers.$inferSelect, memberships: Membership[]) {
   const current = await rulesForGroup(ledger.groupId);
@@ -56,12 +58,21 @@ async function periodBalance(ledger: typeof ledgers.$inferSelect, memberships: M
   );
   const lines: BalanceLine[] = ledger.frozenLines ?? live.lines;
   const noRuleCategories = [...new Set(periodItems.filter((i) => i.categoryId && i.rule === null).map((i) => i.categoryId as string))];
+  // Receipts added to this period that never reached the accounts (rule 21a). A receipt whose
+  // photo never finished uploading ("draft") is left out: nobody can see it to finish or delete it.
+  const inReview = await db
+    .select({ id: receipts.id, storeName: receipts.storeName, status: receipts.status, payerId: receipts.paidBy, payerName: users.displayName })
+    .from(receipts)
+    .innerJoin(users, eq(users.id, receipts.paidBy))
+    .where(and(eq(receipts.ledgerId, ledger.id), inArray(receipts.status, ["reading", "ready", "failed"])))
+    .orderBy(asc(receipts.createdAt));
   return {
     lines,
     // Who agrees the period and has a statement: current members, and leavers it involves (rule 2e).
     people: periodPeople(memberships, ledger.startsOn, ledger.endsOn, periodItems),
     items: periodItems,
     unsorted: periodItems.filter((i) => i.categoryId === null),
+    inReview,
     noRuleCount: live.noRuleCount,
     noRuleCategories,
     // The rules in force for this period's categories, to freeze when everyone agrees.
@@ -151,7 +162,8 @@ export async function getPeriod(userId: string, ledgerId: string) {
     unsorted: stage === "closed" ? balance.unsorted : [],
     noRule: stage === "closed" ? cats.filter((c) => balance.noRuleCategories.includes(c.id)) : [],
     categories: cats,
-    agreeBlockedBy: stage === "closed" ? agreeBlockedBy(balance.unsorted.length, balance.noRuleCount) : null,
+    inReview: stage === "closed" ? balance.inReview : [],
+    agreeBlockedBy: stage === "closed" ? agreeBlockedBy(balance.unsorted.length, balance.noRuleCount, balance.inReview.length) : null,
     members: members.filter((m) => inPeriod.includes(m.id)).map((m) => ({ id: m.id, name: m.name, agreed: agreed.some((a) => a.userId === m.id) })),
     // Someone who left can agree and pay, but not sort or remove items (rule 2e).
     canEdit: me.leftOn === null,
@@ -160,8 +172,8 @@ export async function getPeriod(userId: string, ledgerId: string) {
 }
 
 /**
- * The user agrees to their amount for a closed period (SPEC.md rules 21 and 22, story US8).
- * Only when nothing is left to sort. When this makes every member agreed, the period's amounts are
+ * The user agrees to their amount for a closed period (SPEC.md rules 21, 21a and 22, story US8).
+ * Only when every receipt in the period is saved and nothing is left to sort. When this makes every member agreed, the period's amounts are
  * frozen (stage 1, rule 22a): later rule changes no longer touch it.
  */
 export async function agree(userId: string, ledgerId: string) {
@@ -174,7 +186,7 @@ export async function agree(userId: string, ledgerId: string) {
   const balance = await periodBalance(ledger, memberships);
   const memberIds = balance.people;
   if (!memberIds.includes(userId)) throw new ServiceError("forbidden", "You were not in the group during this period.");
-  const blocked = agreeBlockedBy(balance.unsorted.length, balance.noRuleCount);
+  const blocked = agreeBlockedBy(balance.unsorted.length, balance.noRuleCount, balance.inReview.length);
   if (blocked) throw new ServiceError("invalid", blocked);
   await db.insert(agreements).values({ ledgerId, userId }).onConflictDoNothing();
   return { stage: (await freezeIfAllAgreed(ledger, balance)) ? ("agreed" as const) : ("closed" as const) };
@@ -187,7 +199,7 @@ export async function agree(userId: string, ledgerId: string) {
  */
 async function freezeIfAllAgreed(ledger: typeof ledgers.$inferSelect, balance: Awaited<ReturnType<typeof periodBalance>>): Promise<boolean> {
   if (periodStage(ledger) !== "closed") return periodStage(ledger) !== "open";
-  if (agreeBlockedBy(balance.unsorted.length, balance.noRuleCount)) return false;
+  if (agreeBlockedBy(balance.unsorted.length, balance.noRuleCount, balance.inReview.length)) return false;
   const agreed = await db.select({ userId: agreements.userId }).from(agreements).where(eq(agreements.ledgerId, ledger.id));
   if (balance.people.length === 0 || !balance.people.every((id) => agreed.some((a) => a.userId === id))) return false;
   // Everyone agreed: freeze the amounts and the rules behind them, so the breakdown keeps matching.

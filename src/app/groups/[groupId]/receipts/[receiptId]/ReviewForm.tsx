@@ -21,6 +21,9 @@
  * - see which values the reading was unsure of, fill in prices it could not read, and use a
  *   suggested price worked out from the total when only one price is in doubt (rule 8a, approved
  *   design Review receipt v4, 10 Nov 2026);
+ * - leave the screen and come back to the same corrections, on this phone or another: they are
+ *   kept on the receipt as they are made (rule 8b, added 16 Nov 2026). They are not in the group's
+ *   balance until the receipt is saved;
  * - delete the receipt instead of saving it (rule 9b).
  * Save is never blocked by unsorted items or a value marked unsure. It is blocked while a price
  * is empty, so no price is ever saved that nobody entered, and while the items do not add up to
@@ -30,7 +33,7 @@
  */
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { currencyAffix, formatCents, formatMoney, parseAmount } from "@/domain/money";
 import { findDuplicate, isTaxLine, suggestPrice, sumBlock, sumCheck, type ReadingFlag } from "@/domain/receipts";
@@ -144,6 +147,11 @@ export function ReviewForm(props: {
   const [newName, setNewName] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // Whether the corrections made so far are on the receipt yet (rule 8b).
+  const [kept, setKept] = useState<"idle" | "keeping" | "kept" | "error">("idle");
+  // What was last sent, so nothing is sent twice and nothing is sent before the first change.
+  const sent = useRef<string | null>(null);
+  const savingNow = useRef(false);
 
   // New category names on this receipt, so a name proposed for one item can be picked for another (rule 7).
   const proposed = useMemo(
@@ -171,6 +179,58 @@ export function ReviewForm(props: {
     r.choice.startsWith("p:") ? r.choice.slice(2) : props.categories.find((c) => `c:${c.id}` === r.choice)?.name ?? null;
   const hasTaxLine = rows.some((r) => isTaxLine({ name: r.name, category: rowCategory(r) }));
 
+  // Everything the person has corrected so far, in the shape the API takes (rule 8b).
+  const corrections = JSON.stringify({
+    storeName: store,
+    receiptNumber: number || null,
+    purchaseDate: date || null,
+    totalCents,
+    totalUnclear: totalDoubt,
+    dateUnclear: dateDoubt,
+    items: rows.map((r, i) => ({
+      id: r.key,
+      name: r.name,
+      priceCents: prices[i],
+      discountCents: r.discountCents,
+      categoryId: r.choice.startsWith("c:") ? r.choice.slice(2) : null,
+      proposedCategory: r.choice.startsWith("p:") ? r.choice.slice(2) : null,
+      unclear: r.flag !== null && !touched[r.key],
+    })),
+  });
+  const keepUrl = `/api/v1/receipts/${props.receiptId}/review`;
+
+  // Keeps the corrections a moment after typing stops, so a lost screen does not lose the work
+  // (rule 8b). The first run only records what was already on the receipt.
+  useEffect(() => {
+    if (sent.current === null) {
+      sent.current = corrections;
+      return;
+    }
+    if (sent.current === corrections || savingNow.current) return;
+    const timer = setTimeout(() => {
+      setKept("keeping");
+      void (async () => {
+        const res = await fetch(keepUrl, { method: "PATCH", headers: { "content-type": "application/json" }, body: corrections }).catch(() => null);
+        if (res?.ok) {
+          sent.current = corrections;
+          setKept("kept");
+        } else setKept("error");
+      })();
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [corrections, keepUrl]);
+
+  // A phone call or a closed tab can end the page before that moment comes: send what there is.
+  // keepalive lets the request finish after the page is gone.
+  useEffect(() => {
+    const flush = () => {
+      if (document.visibilityState !== "hidden" || sent.current === null || sent.current === corrections || savingNow.current) return;
+      void fetch(keepUrl, { method: "PATCH", headers: { "content-type": "application/json" }, body: corrections, keepalive: true }).catch(() => {});
+    };
+    document.addEventListener("visibilitychange", flush);
+    return () => document.removeEventListener("visibilitychange", flush);
+  }, [corrections, keepUrl]);
+
   /** Changes one line of the form. */
   function update(key: string, change: Partial<Row>) {
     setRows((all) => all.map((r) => (r.key === key ? { ...r, ...change } : r)));
@@ -189,6 +249,8 @@ export function ReviewForm(props: {
       if (p === null) local[`item.${i}`] = "Check the price.";
     });
     if (Object.keys(local).length > 0) return setErrors(local);
+    // Saving writes the same values itself, so the keeping step stands down while it runs.
+    savingNow.current = true;
     setSaving(true);
     setErrors({});
     const res = await fetch(`/api/v1/receipts/${props.receiptId}/save`, {
@@ -210,6 +272,7 @@ export function ReviewForm(props: {
     }).catch(() => null);
     const body = res ? ((await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string> }) : {};
     if (!res || !res.ok) {
+      savingNow.current = false;
       setSaving(false);
       setErrors({ ...(body.fields ?? {}), form: body.error ?? "Could not save. Check your connection and try again." });
       return;
@@ -390,6 +453,13 @@ export function ReviewForm(props: {
             {saving ? "Saving..." : duplicate?.kind === "warn" ? "Save anyway" : "Save receipt"}
           </button>
         </div>
+        {kept !== "idle" && (
+          <p className={`text-center text-[13px] ${kept === "error" ? "font-semibold text-orange" : "text-sand"}`} aria-live="polite">
+            {kept === "keeping" ? "Keeping your corrections..."
+              : kept === "kept" ? "Corrections kept. You can finish this later."
+              : "Could not keep your corrections. Check your connection."}
+          </p>
+        )}
         {missingCount > 0 && <p className="text-center text-[13px] text-sand">Enter the missing price{missingCount === 1 ? "" : "s"} to save.</p>}
         {sumStop === "mismatch" && (
           <p className="text-center text-[13px] text-sand">

@@ -83,6 +83,34 @@ export default async function ClosePeriod({ params, searchParams }: {
               : "Everyone agreed. These amounts are final. Record what you pay; confirm what you receive."}
       </p>
 
+      {p.inReview.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="mx-1 text-xs font-bold tracking-[1.4px] text-grey-600">STILL IN REVIEW</h2>
+          <p className="mx-1 text-[13px] text-grey-600">
+            These receipts are not in the amounts below. The person who scanned each one saves it, or deletes it (rule 21a).
+          </p>
+          <ul className="rounded-2xl border border-grey-100 px-4">
+            {p.inReview.map((r) => (
+              <li key={r.id} className="flex min-h-14 items-center gap-3 border-b border-grey-100 last:border-0">
+                <span className="flex flex-1 flex-col py-2">
+                  <span className="font-bold">{r.storeName ?? "Receipt"}</span>
+                  <span className="text-[13px] text-grey-600">
+                    {r.payerId === user.id ? "You" : first(r.payerName)}
+                    {r.status === "failed" ? " · could not be read" : r.status === "reading" ? " · being read" : " · to review and save"}
+                  </span>
+                </span>
+                {r.payerId === user.id && (
+                  <Link href={`/groups/${groupId}/receipts/${r.id}`} className="inline-flex min-h-11 items-center gap-2 font-bold text-ink no-underline">
+                    Finish
+                    <span className="text-orange"><Icon name="arrow" size={18} strokeWidth={2.5} /></span>
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {(p.unsorted.length > 0 || p.noRule.length > 0) && (
         <section className="flex flex-col gap-2">
           <h2 className="mx-1 text-xs font-bold tracking-[1.4px] text-grey-600">LEFT TO SORT</h2>
