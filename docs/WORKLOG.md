@@ -411,3 +411,16 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
   - Tests: `unfinishedRow` cases in `tests/unit/receipts.test.ts`. CODE_MAP and BUSINESS_RULES (rule 4) updated.
 - Verified: type check clean, lint clean, unit tests 139 passed (4 new), end to end tests 8 passed.
 - To check by hand: Receipts tab on a phone (scan card is one short row and Recent starts higher); your own receipt in review shows its reason and Finish; a receipt another member left in review shows "<name> needs to review and save" with Waiting; a saved receipt with unsorted items shows Sort for everyone.
+
+## 2026-11-21: phone frame for laptops; Portuguese version planned
+
+- Goal: the teacher may open Distill on a laptop first. Every screen was a 480 px column in the middle of an empty dark page, which works but looks unfinished.
+- Prompts: "we only have screens for mobile devices ... I worry that the teacher's first attempt to access the app will be via laptop. What are our options"; "Let's go with your recommendation"; "I also want to discuss if we can have a portuguese version"; "add it to post submission and then you can implement the show the app as a phone on laptops".
+- Options discussed: leave it; a phone frame with a side panel (chosen: layout only, every screen stays as tested); real laptop layouts (about 15 screens, not in SPEC.md, too much risk before 23 Nov; added to later versions).
+- Changed:
+  - `src/app/layout.tsx` and `globals.css`: from 1024 px wide, screens sit in a phone-sized frame (410 px wide, up to 864 px tall, never taller than the window) that scrolls on its own. Screens fill the frame instead of the window, so each tab bar stays at the bottom of the frame; the frame contains pop-up panels (Leave and Remove), which otherwise would cover the whole window. Phones and tablets are unchanged.
+  - New `LaptopPanel` beside the frame: what Distill does, three steps, "Made for your phone" with the site address (`PhoneAddress`, read from the browser so it is right on previews too), and "choose a file" for adding a receipt from a computer.
+  - SPEC.md: section 5 notes the frame; 8b adds the Portuguese version and full-width laptop layouts as later versions.
+- Not done: a QR code in the panel (needs a new dependency or a third party image service; the address is shown as text instead). Sign in has no separate laptop design: it shows in the frame with the panel beside it, which covers the first impression.
+- Verified: type check clean, lint clean, unit tests 139 passed, end to end tests 8 passed. Screenshots at 1440x900, 1280x720, 900 px (tablet) and 390 px (phone): sign in, Privacy, and a temporary test screen (removed) with a long list, the tab bar and a pop-up panel.
+- To check by hand on a laptop: sign in, Receipts, the review screen of a receipt, Balance, and Leave on the Group screen (the panel stays inside the frame). On a phone: nothing should have changed.

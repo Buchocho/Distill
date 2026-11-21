@@ -35,6 +35,16 @@ body {
 @keyframes pop { 0%, 35% { opacity: 0; transform: scale(0.6); } 45%, 90% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
 @keyframes tilt { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
 
+/* Laptop and desktop (src/app/layout.tsx): screens sit in a phone-sized frame. The frame is the
+   container for pop-up panels (they use fixed positioning), screens fill the frame's height
+   instead of the window's, and the frame's own scroll bar is hidden, as on a phone. */
+@media (min-width: 1024px) {
+  .phone-frame { transform: translateZ(0); }
+  .phone-screen { scrollbar-width: none; }
+  .phone-screen::-webkit-scrollbar { display: none; }
+  .phone-screen .min-h-dvh { min-height: 100%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; }
 }

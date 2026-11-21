@@ -140,7 +140,7 @@ Shared screen files:
 | File | What it holds |
 |---|---|
 | `actions.ts` | What happens when a form is submitted: `createGroupAction`, `joinGroupAction`. |
-| `layout.tsx` | The frame around every screen: font, phone width, page title. |
+| `layout.tsx` | The frame around every screen: font, phone width, page title. On laptops and desktops (1024 px and up) every screen sits in a phone-sized frame that scrolls on its own, with `LaptopPanel` beside it (styles in `globals.css`, "Laptop and desktop"). |
 | `loading.tsx`, `error.tsx`, `not-found.tsx` | Loading (branded Distill-by-Atheria mark with animated orange bar), error with retry, and not found screens. |
 | `globals.css` | Colours, font and the Home animations. |
 
@@ -193,6 +193,8 @@ Full detail in [API.md](API.md). Each file is a thin wrapper that calls a servic
 | `DeviceDate.tsx` | Puts the device's date in a cookie on every page (rule 2c). |
 | `TabBar.tsx` | Bottom tab bar: Receipts, Categories, Balance. |
 | `DistillMark.tsx` | The Distill wordmark, also the link back to Home. |
+| `LaptopPanel.tsx` | Panel beside the phone frame on laptops: what Distill does, three steps, how to open it on a phone, and "choose a file" for a computer. Hidden below 1024 px. |
+| `PhoneAddress.tsx` | The site address the visitor is on, shown in the laptop panel to type on a phone. |
 | `Icon.tsx` | Line icons. |
 | `Figures.tsx` | Animated stick figures on Home. |
 

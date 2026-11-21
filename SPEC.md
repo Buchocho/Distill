@@ -99,7 +99,7 @@ Term: a period in the app is stored as a ledger in the database.
 
 ## 5. Screens
 
-All screens are designed at phone width first. Bottom tab bar on every screen inside a group: Receipts, Categories, Balance. Sign in, New group and Join lead to Home. Home sits outside the tabs; on the first screen of each tab, tapping the Distill mark at the top left goes back to Home.
+All screens are designed at phone width first. On a laptop or desktop (1024 px and up) the same screens are shown in a phone-sized frame with a short panel beside it saying what Distill is and how to open it on a phone (added 21 Nov 2026); there are no separate laptop layouts. Bottom tab bar on every screen inside a group: Receipts, Categories, Balance. Sign in, New group and Join lead to Home. Home sits outside the tabs; on the first screen of each tab, tapping the Distill mark at the top left goes back to Home.
 
 | # | Screen | Route | Stories |
 |---|---|---|---|
@@ -178,6 +178,8 @@ Group "Rua das Flores 12" with members Ana, Rui and Sam. A seed script loads cat
 - Notifications when a category is created or its rule changes.
 - Whole-receipt discounts (vouchers, coupons on the total) spread across the items or shared by rule. Until then they are a negative line (rule 6).
 - Rename or merge categories, spending by category, close date reminder, export of the payment record.
+- Portuguese version (European Portuguese), after the 23 Nov submission: all interface text moved into English and Portuguese dictionaries (a translation library needs approval as a new dependency), language from the phone with a switch on the Group screen, category names in the group's language (likely chosen when the group is created), Privacy and Terms translated with care, and a review by a native speaker. Raised 21 Nov 2026 to test interest in Portugal.
+- Laptop layouts that use the full width (for example the receipt list beside the open receipt). For now laptops get the phone frame.
 - Reading: start with a cheaper model and move to a more capable one when a reading fails. For now one model (`gemini-3.5-flash-lite`, ARCHITECTURE.md).
 
 ## 9. Open questions
