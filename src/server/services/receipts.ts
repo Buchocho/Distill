@@ -61,12 +61,17 @@ function assertOwnReceipt(receipt: { createdBy: string }, userId: string) {
 }
 
 /**
- * The Receipts screen list (screen 2): newest first, with who paid, the total and how many items
- * have no category. Receipts whose photo is still being uploaded (draft) are left out.
+ * The Receipts screen list (screen 2): newest first, with who paid, the total, how many items
+ * have no category, and for receipts in review what the items add up to and how many prices are
+ * missing (shown as the reason in the Unfinished section). Receipts whose photo is still being uploaded (draft) are left out.
  */
 export async function listReceipts(userId: string, groupId: string) {
   await assertMember(userId, groupId);
   const unsorted = sql<number>`count(${items.id}) filter (where ${items.categoryId} is null and ${items.deletedAt} is null)`.mapWith(Number);
+  // For the Unfinished reason on a receipt in review (rules 8 and 8a): what the items add up to,
+  // and how many prices the reading could not see.
+  const itemsCents = sql<number>`coalesce(sum(${items.priceCents}) filter (where ${items.deletedAt} is null), 0)`.mapWith(Number);
+  const missingPrices = sql<number>`count(${items.id}) filter (where ${items.readingFlag} = 'missing' and ${items.deletedAt} is null)`.mapWith(Number);
   const rows = await db
     .select({
       id: receipts.id,
@@ -79,6 +84,8 @@ export async function listReceipts(userId: string, groupId: string) {
       paidByName: users.displayName,
       createdAt: receipts.createdAt,
       unsortedCount: unsorted,
+      itemsCents,
+      missingPrices,
     })
     .from(receipts)
     .innerJoin(users, eq(users.id, receipts.paidBy))

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import continente from "../fixtures/reading-continente.json";
 import usReceipt from "../fixtures/reading-us-tax-discount.json";
 import { parseAmount } from "@/domain/money";
-import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, readingBlockedBy, reconcileTax, shownStatus, spreadTax, storeKey, suggestPrice, sumBlock, sumCheck, validateCorrections, validateReview } from "@/domain/receipts";
+import { findDuplicate, matchCategory, parseReading, receiptNumberKey, receiptStatus, readingBlockedBy, unfinishedRow, reconcileTax, shownStatus, spreadTax, storeKey, suggestPrice, sumBlock, sumCheck, validateCorrections, validateReview } from "@/domain/receipts";
 
 describe("parseAmount", () => {
   it("reads both decimal styles", () => {
@@ -154,6 +154,31 @@ describe("receiptStatus", () => {
   });
 });
 
+
+describe("unfinishedRow", () => {
+  const base = { status: "ready", unsortedCount: 0, itemsCents: 1290, missingPrices: 0, totalCents: 1290, isYours: true, payerFirstName: "Izu", youLeft: false };
+
+  it("asks the scanner to finish their own receipt in review", () => {
+    expect(unfinishedRow(base, "EUR")).toEqual({ reason: "Check the items and save", badge: "Finish", tone: "act" });
+  });
+
+  it("tells everyone else whose turn it is, with no action", () => {
+    expect(unfinishedRow({ ...base, isYours: false }, "EUR")).toEqual({ reason: "Izu needs to review and save", badge: "Waiting", tone: "wait" });
+  });
+
+  it("gives the reason a receipt cannot be saved yet", () => {
+    expect(unfinishedRow({ ...base, itemsCents: 1330 }, "EUR").reason).toBe("Items are 0,40 more than the total");
+    expect(unfinishedRow({ ...base, itemsCents: 1200 }, "USD").reason).toBe("Items are 0.90 less than the total");
+    expect(unfinishedRow({ ...base, totalCents: null }, "EUR").reason).toBe("The total is missing");
+    expect(unfinishedRow({ ...base, missingPrices: 2 }, "EUR").reason).toBe("2 prices could not be read");
+  });
+
+  it("lets any current member sort, but not someone who left", () => {
+    const saved = { ...base, status: "saved", unsortedCount: 3, isYours: false };
+    expect(unfinishedRow(saved, "EUR")).toEqual({ reason: "3 items without a category", badge: "Sort", tone: "act" });
+    expect(unfinishedRow({ ...saved, unsortedCount: 1, youLeft: true }, "EUR")).toEqual({ reason: "1 item without a category", badge: "Waiting", tone: "wait" });
+  });
+});
 
 describe("findDuplicate", () => {
   const saved = [

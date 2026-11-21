@@ -397,3 +397,17 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 ### Verification
 - Type check: clean. Lint: clean. Unit tests: 135 passed. End to end tests not run (no visual changes to test logic).
 - To check by hand: open sign in page (should see receipt illustration and step pills); open group page (ink header, collapsible settings rows, avatar stack); open receipts tab (scan card, needs-you section above recent, payer avatars).
+
+## 2026-11-21: Receipts tab checked against the approved design; "Needs you" renamed
+
+- Goal: confirm the Receipts tab matches the approved canvas (Receipts.dc.html, 16 Nov) and replace the "NEEDS YOU" label, which wrongly suggests every listed receipt is the reader's to act on.
+- Prompts: "check the latest approved design of this receipt page and confirm that this matches"; "needs you ... could also need somebody else in the group ... It has to better represent what action needs to be done there"; "Yes implement".
+- Found: the scan card was built stacked and centred with a full width button, while the design is one compact row; this pushed the Recent list below the fold. Rows said "Review and save this receipt" where the design gives the specific reason. Behind the label there was a real fault: the section lists every member's unfinished receipts, but a receipt in review can only be finished by its scanner (rule 4), so other members saw a "Finish" button they could not use. Left as they are: the orange pill on the active tab (shared tab bar, used on all three tabs) and the underline on the Distill mark.
+- Changed:
+  - `src/domain/receipts.ts`: new `unfinishedRow`. In review and yours: the reason (total missing, prices not read, items more or less than the total by how much) and Finish. In review and someone else's: "Izu needs to review and save" and Waiting. Unsorted items: "N items without a category" and Sort for current members, Waiting for someone who left.
+  - `src/server/services/receipts.ts`: `listReceipts` also returns what the items add up to and how many prices could not be read.
+  - `receipts/page.tsx`: section renamed "UNFINISHED"; rows use `unfinishedRow`; Waiting rows have a grey left border instead of orange.
+  - `receipts/ScanPanel.tsx`: scan card rebuilt as the approved compact row ("choose a file" beside "Take a photo").
+  - Tests: `unfinishedRow` cases in `tests/unit/receipts.test.ts`. CODE_MAP and BUSINESS_RULES (rule 4) updated.
+- Verified: type check clean, lint clean, unit tests 139 passed (4 new), end to end tests 8 passed.
+- To check by hand: Receipts tab on a phone (scan card is one short row and Recent starts higher); your own receipt in review shows its reason and Finish; a receipt another member left in review shows "<name> needs to review and save" with Waiting; a saved receipt with unsorted items shows Sort for everyone.

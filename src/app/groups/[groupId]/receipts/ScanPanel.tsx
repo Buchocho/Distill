@@ -1,8 +1,10 @@
 "use client";
 
 /**
- * The scan card on the Receipts screen (screen 2): dark card with a camera icon,
- * a headline, the orange "Take a photo" button and an underlined "choose a file" link.
+ * The scan card on the Receipts screen (screen 2): one compact row, as in the approved design.
+ * Camera icon on the left; on the right the headline, then the orange "Take a photo" button and
+ * the underlined "choose a file" link side by side. Kept short so the Unfinished and Recent lists
+ * start higher on a phone (corrected 21 Nov 2026: the first build stacked everything).
  * A member scans only their own receipts, so the payer is always the person scanning (SPEC.md
  * rule 4). Someone holding another member's receipt sends them a photo to upload.
  * Runs in the browser.
@@ -21,7 +23,7 @@ import { Icon } from "@/components/Icon";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { PHOTO_BUCKET, PhotoError, preparePhoto } from "@/lib/photos";
 
-/** The scan card: dark-card bg, camera icon square, headline, photo button and file link. */
+/** The scan card: camera icon, headline, photo button and file link in one row (story US2). */
 export function ScanPanel({ groupId }: { groupId: string }) {
   const router = useRouter();
   const camera = useRef<HTMLInputElement>(null);
@@ -61,25 +63,23 @@ export function ScanPanel({ groupId }: { groupId: string }) {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex flex-col items-center gap-3.5 rounded-[20px] bg-dark-card px-4 pb-5 pt-5">
-        {/* Camera icon in a rounded square */}
-        <span className="grid size-14 place-items-center rounded-2xl bg-dark-line">
-          <Icon name="camera" size={28} />
+      <div className="flex items-center gap-3.5 rounded-[20px] bg-dark-card p-4">
+        <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-dark-line text-orange">
+          <Icon name="camera" size={26} />
         </span>
-
-        <span className="text-[15px] font-bold text-paper">Bought something? Scan it.</span>
-
-        {/* Orange photo button */}
-        <button type="button" disabled={busy} onClick={() => camera.current?.click()}
-          className="min-h-11 w-full rounded-[14px] bg-orange text-[15px] font-extrabold text-ink disabled:opacity-70">
-          {label}
-        </button>
-
-        {/* File picker link */}
-        <button type="button" disabled={busy} onClick={() => picker.current?.click()}
-          className="text-sm font-semibold text-sand underline">
-          or choose a file
-        </button>
+        <div className="flex min-w-0 flex-1 flex-col gap-[9px]">
+          <span className="text-[15px] font-extrabold leading-tight text-paper">Bought something? Scan it.</span>
+          <div className="flex flex-wrap items-center gap-x-2.5">
+            <button type="button" disabled={busy} onClick={() => camera.current?.click()}
+              className="min-h-11 rounded-xl bg-orange px-4 text-sm font-extrabold text-ink disabled:opacity-70">
+              {label}
+            </button>
+            <button type="button" disabled={busy} onClick={() => picker.current?.click()}
+              className="min-h-11 text-[13px] font-bold text-sand underline underline-offset-[3px]">
+              choose a file
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Hidden file inputs: camera capture and gallery/file picker */}

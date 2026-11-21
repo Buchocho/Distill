@@ -19,7 +19,7 @@
  * Pure functions. Tests: tests/unit/receipts.test.ts, with sample readings in tests/fixtures.
  */
 
-import { parseAmount, splitCents } from "./money";
+import { formatCents, parseAmount, splitCents } from "./money";
 
 /** Longest item name kept. Receipt lines are short; anything longer is cut, not refused. */
 export const ITEM_NAME_MAX = 80;
@@ -326,6 +326,47 @@ export function receiptStatus(status: string, unsortedCount: number): { label: s
   if (status === "ready") return { label: "Review and save", tone: "act" };
   if (unsortedCount > 0) return { label: `${unsortedCount} item${unsortedCount === 1 ? "" : "s"} unsorted`, tone: "act" };
   return { label: "All sorted", tone: "done" };
+}
+
+/** What the Unfinished list on the Receipts screen needs to know about one receipt. */
+export interface UnfinishedFacts {
+  status: string;
+  unsortedCount: number;
+  itemsCents: number;
+  missingPrices: number;
+  totalCents: number | null;
+  isYours: boolean;
+  payerFirstName: string;
+  youLeft: boolean;
+}
+
+/**
+ * One row of the Unfinished section on the Receipts screen (screen 2): the reason the receipt is
+ * not finished, and who has to act. The section is seen by the whole group, so a row only offers
+ * an action to someone who can take it. A receipt still in review can be finished only by the
+ * person who scanned it (SPEC.md rule 4); everyone else sees whose turn it is and "Waiting".
+ * Unsorted items on a saved receipt can be sorted by any current member (SPEC.md rules 7 and 9);
+ * someone who left the group cannot change items, so they see "Waiting" too.
+ * The reason for a receipt in review follows the save block (SPEC.md rules 8 and 8a): a missing
+ * total, prices that could not be read, or items that do not add up to the total, by how much.
+ */
+export function unfinishedRow(f: UnfinishedFacts, currency: string): { reason: string; badge: string; tone: "act" | "wait" } {
+  if (f.status === "ready") {
+    if (!f.isYours) return { reason: `${f.payerFirstName} needs to review and save`, badge: "Waiting", tone: "wait" };
+    return { reason: reviewReason(f, currency), badge: "Finish", tone: "act" };
+  }
+  const reason = `${f.unsortedCount} item${f.unsortedCount === 1 ? "" : "s"} without a category`;
+  return f.youLeft ? { reason, badge: "Waiting", tone: "wait" } : { reason, badge: "Sort", tone: "act" };
+}
+
+/** Why the scanner's own receipt in review cannot be saved yet (SPEC.md rules 8 and 8a). */
+function reviewReason(f: UnfinishedFacts, currency: string): string {
+  if (f.totalCents === null) return "The total is missing";
+  if (f.missingPrices > 0) return `${f.missingPrices} price${f.missingPrices === 1 ? "" : "s"} could not be read`;
+  const diff = f.itemsCents - f.totalCents;
+  if (diff > 0) return `Items are ${formatCents(diff, currency)} more than the total`;
+  if (diff < 0) return `Items are ${formatCents(-diff, currency)} less than the total`;
+  return "Check the items and save";
 }
 
 /**
