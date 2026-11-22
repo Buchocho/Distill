@@ -424,3 +424,15 @@ One entry per build session. Evidence for the "LLM good practices" criterion.
 - Not done: a QR code in the panel (needs a new dependency or a third party image service; the address is shown as text instead). Sign in has no separate laptop design: it shows in the frame with the panel beside it, which covers the first impression.
 - Verified: type check clean, lint clean, unit tests 139 passed, end to end tests 8 passed. Screenshots at 1440x900, 1280x720, 900 px (tablet) and 390 px (phone): sign in, Privacy, and a temporary test screen (removed) with a long list, the tab bar and a pop-up panel.
 - To check by hand on a laptop: sign in, Receipts, the review screen of a receipt, Balance, and Leave on the Group screen (the panel stays inside the frame). On a phone: nothing should have changed.
+
+## 2026-11-22: multi photo receipts taken out of the current scope
+
+- Goal: the build report says multi photo receipts moved to a later version, but SPEC.md still listed them as a change to the spec and rule 9a still said a receipt can have any number of photos. A grader comparing the report with the repository would find the mismatch.
+- Prompt: "push the change to the spec.md tonight. Now, actually, that multi-photo receipts are not within the current scope and may be included in future versions of the App."
+- Changed (documents only, no code):
+  - SPEC.md: rule 9a now says one photo per receipt in this version; build step 4 marked as taken out of the current scope on 22 Nov; section 7 records the decision; section 8b lists multi photo receipts as a later version.
+  - `docs/features/multi-photo-receipt.md`: status line updated; the proposal is kept for a later version.
+  - CODE_MAP and BUSINESS_RULES (rule 9a) updated to match.
+- Verified: the app already takes one photo per receipt (the camera and file inputs in `ScanPanel.tsx` accept a single file), so no code change is needed. Unit tests 139 passed.
+- To check by hand: nothing; screens are unchanged.
+

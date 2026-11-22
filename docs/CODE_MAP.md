@@ -53,7 +53,7 @@ Where to look when something needs changing:
 | `BUSINESS_RULES.md` | Each SPEC.md rule, whether it is built, and the files that enforce it. |
 | `CODE_MAP.md` | This file. |
 | `WORKLOG.md` | One entry per build session: goal, what changed, how it was checked. |
-| `features/multi-photo-receipt.md` | Detail of the multi photo receipt change (build step 4). |
+| `features/multi-photo-receipt.md` | Proposal for multi photo receipts. Not in the current scope; may come in a future version (SPEC.md sections 7 and 8b). |
 
 ## src/domain: business rules
 

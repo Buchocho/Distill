@@ -60,7 +60,7 @@ Term: a period in the app is stored as a ledger in the database.
 8b. Corrections to a receipt in review are kept as they are made, on the receipt itself, so leaving the screen never loses them: the same corrections come back on any device, with the prices already checked no longer marked. They are not in the group's accounts until the receipt is saved, and only the person who scanned it can make or see them (rule 4). An empty price is kept as empty (added 16 Nov 2026, because rule 8 now means a receipt may need several goes before it can be saved).
 8a. The reading never makes up a number (added 10 Nov 2026, found by a beta tester on a faded receipt). For each price, the total and the date it says whether it was unsure; a price it cannot read is left empty. The review screen marks unsure values in orange with a notice at the top, shows empty prices as empty, and when exactly one price is in doubt and the total is known, offers the price that makes the items match the total, which the person can use. Saving is blocked while a price is empty, and by rule 8 while the items do not add up to the total.
 9. Saving is never blocked by unsorted items (US5).
-9a. A receipt can have any number of photos. Once it is saved into the ledger, no photos can be added or removed.
+9a. In this version a receipt has one photo. Once it is saved into the ledger, no photos can be added or removed. Receipts made of several photos are not in the current scope (section 7) and may come in a future version (section 8b).
 9b. A receipt that is not saved yet can be deleted with its photo, after a confirm step. A saved receipt cannot be deleted.
 9c. The reading step also returns the receipt's own number (document or transaction number, not a tax number). A receipt with the same store and receipt number as a saved receipt in the group cannot be saved. Otherwise, a receipt with the same store, date and total as a saved one shows a warning, even when the receipt numbers differ (a number can be misread or cropped), and the person can delete it or save it anyway. Store names are compared without accents, capitals or punctuation.
 10. If reading fails, the receipt is kept with its photos and status "failed", and the user can retry. A reading cut off by the server time limit (still "reading" 90 seconds after it started) is shown as failed, with Retry (fixed 10 Nov 2026).
@@ -136,14 +136,14 @@ Each step works end to end, with tests, before the next starts. A step is done o
 | 1 | US1: sign in, create group, invite link, join | 29 Oct | Passed 7 Nov; joining from a second account checked 9 Nov |
 | 2 | US2 and US5 with one photo: capture, reading, review, save, unsorted items | 1 Nov | Passed 9 Nov |
 | 3 | US3 and US4: categories, rules, item changes and change log; open period balance | 3 Nov | Passed 10 Nov |
-| 4 | Multi photo receipts (section 7). Moved after steps 5 to 7 on 10 Nov; built only if time is left | 4 Nov | Not built; dropping it was proposed on 10 Nov, not decided |
+| 4 | Multi photo receipts (section 7). Moved after steps 5 to 7 on 10 Nov; built only if time is left | 4 Nov | Not built. Taken out of the current scope on 22 Nov; may be included in a future version (section 8b) |
 | 5 | US6, US7, US8: close rule, closing, sorting leftovers, agree | 6 Nov | Built 10 Nov; tested by hand with step 6, no separate pass recorded |
 | 6 | US9: payments | 8 Nov | Passed 10 Nov |
 | 7 | Remaining tests, UX review by the LLM against the Assignment 1 mockups, manual check of every screen, privacy page and Google sign in published (out of testing mode), data tables PDF, screenshots, demo script and rehearsal | 9 to 15 Nov | In progress. Done: Privacy and Terms, Google sign in published and out of testing mode (by Maduabuchi, Nov 2026, so anyone can sign in), stuck readings, reading limits, receipts must add up (rule 8), corrections kept (8b), Agree waits for every receipt (21a). Left: redesign of Sign in, the Group screen and the Receipts tab (raised 16 Nov: too plain for people outside the group, and the Group screen does not match the other screens; mockups made, waiting on feedback, then build), demo data, signed in tests, design review, screen check, data tables PDF, screenshots, demo script and rehearsal |
 
 ## 7. Change from the approved specification
 
-Multi photo receipts: a receipt can be made of one or more photos taken in sections, read together as one receipt. Reason: a long receipt in one photo is too small to read. It extends US2 and does not add a screen to the tab bar. Full detail in `docs/features/multi-photo-receipt.md`.
+Multi photo receipts (proposed 25 Oct 2026, not built): a receipt made of one or more photos taken in sections, read together as one receipt, because a long receipt in one photo is too small to read. Decided 22 Nov 2026: multi photo receipts are not within the current scope and may be included in a future version of the app (section 8b). In this version a receipt has one photo (rule 9a). The proposal is kept in `docs/features/multi-photo-receipt.md`.
 
 Category rules (agreed 2 Nov 2026): the approved specification split a category with no rule evenly between everyone. Now a category with no rule is not split; its items count as unsorted until someone sets a rule, and the period cannot be agreed until every category used in it has one. Reason: an even split hides the missing decision, and the period should not settle on a guess. Category creation and rule changes are also logged and visible to every member.
 
@@ -174,6 +174,7 @@ Group "Rua das Flores 12" with members Ana, Rui and Sam. A seed script loads cat
 
 ## 8b. Later versions (roadmap, not in this MVP)
 
+- Multi photo receipts: a long receipt photographed in sections and read as one receipt (`docs/features/multi-photo-receipt.md`). Taken out of the current scope on 22 Nov 2026.
 - Home section order per person: each member can reorder the three Home sections to put what matters to them first. For now the order is fixed: Receipts, Categories, Balance.
 - Notifications when a category is created or its rule changes.
 - Whole-receipt discounts (vouchers, coupons on the total) spread across the items or shared by rule. Until then they are a negative line (rule 6).

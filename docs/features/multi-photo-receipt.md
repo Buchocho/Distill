@@ -1,7 +1,7 @@
 # Distill: feature spec, multi photo receipt capture
 
 Author: Maduabuchi Ogugua Dibiaezue
-Status: draft, 25 Oct 2026. Change to the approved Assignment 1 spec, to be listed as such in the build report.
+Status: not in the current scope (decided 22 Nov 2026); may be included in a future version of the app. Proposed 25 Oct 2026 as a change to the approved Assignment 1 spec; never built. In this version a receipt has one photo (SPEC.md rule 9a).
 
 ## Problem
 
